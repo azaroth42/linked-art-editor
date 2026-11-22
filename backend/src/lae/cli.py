@@ -2,7 +2,8 @@
 
 Sub-command names match the process names in conventions §1, the entries in ``deploy/Procfile``,
 and the ``deploy/systemd/lae-<name>.service`` units. Every command reads ``Settings``
-(``LAE_*``). ``migrate`` runs ``alembic upgrade head`` against ``LAE_DATABASE_URL``; ``api``
+(``LAE_*``). ``migrate`` runs ``alembic upgrade head`` against ``LAE_DATABASE_URL``;
+``bootstrap <stage>`` runs one stage of the bulk bootstrap (``lae.bootstrap.cli``); ``api``
 configures JSON logging and runs uvicorn on ``lae.app.create_app``, and refuses to start (exit
 ``EXIT_CONFIG_ERROR``) when the authentication settings are unsafe, e.g. ``LAE_DEV_USER`` with
 ``LAE_ENV=production`` (``lae.auth.setup.AuthConfigError``).
@@ -28,6 +29,7 @@ import uvicorn
 
 from lae.app import create_app
 from lae.auth.setup import AuthConfigError
+from lae.bootstrap import cli as bootstrap_cli
 from lae.db import migrate
 from lae.logging import configure_logging
 from lae.settings import Settings, get_settings
@@ -48,9 +50,7 @@ PROCESS_MODULES: dict[str, tuple[str, str]] = {
 }
 """Processes whose module exposes ``main(settings)``: command → (module, guide step building it)."""
 
-NOT_IMPLEMENTED: dict[str, str] = {
-    "bootstrap": "1.12",
-}
+NOT_IMPLEMENTED: dict[str, str] = {}
 """One-shot commands not built yet: command → guide step that builds it."""
 
 EXIT_NOT_IMPLEMENTED = 3
@@ -65,7 +65,9 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(prog="lae", description="Collaborative Linked Art Editor")
     subparsers = parser.add_subparsers(dest="command", required=True, metavar="<command>")
     for name, help_text in COMMANDS.items():
-        subparsers.add_parser(name, help=help_text, description=help_text)
+        subparser = subparsers.add_parser(name, help=help_text, description=help_text)
+        if name == "bootstrap":
+            bootstrap_cli.add_arguments(subparser)
     return parser
 
 
@@ -79,13 +81,18 @@ def not_implemented(command: str, step: str) -> int:
     return EXIT_NOT_IMPLEMENTED
 
 
-def run_migrate() -> int:
+def run_migrate(args: argparse.Namespace) -> int:
     """``lae migrate``: apply every migration up to head."""
     migrate.upgrade("head")
     return 0
 
 
-def run_api() -> int:
+def run_bootstrap(args: argparse.Namespace) -> int:
+    """``lae bootstrap <stage>``: run one bulk bootstrap stage (Phase 1, Step 1.12)."""
+    return bootstrap_cli.run(args)
+
+
+def run_api(args: argparse.Namespace) -> int:
     """``lae api``: serve ``create_app(settings)`` with uvicorn until interrupted."""
     settings = get_settings()
     configure_logging(settings.log_level)
@@ -131,9 +138,10 @@ def run_process(command: str) -> int:
     return 0 if result is None else int(result)
 
 
-HANDLERS: dict[str, Callable[[], int]] = {
+HANDLERS: dict[str, Callable[[argparse.Namespace], int]] = {
     "api": run_api,
     "migrate": run_migrate,
+    "bootstrap": run_bootstrap,
 }
 """Sub-commands implemented in this module; the others are in ``PROCESS_MODULES``."""
 
@@ -144,7 +152,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     command: str = args.command
     handler = HANDLERS.get(command)
     if handler is not None:
-        return handler()
+        return handler(args)
     if command in PROCESS_MODULES:
         return run_process(command)
     return not_implemented(command, NOT_IMPLEMENTED[command])

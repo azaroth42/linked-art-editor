@@ -118,7 +118,7 @@ command line:
 | `LAE_DB` | `lae` | database created by `make up` |
 | `QLEVER_PORT` | `7010` | QLever port; `make down` stops only the server on this port |
 | `QLEVER_DIR` | `deploy/data/qlever` | QLever index directory |
-| `QLEVER_INPUT_FILES` | `*.nt` | N-Triples (plain or gzipped) for a new index, relative to `QLEVER_DIR` |
+| `QLEVER_INPUT_FILES` | `*.nt` | N-Quads or N-Triples (plain or gzipped) for a new index, relative to `QLEVER_DIR` |
 | `LAE_QLEVER_ACCESS_TOKEN` | unset | token for SPARQL Update; without it QLever is read-only |
 | `PG_BIN` | Postgres.app's `bin` if installed | directory of `psql`, `createdb`, `pg_isready` |
 | `QLEVER` | `qlever` | qlever-control executable |
@@ -133,7 +133,20 @@ make down QLEVER_PORT=7003
 The index starts empty: `qlever get-data` only creates an empty `lae-empty.nt`. To rebuild from
 other N-Triples, stop QLever, empty the index directory, and run `make up` with
 `QLEVER_INPUT_FILES` pointing at the files (plain or gzipped; relative to the index
-directory). From Phase 1 on, `lae bootstrap` builds the index from Postgres.
+directory). From Phase 1 on, `lae bootstrap` builds the index from Postgres:
+
+```sh
+cd backend
+uv run lae bootstrap load --input <dir-or-jsonl>           # records + entity_labels (COPY)
+uv run lae bootstrap aat-labels --csv <aat_dataset.csv>    # AAT labels (Phase 1 sidecar stand-in)
+uv run lae bootstrap export-nt --out /data/export.nt.gz     # records + sidecar labels as N-Quads
+uv run lae bootstrap build-index --nt /data/export.nt.gz --dir <fresh index dir>
+```
+
+`build-index` builds in a fresh directory, starts the server with `--persist-updates` on the
+port of `LAE_QLEVER_URL` (with `LAE_QLEVER_ACCESS_TOKEN` for updates), records the watermark in
+`sync_state`, and prints the command that stops exactly that server. Each command prints a JSON
+summary; skipped records are listed in a JSON Lines report. Timings: `docs/spikes/S6-bootstrap.md`.
 
 To run qlever-control by hand, work in the index directory and pass the Qleverfile:
 

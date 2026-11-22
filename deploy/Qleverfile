@@ -10,7 +10,7 @@
 # Values written as $$(...) are evaluated by the shell when the file is read (`$$` escapes `$`),
 # so these environment variables override the defaults:
 #   QLEVER_PORT              server port                      (default 7010)
-#   QLEVER_INPUT_FILES       N-Triples input, plain or .gz    (default *.nt)
+#   QLEVER_INPUT_FILES       N-Quads/N-Triples input, plain or .gz (default *.nt)
 #   LAE_QLEVER_ACCESS_TOKEN  token required for SPARQL Update (default: none, so read-only)
 # Any value can also be overridden per call on the command line, e.g. `qlever start --port 7003`.
 #
@@ -33,7 +33,9 @@ NAME              = lae
 GET_DATA_CMD      = touch lae-empty.nt
 DESCRIPTION       = Linked Art Editor: published records
 TEXT_DESCRIPTION  = Literals of published Linked Art records
-FORMAT            = nt
+# N-Quads, of which N-Triples is a subset: records are in the default graph, sidecar labels in
+# urn:graph:sidecar:<source> graphs (`lae bootstrap export-nt`).
+FORMAT            = nq
 
 [index]
 INPUT_FILES       = $$(printf '%s' "$${QLEVER_INPUT_FILES:-*.nt}")

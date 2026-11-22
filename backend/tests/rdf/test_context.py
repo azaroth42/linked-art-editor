@@ -13,6 +13,7 @@ from pyld.context_resolver import ContextResolver
 from lae.corpus import iter_corpus
 from lae.rdf.context import (
     CONTEXT_URLS,
+    STATIC_TAG,
     UnpinnedContextError,
     context_path,
     document_loader,
@@ -60,6 +61,25 @@ def test_document_loader_serves_the_pinned_context() -> None:
     assert remote["contentType"] == "application/ld+json"
     assert remote["contextUrl"] is None
     assert remote["document"] == load_context(1)
+    assert remote["tag"] == STATIC_TAG
+
+
+def test_static_tag_lets_pyld_share_the_resolved_context_across_documents() -> None:
+    """pyld's public cache contract (Spike S6): one load serves every later document."""
+    calls: list[str] = []
+
+    def spy(url: str, options: dict[str, Any] | None = None) -> dict[str, Any]:
+        calls.append(url)
+        return document_loader(url, options)
+
+    shared: dict[str, Any] = {}
+    records = [doc for _, doc in iter_corpus()][:5]
+    for record in records:
+        # A fresh resolver per document, as pyld creates by default, over one shared cache.
+        jsonld.expand(
+            record, {"documentLoader": spy, "contextResolver": ContextResolver(shared, spy)}
+        )
+    assert calls == [PINNED_URL]
 
 
 @pytest.mark.parametrize(

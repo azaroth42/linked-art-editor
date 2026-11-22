@@ -326,3 +326,93 @@ uv run python ../scripts/spikes/s6_bootstrap/build_index.py serve-check \
 
 Every command accepts `--stats-out <file.json>`. `serve-check` stops only its own server (its
 `--cmdline-regex` matches the unique index name and the port); never run a bare `qlever stop`.
+
+## Phase 1 actual (Step 1.12)
+
+The same 1M synthetic records went through the production commands of Phase 1 Step 1.12
+(`lae bootstrap load`, `aat-labels`, `export-nt`, `build-index`; `backend/src/lae/bootstrap/`),
+on the same machine, on 2026-11-22. The machine was shared again: other agents' test runs and
+the CrashPlan backup kept the 1-minute load average at 8.7–12.5 before the load started, so the
+times below are on a busier machine than the spike's and are, if anything, pessimistic.
+
+| | |
+| :-- | :-- |
+| Input | `generate.py --count 1000000` (seed `20261122`): 4,358,540,080 bytes, SHA-256 `8f6d1ae8…6012695e`, identical to §2.1; 5.9 s |
+| Database | Slot database `lae_i25` at migration 0003, stock Postgres.app settings (§3.2); `LAE_BASE_URI=https://collection.example.org/id/` so that record ids are the UUIDs in the URIs |
+| QLever | Index `lae_i25` in `/tmp/lae-i25/qlever-1m`, port 7025, `deploy/Qleverfile` (now `FORMAT = nq`) |
+| Settings | Defaults: 18 worker processes, 4 `COPY` streams, batches of 10,000 (load) and 500 (export), plain `.nt` output |
+
+### Stage results
+
+| Stage | Wall | Throughput | Notes |
+| :-- | --: | :-- | :-- |
+| `load` | **93.6 s** | 10,689 input records/s; 6,725 written/s | 1,000,000 read, **629,163 written**, 370,837 skipped and reported: 370,825 JSON Schema (`LAE-BOOT-005`), 12 ids that cannot be repaired (`LAE-BOOT-003`, the injected `https:/no-host` IRIs). 9 ids repaired (injected spaces, in records that passed the schema). Worker CPU 1,427 s (1.43 ms per input record), time in `COPY` 52 s summed over workers. Peak RSS 3.3 GB (main process, in-flight batches). `records` 1,338 MB, `entity_labels` 249 MB. |
+| `aat-labels` | 0.7 s | 89k rows/s | 58,799 AAT terms from `aat_dataset.csv`, none rejected. |
+| `export-nt` | **73.6 s** | **8,609 records/s**, 291,779 triples/s | 629,149 records, **21,323,874 triples** (33.9 per record), plus 117,598 sidecar quads (`rdf:type` and `rdfs:label` for every AAT row in `urn:graph:sidecar:aat`); 4,798,283,992 bytes. 14 records skipped and reported (`LAE-BOOT-007`, `InvalidLiteralError`): the injected year-only and `c. 1850` `xsd:dateTime` values, which `lae.rdf` rejects (S6 padded them). Worker CPU 1,181 s (**1.88 ms per record**), workers 90 % busy. |
+| `build-index` | **66.1 s** + 1.4 s to ready | 324k triples/s | **21,441,472 triples parsed and 21,441,472 distinct** (no duplicates; S6 had 31 %), 27,848,987 `ql:has-word` triples, index 1.10 GB, **peak RSS 2.46 GiB**. Phases: parse 5.7 s, vocabulary merge 1.7 s, ID conversion and permutations 16.2 s, **text index 41.9 s (64 %, one core)**. |
+| **Total** | **235 s (3.9 min)** | | for 1M input records, 629k loaded |
+
+The served index answered `SELECT (COUNT(*) AS ?c) WHERE { ?s ?p ?o }` with 21,441,472,
+`GRAPH <urn:graph:sidecar:aat> { ?s ?p ?o }` with 117,598, and `ql:contains-word "portrait*"`
+with 26,197 hits. A record published after the bootstrap is reachable: the publish path
+(Step 1.10) and the sync worker (Step 1.11) are not built yet, so a new `HumanMadeObject` was
+expanded with `expand_to_ntriples` and sent as `build_update([], triples)` (the update a first
+publish produces) with the access token. 7 triples, 22.8 ms; a query joining the record's name
+with the `rdfs:label` of its classification in the AAT sidecar graph returned it at once
+(`tests/bootstrap/test_index.py` does the same against a fresh index).
+
+### What changed from the spike, and why it matters
+
+1. **JSON Schema is now the load's cost and its filter.** Validation is about 95 % of a load
+   worker's time (cProfile of 3,000 records; 0.87 ms per record in one process after collecting
+   errors in a single pass instead of `is_valid` plus `iter_errors`). It also rejects 37 % of the
+   synthetic records: the generator merges corpus templates, and 60 of the 244 corpus files fail
+   the schema (`tests/corpus/KNOWN_FAILURES.md`), so their faults spread. Share of the failing
+   records with each kind of error: a reference without `id` 45 % (`member_of`, `residence`,
+   `broader`, `digitally_shows`, …), a shape that matches no `anyOf` alternative 37 %, another
+   disallowed property 24 %, a single value where an array is required or the reverse 20 %,
+   Yale Library entities embedded in `about` 16 %, `@context` on a nested node 9 %. Pass rate by
+   class: Event and PropositionalObject 100 %, Type 80 %,
+   Person 79 %, Set 76 %, VisualItem 65 %, Group 60 %, HumanMadeObject 58 %, Place 55 %,
+   LinguisticObject 54 %, Period 50 %, DigitalObject 41 %, Activity 35 %. See
+   `docs/questions.md`, Step 1.12, item 2.
+2. **Validate the public form.** The load validates each record with its internal node IRIs
+   stripped, as `/id/{uuid}` would serve it. The schemas forbid `id` on many embedded nodes: 129
+   of the 184 corpus records that validate would fail with node IRIs added, and 92 % of the
+   generator's records (which carry node IRIs already) failed in a first run that validated them
+   as stored.
+3. **Phase 1 expansion is 2.6x cheaper per record than the tuned spike.** 1.88 ms of worker CPU
+   per record against 4.9 ms (S6 tuned) and 6.7 ms (S6 as on `main`), from Step 1.3's stub
+   stripping (33.9 triples per record instead of 75.5) and its module-level pyld
+   `ContextResolver`. The loaded records are biased towards the smaller ones (records merged from
+   more templates fail the schema more often); S6 estimated 49.4 triples per record for the
+   stripped shape over unfiltered records, so expect up to about 45 % more per record on data
+   that all passes.
+4. **The `"tag": "static"` loader change made no measurable difference here.** `lae.rdf.expand`
+   passes one module-level `ContextResolver`, whose cache pyld never resets, so the pinned
+   context is loaded once per process with or without the tag (counted with a spy loader over
+   three passes of the corpus: one call either way, 0.56–0.58 ms per record). The +32 % of §3.3 was already in Step 1.3's expansion. The tag is in
+   `lae.rdf.context.document_loader` anyway: it is pyld's public cache contract and helps every
+   pyld call that uses pyld's default resolver.
+5. **No duplicate triples.** Stub stripping (finding 5) leaves every subject owned by exactly one
+   record, so QLever's distinct count equals the input count. The sidecar labels are emitted once
+   per entity in their own graph instead of once per referencing record.
+6. **N-Quads.** Sidecar labels go into `urn:graph:sidecar:<source>` graphs, so the export is
+   N-Quads (record triples stay in the default graph) and `deploy/Qleverfile` reads `nq`. QLever
+   0.6.0 counts all graphs in `SELECT (COUNT(*) …) WHERE { ?s ?p ?o }`, and `INSERT DATA` without
+   a graph goes to the default graph.
+7. **qlever-control.** `build-index` symlinks the export into the index directory (finding 4) and
+   stops nothing; it prints the exact `qlever stop --cmdline-regex` for its own index name and
+   port.
+
+### Projection to 10M
+
+| Stage | Basis | 10M records loaded |
+| :-- | :-- | --: |
+| `load` | 10.7k input records/s, linear (independent batches; `COPY` is 4 % of worker time) | 15.6 min per 10M input records |
+| `export-nt` | 8,609 records/s | 19.4 min (28 min at 49 triples per record) |
+| `build-index` | 339M triples; `time ∝ triples^b` with `b = 1.08–1.14` (§4) from 66.1 s | 22–26 min (33–39 min at 49 triples per record) |
+| **Total** | | **≈ 1.0–1.4 h**, against S6's 1.2 h (tuned) and the 8-hour window |
+
+The text index stays the largest single-threaded phase of the build. Memory stays well inside
+the machine: 3.3 GB for the load's main process, 2.5 GiB for the index build.
