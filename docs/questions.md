@@ -349,3 +349,38 @@ Spike S6 (`docs/spikes/S6-bootstrap.md`) is a **GO**: 1M records bootstrap in 10
    streaming pass does not know every target yet. Labels are transcluded on read either way, so
    stored `_label`s are only stale copies until the record is first published. Say if a
    post-load normalization pass is wanted.
+
+## Step 1.9
+
+1. **How is an EDTF string marked in a `TimeSpan`?** The guide asks for a rule on "EDTF syntax in
+   `identified_by` of a `TimeSpan`" (`LAE-RULE-002`), but nothing says which of a `TimeSpan`'s
+   names is EDTF, and its ordinary names are free-text display labels ("ca. 1642", "1503-1506").
+   The rule therefore checks only a `Name` or `Identifier` classified as
+   `http://id.loc.gov/datatypes/edtf` (the Library of Congress EDTF datatype; AAT has no concept
+   for EDTF), and reports invalid syntax as a warning. No corpus record has such a name, and
+   until Step 1.18's `EdtfWidget` writes that classification the rule never fires. Please
+   confirm the marker, or name another (ADR-0025, item 4).
+2. **Records whose embedded nodes have their own ids cannot be published.** ADR-0021 indexes an
+   embedded `Name`, `Identifier`, `TimeSpan` or `Dimension` that arrives with an `id`, and
+   `records.data` keeps that `id`. The vendored JSON Schema does not allow `id` on those nodes,
+   and JSON Schema is the publish gate, so such a record fails: `object-3.json` (in
+   `tests/corpus/KNOWN_FAILURES.md`) gives `LAE-SCHEMA-anyOf` at `/identified_by/0`, whose cause
+   is `LAE-SCHEMA-additionalProperties` for the `id` of the `Name`. Internal node IRIs are
+   stripped before the schema runs; foreign ids are not, because they are part of the record.
+   Either the schema changes upstream or validation strips every `id` from the classes in
+   `lae.rdf.expand.EMBEDDED_TYPES` before the schema runs. Not done here: it loosens
+   the publish gate, which needs the owner.
+3. **`POST /api/records/{id}/draft/validate` has no draft source yet.** Step 1.8 was not on main,
+   so the endpoint reads the draft through the `DraftSnapshotSource` protocol
+   (`lae.api.validation`) from `app.state.draft_snapshot_source`, and answers 503
+   `LAE-VALID-001` while that is unset. Step 1.8 or 1.10 must set it to the `CrdtWsClient` in
+   `create_app` (its `snapshot(record_id)` returning an object with `jsonld`, or `None` /
+   `LookupError` when there is no draft). Not verified: the endpoint against a real `crdt-ws`.
+4. **Codes added beyond the guide's list:** `LAE-RULE-005` (invalid `TimeSpan` bound),
+   `LAE-RDF-001` to `-005` (expansion failures), `LAE-SHACL-000` (SHACL could not run),
+   `LAE-SCHEMA-ref` / `-recordType` / `-false`, `LAE-VALID-001` / `-002` (the draft endpoint).
+   ADR-0025 (Proposed) gives the reasons. No decision needed unless the names should differ.
+5. **Not verified: the 50 ms budget on CI or production hardware.** On the development Mac the
+   whole pipeline takes 2.7 ms at p50 and 11.2 ms at p95 over the 184 schema-valid corpus
+   records (max 23 ms), one run, other agents sharing the machine. The budget
+   is a logged threshold, as S4 recommends, not a test assertion.

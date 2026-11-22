@@ -1,0 +1,52 @@
+# SHACL shapes for Type (concept) records (linked.art/docs/model/concept/). Conventions, lae:code
+# and the SPARQL prefix declarations (laes:) are in common.ttl and profiles/shapes/README.md.
+
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix skos: <http://www.w3.org/2004/02/skos/core#> .
+@prefix sh:   <http://www.w3.org/ns/shacl#> .
+@prefix crm:  <http://www.cidoc-crm.org/cidoc-crm/> .
+@prefix lae:  <urn:lae:ns:> .
+@prefix laes: <urn:lae:shape:> .
+
+# 20. "It is strongly RECOMMENDED that every entity ... have at least one specific name". A
+#     concept that has nothing but a type and a label (a new draft) is not reported.
+laes:Type-name
+    a sh:NodeShape ;
+    lae:code "LAE-SHACL-020" ;
+    sh:targetClass crm:E55_Type ;
+    sh:severity sh:Warning ;
+    sh:sparql [
+        a sh:SPARQLConstraint ;
+        sh:message "A concept should have at least one Name in identified_by."@en ;
+        sh:prefixes laes: ;
+        sh:select """
+            SELECT $this (crm:P1_is_identified_by AS ?path)
+            WHERE {
+                FILTER NOT EXISTS {
+                    $this crm:P1_is_identified_by ?name .
+                    ?name a crm:E33_E41_Linguistic_Appellation .
+                }
+                FILTER EXISTS {
+                    $this ?property ?value .
+                    FILTER (?property NOT IN (rdf:type, rdfs:label))
+                }
+            }
+            """ ;
+    ] .
+
+# 21. "broader" places the concept in a hierarchy of concepts: its value is a concept class
+#     (Type or one of its Linked Art subclasses; there is no inference, so each is listed).
+laes:Type-broader
+    a sh:PropertyShape ;
+    lae:code "LAE-SHACL-021" ;
+    sh:targetClass crm:E55_Type ;
+    sh:path skos:broader ;
+    sh:or (
+        [ sh:class crm:E55_Type ]
+        [ sh:class crm:E57_Material ]
+        [ sh:class crm:E56_Language ]
+        [ sh:class crm:E58_Measurement_Unit ]
+        [ sh:class crm:E98_Currency ]
+    ) ;
+    sh:message "broader must refer to a concept (Type, Material, Language, MeasurementUnit or Currency)."@en .

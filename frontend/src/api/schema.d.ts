@@ -363,10 +363,84 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Validate Jsonld
+         * @description Validate the JSON-LD in the body and return its diagnostics.
+         */
+        post: operations["validate_jsonld_api_validate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/records/{record_id}/draft/validate": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Validate Draft
+         * @description Validate the live draft of a record and return its diagnostics.
+         */
+        post: operations["validate_draft_api_records__record_id__draft_validate_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * Diagnostic
+         * @description One validation finding; see the module docstring for the fields.
+         */
+        Diagnostic: {
+            /** Code */
+            code: string;
+            /** Path */
+            path: string;
+            /**
+             * Severity
+             * @enum {string}
+             */
+            severity: "violation" | "warning" | "info";
+            /** Params */
+            params: {
+                [key: string]: unknown;
+            };
+            /** Message En */
+            message_en: string;
+        };
+        /**
+         * Diagnostics
+         * @description The findings for one document; ``ok`` means that none of them is a violation.
+         */
+        Diagnostics: {
+            /** Items */
+            items: components["schemas"]["Diagnostic"][];
+            /**
+             * Ok
+             * @description True when no item has severity ``violation`` (warnings do not count).
+             */
+            readonly ok: boolean;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -541,6 +615,18 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+        };
+        /**
+         * ValidateRequest
+         * @description Body of ``POST /api/validate``.
+         */
+        ValidateRequest: {
+            /** Jsonld */
+            jsonld: {
+                [key: string]: unknown;
+            };
+            /** Record Uri */
+            record_uri?: string | null;
         };
         /** ValidationError */
         ValidationError: {
@@ -1121,6 +1207,70 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    validate_jsonld_api_validate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ValidateRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Diagnostics"];
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    validate_draft_api_records__record_id__draft_validate_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Diagnostics"];
+                };
             };
             /** @description Validation Error */
             422: {

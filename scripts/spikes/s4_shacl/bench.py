@@ -14,10 +14,11 @@ What it does:
    all of them alike): ``--warmup`` untimed runs, then ``--iterations`` timed runs of the whole
    per-record pipeline, timing three stages separately: ``expand`` (pyld ``to_rdf`` with the
    pinned context through ``lae.rdf.context``'s offline loader), ``build`` (the data graph from
-   the expanded triples), and ``validate`` (pyshacl with ``profiles/shapes/HumanMadeObject.ttl``).
+   the expanded triples), and ``validate`` (pyshacl with ``HumanMadeObject.s4.ttl``, the shapes
+   file as it was when the spike ran).
 3. Checks that every configuration reports the same results (per record: conformance and the
    multiset of ``(lae:code, severity)``), that every configuration gives the expected results for
-   the broken-record cases in ``backend/tests/validation/data/hmo_shape_cases.json``, and that a
+   the broken-record cases in ``hmo_shape_cases.s4.json``, and that a
    validator shared across threads agrees with the sequential run.
 4. Times the data-graph preparation alternatives on their own (pyld dataset vs N-Quads text, into
    rdflib vs pyoxigraph).
@@ -79,8 +80,11 @@ from lae.corpus import CORPUS_DIR, iter_corpus
 from lae.rdf.context import document_loader
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
-SHAPES_PATH = REPO_ROOT / "profiles" / "shapes" / "HumanMadeObject.ttl"
-CASES_PATH = REPO_ROOT / "backend" / "tests" / "validation" / "data" / "hmo_shape_cases.json"
+# The ten shapes and their cases as the spike measured them. Step 1.9 changed the live files
+# (profiles/shapes/, backend/tests/validation/data/shape_cases.json): LAE-SHACL-009 and -010
+# became Python rules and the shared declarations moved to common.ttl.
+SHAPES_PATH = Path(__file__).resolve().parent / "HumanMadeObject.s4.ttl"
+CASES_PATH = Path(__file__).resolve().parent / "hmo_shape_cases.s4.json"
 DEFAULT_OUT = Path("/tmp/lae-i9/s4-results.json")
 SH = Namespace("http://www.w3.org/ns/shacl#")
 LAE = Namespace("urn:lae:ns:")

@@ -1,0 +1,55 @@
+# SHACL shapes for Person records (linked.art/docs/model/actor/). Conventions, lae:code and the
+# SPARQL prefix declarations (laes:) are in common.ttl and profiles/shapes/README.md.
+
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix sh:   <http://www.w3.org/ns/shacl#> .
+@prefix crm:  <http://www.cidoc-crm.org/cidoc-crm/> .
+@prefix lae:  <urn:lae:ns:> .
+@prefix laes: <urn:lae:shape:> .
+
+# 15. "It is strongly RECOMMENDED that every entity ... have at least one specific name". A
+#     person that has nothing but a type and a label (a new draft) is not reported.
+laes:Person-name
+    a sh:NodeShape ;
+    lae:code "LAE-SHACL-015" ;
+    sh:targetClass crm:E21_Person ;
+    sh:severity sh:Warning ;
+    sh:sparql [
+        a sh:SPARQLConstraint ;
+        sh:message "A person should have at least one Name in identified_by."@en ;
+        sh:prefixes laes: ;
+        sh:select """
+            SELECT $this (crm:P1_is_identified_by AS ?path)
+            WHERE {
+                FILTER NOT EXISTS {
+                    $this crm:P1_is_identified_by ?name .
+                    ?name a crm:E33_E41_Linguistic_Appellation .
+                }
+                FILTER EXISTS {
+                    $this ?property ?value .
+                    FILTER (?property NOT IN (rdf:type, rdfs:label))
+                }
+            }
+            """ ;
+    ] .
+
+# 16. A person is born once: `born` is a single Birth.
+laes:Person-born
+    a sh:PropertyShape ;
+    lae:code "LAE-SHACL-016" ;
+    sh:targetClass crm:E21_Person ;
+    sh:path crm:P98i_was_born ;
+    sh:maxCount 1 ;
+    sh:class crm:E67_Birth ;
+    sh:message "born must be a single Birth."@en .
+
+# 17. A person dies once: `died` is a single Death.
+laes:Person-died
+    a sh:PropertyShape ;
+    lae:code "LAE-SHACL-017" ;
+    sh:targetClass crm:E21_Person ;
+    sh:path crm:P100i_died_in ;
+    sh:maxCount 1 ;
+    sh:class crm:E69_Death ;
+    sh:message "died must be a single Death."@en .

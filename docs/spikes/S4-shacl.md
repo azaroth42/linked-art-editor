@@ -329,12 +329,42 @@ Two more linked.art examples have no Name and are not reported: `object-nightwat
 reference rather than a description. A draft with nothing but a type and a label is likewise not
 warned about a missing Name until it gains another property.
 
+## Appendix C. Step 1.9 follow-up (Phase 1)
+
+Step 1.9 adopted the recommendations: pyshacl on a pyoxigraph store with the shapes loaded once
+and `advanced=False`; severities read from the results; `LAE-SHACL-009` and `-010` retired in
+favour of the Python rules `LAE-RULE-005` and `LAE-RULE-001`; a 50 ms budget that is logged; a
+process pool for batches. The shapes grew to 19 (`common.ttl`, `Person.ttl`, `Place.ttl`,
+`Type.ttl`; codes up to `LAE-SHACL-021`). The benchmark keeps the ten shapes it measured, as
+`scripts/spikes/s4_shacl/HumanMadeObject.s4.ttl` and `hmo_shape_cases.s4.json`.
+
+Two things differ from Appendix A. JSON Schema now runs first, so the 60 files in
+`tests/corpus/KNOWN_FAILURES.md` stop there and never reach SHACL. And a referenced entity is no
+longer a focus node, so only nodes of the record are reported.
+
+**Corpus result (244 files):** 60 fail JSON Schema, exactly the known failures. The other 184
+have **zero violations** from SHACL and the Python rules, and these warnings
+(`backend/tests/validation/test_engine.py` pins the counts):
+
+| Code | Results | Where |
+| :-- | --: | :-- |
+| `LAE-SHACL-001` | 46 | 45 object roots without a `Name`, and the embedded object at `members_exemplified_by/0` of `set-exhset-2.json` |
+| `LAE-SHACL-002` | 7 | Objects with Names, none classified as Primary Name |
+| `LAE-SHACL-014` | 1 | A `TimeSpan` without both outer bounds: `carried_out/0/timespan` of `yuag-agt-67740.json` |
+| `LAE-SHACL-015` | 18 | `Person` roots without a `Name` |
+| `LAE-SHACL-018` | 2 | `Place` roots without a `Name` |
+| `LAE-SHACL-020` | 3 | `Type` roots without a `Name` |
+
+No shape or rule had to be changed for the corpus. Whole-pipeline latency per record (schema,
+rules, expansion, SHACL, path mapping) over those 184 records on the same machine, one run with
+other agents sharing it: 2.7 ms p50, 11.2 ms p95, 23 ms max.
+
 ## Appendix B. Reproducing
 
 ```sh
 uv run --project backend python scripts/spikes/s4_shacl/bench.py \
     --iterations 50 --warmup 5 --out /tmp/lae-i9/s4-results.json
-cd backend && uv run pytest tests/rdf tests/validation/test_hmo_shapes.py -q
+cd backend && uv run pytest tests/rdf tests/validation -q
 ```
 
 The benchmark took 11 minutes on this machine. `--config NAME` (repeatable) limits it to some
@@ -346,7 +376,7 @@ configurations; `--scale` and `--scale-iterations` control the scale probe.
 | :-- | :-- |
 | `backend/src/lae/rdf/context.py` | `load_context(version)`, the offline `document_loader`, `UnpinnedContextError` |
 | `backend/tests/rdf/test_context.py` | The loader serves only pinned contexts and never opens a socket |
-| `profiles/shapes/HumanMadeObject.ttl` | The 10 shapes |
+| `profiles/shapes/HumanMadeObject.ttl` | The shapes (eight since Step 1.9; the ten the spike measured are `scripts/spikes/s4_shacl/HumanMadeObject.s4.ttl`) |
 | `profiles/shapes/README.md` | The `lae:` and `laes:` namespaces, `lae:code`, authoring rules, code table |
-| `backend/tests/validation/test_hmo_shapes.py`, `backend/tests/validation/data/hmo_shape_cases.json` | `lae:code` rules, one broken record per code on both stores, zero corpus violations, the two pinned pyshacl defects |
+| `backend/tests/validation/test_hmo_shapes.py`, `backend/tests/validation/data/hmo_shape_cases.json` (replaced in Step 1.9 by `test_shacl.py` and `data/shape_cases.json`; the spike's cases are `scripts/spikes/s4_shacl/hmo_shape_cases.s4.json`) | `lae:code` rules, one broken record per code on both stores, zero corpus violations, the two pinned pyshacl defects |
 | `scripts/spikes/s4_shacl/bench.py` | The benchmark |
