@@ -1,0 +1,15 @@
+<!-- Section numbers are preserved from the original design document (now in docs/old/design_doc.md). Guides cite these numbers as 'spec §N.N'. Do not renumber. -->
+
+## 5. Validation Engine (JSON-Schema & SHACL)
+
+Validation runs as a two-tier, dual-engine pipeline. JSON-Schema is the first-order gate (reusing the upstream Linked Art JSON Schema); SHACL shapes are authored and maintained by this project (Linked Art publishes none) and run only on documents that already pass JSON-Schema, within a per-record latency budget that keeps the Batch Staging Wizard and agent self-correction loops practical.
+
+1. **Structural Validation (JSON-Schema):** Runs in both browser (instant feedback via Ajv) and Python backend (canonical gatekeeper). Enforces Linked Art JSON-LD framing, required `@context`, valid field keys, and primitive datatypes.  
+2. **Semantic / Graph Validation (SHACL):** Runs in Python (e.g., `pyshacl` or compiled shape evaluators over the single-record graph plus referenced entity types). Validates ontology rules that JSON-Schema cannot easily express (e.g., `made_of` targets must be `Type` entities classified under AAT Materials; `begin_of_the_begin` must not exceed `end_of_the_end`).
+
+### Tiered Severity Levels
+
+* **Hard Errors (`sh:Violation`):** Structurally or ontologically invalid. Blocks publishing; highlighted inline on the offending widget.  
+* **Soft Warnings (`sh:Warning`):** Editorial quality or completeness gaps (e.g., missing preferred title, unlinked creator string, missing measurement unit). Surfaced in a validation drawer; publishable with acknowledgment.  
+* **Vocabulary-Driven Enforcement:** Contextual Value Set bindings from the Vocabulary Management Layer compile directly into SHACL/JSON-Schema validation rules with per-slot enforcement levels: `strict` (`sh:Violation`, blocking publish), `extensible` (`sh:Warning`, publishable with confirmation for valid `Type`s outside the list), or `advisory` (UI guidance only). Updating a Value Set in the Vocabulary Manager updates both form pickers and backend validation without hand-editing Turtle shape files. Note that JSON-Schema and SHACL validators emit structured diagnostic codes + typed parameters (`code`, `path`, `params`) for localized client rendering alongside language-tagged `sh:message` literals (`"..."@en`) for RDF and MCP consumers.  
+* **Cross-Record Data Quality & Temporal Sanity Sweeps:** Because single-record SHACL cannot catch multi-record graph contradictions, a scheduled QLever-backed **QA Sweep & Link-Rot Checker** detects cross-record anomalies—such as death before birth on a referenced `Person`, artwork production dated after its creator's death, circular `part_of` or `broader` hierarchies, and broken external IIIF/image URLs—populating structured worklists (`qa_findings`) that human catalogers or Tier 1 MCP agents can claim and repair. The QA sweeper also flags stale machine translations when a source node's current text hash diverges from `source_content_hash`.
