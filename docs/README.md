@@ -78,7 +78,8 @@ Detailed per-step checkboxes live at the bottom of each phase guide (Exit Checkl
 | `/Users/rs2668/Development/linked-art/linkedart-parser` | Natural-language-to-Linked-Art service: deterministic builder, extraction schemas, reconciliation pattern, local AAT CSV. |
 | `/Users/rs2668/Development/lux/data-pipeline` | LUX ingestion pipeline: source loaders, LMDB reconciliation indexes, identity resolution, merge rules. |
 | `/Users/rs2668/Development/lux/qlever-middletier` | LUX QLever middle tier: SPARQL client and builder, Qleverfile, vector SPARQL SERVICE sidecar, embedding code. |
-| `/Users/rs2668/Development/lux/qlever-dev` | QLever source (upstream master). The binary the project builds and pins. |
+| `/Users/rs2668/Development/lux/qlever-dev` | QLever source (upstream master), the reference for native builds; development uses Homebrew QLever 0.6.0. |
+| `/Users/rs2668/Development/lux/dataset/jsonl/` | Full LUX dataset export as gzipped JSONL (`export_full_*.jsonl.gz`), one merged Linked Art record per line. Read-only. Source for realistic scale tests (Steps 1.22 and 2.20) and corpus sampling. Check that files are complete (`gzip -t`) before reading. |
 | `/Users/rs2668/Development/llm/chai-engine` | LLM workflow engine: LiteLLM request handling, usage accounting, JSON repair, append-only correction rows. |
 
 Local tooling already installed on the development machine: Postgres.app (with `vector` and `pg_trgm`), Homebrew `qlever` and `qlever-control` 0.6.0. See Phase 0 Step 0.3 for the native setup.

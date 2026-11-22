@@ -385,7 +385,7 @@ The specification is rules R1–R19 of `docs/spikes/S3-projection.md` (ADR-0018)
 ## Step 1.22 — Scale and collaboration gate
 
 **Do:**
-1. `scripts/load/bootstrap_1m.sh`: runs the S6 generator and the three bootstrap commands; records timings into `docs/spikes/S6-bootstrap.md`.
+1. `scripts/load/bootstrap_1m.sh`: runs the three bootstrap commands over 1M records, taken from the real LUX dump at `/Users/rs2668/Development/lux/dataset/jsonl/*.jsonl.gz` when it is present and complete (sample a deterministic 1M subset across record types), otherwise from the S6 generator; records which source was used, and records timings into `docs/spikes/S6-bootstrap.md`.
 2. `scripts/load/publish_storm.py`: 20 concurrent publishes per second for 2 minutes against the running stack; record sync lag p95 from the worker `/metrics` and QLever delta count.
 3. `frontend/e2e/collab.spec.ts`: three browser contexts edit the same record (title, a material, a dimension) for 60 seconds with overlapping edits, then one publishes; assert the published JSON-LD contains all three edits and the corpus round-trip invariant holds for the result.
 4. Autocomplete latency: 200 random prefixes against the 1M load; record p95.
