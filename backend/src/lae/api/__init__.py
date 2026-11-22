@@ -12,4 +12,6 @@ from fastapi import APIRouter
 
 def routers() -> list[APIRouter]:
     """Return every HTTP API router, in registration order."""
-    return []
+    from lae.auth import oidc, tokens
+
+    return [oidc.router, tokens.router]

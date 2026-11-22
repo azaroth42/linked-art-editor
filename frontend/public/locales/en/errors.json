@@ -1,1 +1,12 @@
-{}
+{
+  "LAE-AUTH-001": "You do not have permission to do this. Missing permissions: {missing}.",
+  "LAE-AUTH-002": "Please sign in to continue.",
+  "LAE-AUTH-003": "The access token is invalid, expired, or revoked.",
+  "LAE-AUTH-004": "A token cannot have permissions you do not hold: {scopes}.",
+  "LAE-AUTH-005": "Access tokens can only be created while signed in, not with another token.",
+  "LAE-AUTH-006": "Sign-in is not configured on this server.",
+  "LAE-AUTH-007": "Sign-in failed ({error}). Please try again.",
+  "LAE-AUTH-008": "The sign-in service cannot be reached. Please try again later.",
+  "LAE-AUTH-009": "This account has been deactivated.",
+  "LAE-AUTH-010": "No such access token."
+}

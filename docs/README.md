@@ -54,6 +54,7 @@ Detailed per-step checkboxes live at the bottom of each phase guide (Exit Checkl
 | `glossary.md` | Terms. |
 | `conventions.md` | Engineering rules and the model-tier policy. |
 | `agent-workflow.md` | The exact procedure an implementing agent follows for one issue: isolation slots, local environment, PR and merge rules. |
+| `dev-setup.md` | Signing in during development: the `LAE_DEV_USER` bypass, OIDC login (native Keycloak or any IdP), granting roles, Personal Access Tokens. |
 | `reuse_map.md` | What to take from the adjacent repositories, file by file. |
 | `spikes/` | Created in Phase 0. One report per spike with GO / NO-GO. |
 | `questions.md` | Created on first use. Questions for humans, with the step number. |

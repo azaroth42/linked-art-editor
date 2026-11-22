@@ -88,6 +88,7 @@ Decisions made during the November 2026 design review are also written up as ADR
 | E9 | LLM access is through one adapter built on LiteLLM functions copied from chai-engine, with `litellm` pinned to an exact version; provider keys are envelope-encrypted (`AES-256-GCM` DEK wrapped by `LAE_MASTER_KEY`); `local_only` vs `allow_cloud` policy; optional per-user BYOK. | locked | spec §9; Phase 3 Step 3.12 |
 | E10 | Reconciliation is on demand only, via the new `lae-reconcile` process built on the LUX LMDB reconciler with network off, returning candidates with evidence. | locked | ADR-0014; Phase 3 Step 3.11 |
 | E11 | Data translation is additive only (`Name.content`, `LinguisticObject.content`), appends a sibling node with `AttributeAssignment` provenance and `source_content_hash`; Public Reader translations are ephemeral and never enter records or QLever. | locked | spec §6.7; Phase 4 Steps 4.10–4.11 |
+| E12 | Session is a signed `SessionMiddleware` cookie `lae_session` (`HttpOnly`, `SameSite=Lax`, `Secure` outside development, 12 h idle) reloaded against `users` on every request; migration `0002` seeds all seven roles (Vocabulary Admin = `manage_vocabularies`); new users get Viewer; PAT permissions = scopes ∩ current role permissions, tokens minted only from a session or the dev user; bearer token > dev user > session; 401/403 bodies `{code, path, params}` with `LAE-AUTH-NNN`. | fixed | ADR-0020; Phase 1 Step 1.7 |
 
 ## F. Tooling, naming, process
 

@@ -257,7 +257,8 @@ async def test_sync_state_holds_json(db_session: AsyncSession) -> None:
 async def test_users_roles_and_tokens(db_session: AsyncSession) -> None:
     user = User(subject="oidc|abc", display_name="Ada", email="ada@example.org")
     agent = User(display_name="tier1-sweeper", kind=UserKind.AGENT)
-    role = Role(name="Editor", permissions=["edit_draft", "publish"])
+    # Not a seeded role name (migration 0002 seeds Viewer, Collaborator, Editor, ...).
+    role = Role(name="Test Editor", permissions=["edit_draft", "publish"])
     db_session.add_all([user, agent, role])
     await db_session.flush()
     assert user.id.version == 7
@@ -281,7 +282,7 @@ async def test_users_roles_and_tokens(db_session: AsyncSession) -> None:
             .where(UserRole.user_id == user.id)
         )
     ).all()
-    assert role_names == ["Editor"]
+    assert role_names == ["Test Editor"]
     loaded_token = await db_session.scalar(select(ApiToken).where(ApiToken.token_hash == "0" * 64))
     assert loaded_token is not None
     assert loaded_token.scopes == ["edit_draft"]
