@@ -60,3 +60,4 @@ the step's follow-up issue.
    Value Set, so under a strict Gender binding every Occupation would be a violation. A rule that
    accepts a value claimed by any Value Set bound at that path, and leaves unclaimed values to the
    Other Classifications bucket (decision C5), would match the spec.
+   **Resolved (orchestrator, 2026-11-22):** the spec is authoritative here and the Phase 2 guide was wrong. Step 2.1 now makes bindings unique on `(entity_class, property_path, vocabulary_id)`, and Step 2.2 checks a value only against the bindings that claim it (by membership or metatype), leaving unclaimed values to Other Classifications. Register entry C4 updated. The owner may override.
