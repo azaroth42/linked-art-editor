@@ -58,6 +58,15 @@ class Settings(BaseSettings):
     crdt_ws_url: str = "http://crdt-ws:8001"
     """Base URL at which ``api`` reaches the ``crdt-ws`` process (internal RPC, Step 1.8)."""
 
+    crdt_ws_host: str = "127.0.0.1"
+    """Interface ``lae crdt-ws`` binds to (WebSocket and internal RPC share the listener)."""
+
+    crdt_ws_port: int = 8001
+    """Port ``lae crdt-ws`` listens on."""
+
+    crdt_room_idle_seconds: int = 600
+    """Seconds without a connection or a write after which a room leaves memory (decision B5)."""
+
     internal_token: SecretStr | None = None
     """Shared secret for ``/internal/`` endpoints, sent as ``X-Internal-Token`` (conventions §2)."""
 

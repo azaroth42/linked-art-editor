@@ -200,6 +200,12 @@ The unit templates in `systemd/` assume this layout; adjust paths and the user i
    LAE_BASE_URI=https://<your host>/id/
    # Required in production: signs the session cookie (shared by api and crdt-ws).
    LAE_SESSION_SECRET=<output of: openssl rand -hex 32>
+   # Required in production: shared secret of the internal RPC between api and crdt-ws.
+   LAE_INTERNAL_TOKEN=<output of: openssl rand -hex 32>
+   # Where crdt-ws listens, and where api reaches it. Proxy /ws/ to it; never expose /internal/.
+   LAE_CRDT_WS_HOST=127.0.0.1
+   LAE_CRDT_WS_PORT=8001
+   LAE_CRDT_WS_URL=http://127.0.0.1:8001
    # Sign-in (docs/dev-setup.md §2); redirect URI https://<your host>/auth/callback.
    LAE_OIDC_ISSUER=https://<your IdP>/realms/<realm>
    LAE_OIDC_CLIENT_ID=<client id>

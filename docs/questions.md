@@ -491,3 +491,37 @@ Implemented as decided above (items 3 and 4). Points for a human:
    fix every `made_of` and every `Name` `language` pointing at AAT was a violation as soon as
    the AAT labels were loaded. Phase 2 Value Sets are the real check of which concept may be
    used where.
+
+## Step 1.8
+
+1. **`records.draft_epoch` now also increments when a draft is discarded (ADR-0025).** Decision
+   B6 says "on every publish". Without the extra increment, a draft opened after a discard, a
+   reaped draft or a revert would be a second hydration at the same epoch, and a browser tab
+   that still held the old document would be merged into it. Please confirm the reading of B6;
+   Steps 1.10, 1.14 and 1.15 must delete drafts only through `CrdtWsClient.close(discard=True)`
+   or `lae.crdt.store.delete_draft`.
+2. **Compaction does not write plain `Doc.get_update()` when an update is pending (ADR-0025).**
+   `pycrdt` 0.14.13 leaves out updates whose dependencies have not arrived. The room merges
+   those into the compacted state. No decision needed unless the pinned pair changes.
+3. **`transact` and `revert` raise `NotImplementedError`,** as the guide says. They were not
+   implemented early because a transaction on the live document is broadcast before it can be
+   persisted (B5), and an undo stack that only lives in memory needs a decision about eviction
+   and restarts. Phase 3 Step 3.6 owns both; the route is in the docstring of
+   `InMemoryRoomManager.revert`.
+4. **No `Origin` check on the WebSocket.** A session cookie is `SameSite=Lax`, which keeps other
+   sites from opening an authenticated socket, but not another origin of the same site. An
+   allowlist needs a setting (the public origin of the editor), which no step defines yet.
+   Should Step 1.16/1.17 or Phase 4 add `LAE_PUBLIC_ORIGIN` and enforce it here?
+5. **Not verified: a browser.** The guide's Verify says to connect the S2 browser page. The
+   check was made with the same libraries (Yjs 13.6.33, `y-websocket` 3.1.0) in Node 26
+   (`scripts/crdt/y_websocket_check.mjs`, run by `tests/crdt/test_y_websocket.py`), not in
+   Chromium, and that test is skipped in the CI `backend` job, which has no Node modules.
+   Step 1.17's Playwright test will be the first run in a real browser.
+6. **Observed, cause not established: a detached `lae crdt-ws` hangs on its first database
+   connection on the development machine.** Started as `( lae crdt-ws > log 2>&1 & )`, the
+   process accepted WebSockets and then never opened a PostgreSQL session (`pg_stat_activity`
+   showed none; three runs out of three). Started as a direct child of the shell or of pytest
+   it connected at once (every other run, including the crash test's subprocess). The likely
+   cause is Postgres.app's per-application client permission, which cannot attribute an
+   orphaned process, but that was not confirmed. Nothing in the server depends on how it is
+   launched; noted so the next agent does not lose time on it.

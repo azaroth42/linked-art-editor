@@ -388,12 +388,14 @@ async def serve_app(
     idp: FakeOIDCProvider | None = None,
     *,
     github: FakeGitHub | None = None,
+    http_transport: httpx.AsyncBaseTransport | None = None,
     **overrides: Any,
 ) -> AsyncIterator[Served]:
     """Run ``create_app`` (plus ``protected_router``) with its lifespan; yield app and client.
 
     Outgoing requests to GitHub go to ``github`` (a fresh ``FakeGitHub`` if omitted), every
-    other one to ``idp``.
+    other one to ``idp``. ``http_transport`` replaces both as the application's outgoing
+    network (the records tests route ``crdt-ws`` calls through it).
     """
     provider = idp or FakeOIDCProvider()
     fake_github = github or FakeGitHub()
@@ -404,7 +406,8 @@ async def serve_app(
         return provider.handle(request)
 
     app = create_app(
-        make_settings(database_url, **overrides), http_transport=httpx.MockTransport(handle)
+        make_settings(database_url, **overrides),
+        http_transport=http_transport or httpx.MockTransport(handle),
     )
     app.include_router(protected_router)
     async with app.router.lifespan_context(app):

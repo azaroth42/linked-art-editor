@@ -16,18 +16,30 @@ from datetime import UTC, datetime
 from typing import Any
 from uuid import UUID
 
+import httpx
 import orjson
 import pytest
+from fastapi import FastAPI
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 from uuid_utils.compat import uuid7
 
 from lae.api.records import record_etag
 from lae.corpus import CORPUS_DIR, load_record
+from lae.crdt.rooms import InMemoryRoomManager
+from lae.crdt.server import create_crdt_app
 from lae.db.models import CrdtDraft, EntityLabel, Record, RecordRevision, RecordStatus
 from lae.ids import NODE_PATH, record_id_from_uri, record_uri
 from lae.projection import assign_node_iris
 from lae.rdf.canonical import compress
-from tests.auth.conftest import Served, bearer, create_token, create_user, serve_app
+from tests.auth.conftest import (
+    FakeOIDCProvider,
+    Served,
+    bearer,
+    create_token,
+    create_user,
+    make_settings,
+    serve_app,
+)
 
 BASE_URI = "https://data.test/id/"
 """``Settings.base_uri`` of the application under test."""
@@ -41,10 +53,59 @@ ENGLISH = {"id": f"{AAT}300388277", "type": "Language", "_label": "English"}
 FRENCH = {"id": f"{AAT}300388306", "type": "Language", "_label": "French"}
 
 
+INTERNAL_TOKEN = "api-test-internal-token"
+CRDT_WS_URL = "http://crdt-ws.test:8001"
+
+
+class Network(httpx.AsyncBaseTransport):
+    """Outgoing network of the API: ``crdt-ws`` in-process, everything else the fake IdP.
+
+    ``crdt_down = True`` makes ``crdt-ws`` unreachable.
+    """
+
+    def __init__(self, crdt_app: FastAPI) -> None:
+        self.crdt_app = crdt_app
+        self.crdt = httpx.ASGITransport(app=crdt_app)
+        self.other = httpx.MockTransport(FakeOIDCProvider().handle)
+        self.crdt_down = False
+
+    @property
+    def rooms(self) -> InMemoryRoomManager:
+        """The room manager of the in-process ``crdt-ws``."""
+        manager: InMemoryRoomManager = self.crdt_app.state.rooms
+        return manager
+
+    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+        if request.url.host != httpx.URL(CRDT_WS_URL).host:
+            return await self.other.handle_async_request(request)
+        if self.crdt_down:
+            raise httpx.ConnectError("crdt-ws unreachable", request=request)
+        return await self.crdt.handle_async_request(request)
+
+
 @pytest.fixture
-async def served(db_url: str) -> AsyncIterator[Served]:
-    """The application (no dev user, OIDC against the fake provider) and a client for it."""
-    async with serve_app(db_url, base_uri=BASE_URI) as running:
+async def network(db_url: str) -> AsyncIterator[Network]:
+    """A running ``crdt-ws`` application (real rooms, same database) behind ``Network``."""
+    crdt_app = create_crdt_app(
+        make_settings(db_url, base_uri=BASE_URI, internal_token=INTERNAL_TOKEN)
+    )
+    async with crdt_app.router.lifespan_context(crdt_app):
+        yield Network(crdt_app)
+
+
+@pytest.fixture
+async def served(db_url: str, network: Network) -> AsyncIterator[Served]:
+    """The application (no dev user, OIDC against the fake provider) and a client for it.
+
+    Its calls to ``crdt-ws`` reach a real room manager in this process (``network``).
+    """
+    async with serve_app(
+        db_url,
+        http_transport=network,
+        base_uri=BASE_URI,
+        internal_token=INTERNAL_TOKEN,
+        crdt_ws_url=CRDT_WS_URL,
+    ) as running:
         yield running
 
 
