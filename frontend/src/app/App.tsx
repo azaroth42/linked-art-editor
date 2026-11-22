@@ -1,11 +1,26 @@
-import { useTranslation } from "react-i18next";
+import { type QueryClient, QueryClientProvider } from "@tanstack/react-query";
+import { RouterProvider } from "react-router";
 
-/** Placeholder route for `/`: renders one translated string. Step 1.16 adds the router and shell. */
-export function App() {
-  const { t } = useTranslation();
+import { AuthProvider } from "./AuthProvider.tsx";
+
+/** A router created from `routes` (`createBrowserRouter`, or `createMemoryRouter` in tests). */
+type Router = Parameters<typeof RouterProvider>[0]["router"];
+
+interface AppProps {
+  router: Router;
+  queryClient: QueryClient;
+}
+
+/**
+ * The SPA: data fetching (TanStack Query), the signed-in user, and the routes. Render it under an
+ * `I18nextProvider` and a `Suspense` boundary (`main.tsx`).
+ */
+export function App({ router, queryClient }: AppProps) {
   return (
-    <main data-testid="app-root">
-      <h1>{t("app.title")}</h1>
-    </main>
+    <QueryClientProvider client={queryClient}>
+      <AuthProvider>
+        <RouterProvider router={router} />
+      </AuthProvider>
+    </QueryClientProvider>
   );
 }

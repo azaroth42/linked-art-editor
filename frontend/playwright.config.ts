@@ -1,10 +1,19 @@
 import { defineConfig, devices } from "@playwright/test";
 
-// Phase 0 serves the production build (`pnpm build` first) with `vite preview`. Phase 1 switches
-// the web server to the FastAPI app, which serves the same build. Override the port with
-// LAE_E2E_PORT (agents use their slot's API port, docs/agent-workflow.md §3).
+import { E2E_DEV_USER } from "./e2e/devUser.ts";
+
+// The e2e suite runs the production build (`pnpm build` first) in `vite preview` against a real
+// `lae api` process, which Playwright starts with the development login bypass (LAE_DEV_USER) and
+// LAE_ENV=test. The preview server proxies the API paths to it (vite.config.ts), so the browser
+// sees one origin as in production.
+//
+// The API needs a migrated database: set LAE_DATABASE_URL (`uv run lae migrate` first). Ports:
+// LAE_E2E_PORT for the preview server (default 4173) and LAE_E2E_API_PORT for the API (default
+// 8000); agents use their slot's ports (docs/agent-workflow.md §3).
 const port = Number(process.env.LAE_E2E_PORT ?? "4173");
+const apiPort = Number(process.env.LAE_E2E_API_PORT ?? "8000");
 const baseURL = `http://127.0.0.1:${String(port)}`;
+const apiURL = `http://127.0.0.1:${String(apiPort)}`;
 const ci = Boolean(process.env.CI);
 
 export default defineConfig({
@@ -18,10 +27,26 @@ export default defineConfig({
     trace: "retain-on-failure",
   },
   projects: [{ name: "chromium", use: { ...devices["Desktop Chrome"] } }],
-  webServer: {
-    command: `corepack pnpm preview --host 127.0.0.1 --port ${String(port)} --strictPort`,
-    url: baseURL,
-    reuseExistingServer: !ci,
-    timeout: 30_000,
-  },
+  webServer: [
+    {
+      command: "uv run --project ../backend --locked lae api",
+      env: {
+        LAE_ENV: "test",
+        LAE_DEV_USER: `${E2E_DEV_USER.email}:${E2E_DEV_USER.role}`,
+        LAE_API_HOST: "127.0.0.1",
+        LAE_API_PORT: String(apiPort),
+      },
+      url: `${apiURL}/health/live`,
+      reuseExistingServer: !ci,
+      stdout: "pipe",
+      timeout: 60_000,
+    },
+    {
+      command: `corepack pnpm preview --host 127.0.0.1 --port ${String(port)} --strictPort`,
+      env: { VITE_API_TARGET: apiURL },
+      url: baseURL,
+      reuseExistingServer: !ci,
+      timeout: 30_000,
+    },
+  ],
 });

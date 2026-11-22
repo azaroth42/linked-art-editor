@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 from typing import Any
 
@@ -26,6 +27,7 @@ from tests.auth.conftest import (
 )
 
 ERRORS_JSON = Path(__file__).resolve().parents[3] / "frontend/public/locales/en/errors.json"
+FRONTEND_PERMISSIONS = Path(__file__).resolve().parents[3] / "frontend/src/app/permissions.ts"
 
 SPEC_PERMISSIONS = [
     "edit_draft",
@@ -49,6 +51,13 @@ SPEC_PERMISSIONS = [
 
 def test_permission_names_are_exactly_those_of_spec_8_2() -> None:
     assert list(ALL_PERMISSIONS) == SPEC_PERMISSIONS
+
+
+def test_frontend_lists_the_same_permission_names() -> None:
+    source = FRONTEND_PERMISSIONS.read_text(encoding="utf-8")
+    match = re.search(r"export const PERMISSIONS = \[(.*?)\] as const;", source, re.DOTALL)
+    assert match is not None, f"no PERMISSIONS array in {FRONTEND_PERMISSIONS}"
+    assert re.findall(r'"([a-z_]+)"', match.group(1)) == list(ALL_PERMISSIONS)
 
 
 def test_roles_are_those_of_spec_10_4_with_the_specified_permissions() -> None:

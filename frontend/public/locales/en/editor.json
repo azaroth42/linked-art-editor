@@ -1,1 +1,12 @@
-{}
+{
+  "page": {
+    "title": "Edit record",
+    "record_id": "Record {id}",
+    "history_link": "Revision history"
+  },
+  "history": {
+    "title": "Revision history",
+    "record_id": "Record {id}",
+    "editor_link": "Back to the editor"
+  }
+}

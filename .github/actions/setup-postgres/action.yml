@@ -1,0 +1,41 @@
+# Native PostgreSQL 16 + pgvector for a CI job (no Docker, ADR-0017). Used by the `backend` and
+# `e2e` jobs of ci.yml; run it after actions/checkout (it applies the checked-out
+# deploy/postgres/init.sql).
+name: Set up PostgreSQL
+description: Install PostgreSQL 16 with pgvector, start it, and create one database owned by lae/lae.
+
+inputs:
+  database:
+    description: Name of the database to create (role `lae`, password `lae`, on localhost:5432).
+    required: true
+
+runs:
+  using: composite
+  steps:
+    # The runner image ships PostgreSQL 16 (service disabled) from PGDG; pgvector comes from
+    # the same repository so halfvec/HNSW (Phase 3) are available.
+    - name: Install PostgreSQL 16 and pgvector
+      shell: bash
+      run: |
+        sudo install -d /usr/share/postgresql-common/pgdg
+        sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
+          https://www.postgresql.org/media/keys/ACCC4CF8.asc
+        echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
+          | sudo tee /etc/apt/sources.list.d/pgdg.list > /dev/null
+        sudo apt-get update -qq
+        sudo apt-get install -y -qq --no-install-recommends postgresql-16 postgresql-16-pgvector
+
+    - name: Start PostgreSQL and create the database
+      shell: bash
+      env:
+        LAE_CI_DATABASE: ${{ inputs.database }}
+      run: |
+        sudo pg_ctlcluster 16 main start
+        for _ in $(seq 1 30); do pg_isready -h localhost -p 5432 && break; sleep 1; done
+        sudo -u postgres psql -v ON_ERROR_STOP=1 \
+          -c "CREATE ROLE lae LOGIN SUPERUSER PASSWORD 'lae'" \
+          -c "CREATE DATABASE \"$LAE_CI_DATABASE\" OWNER lae"
+        PGPASSWORD=lae psql -v ON_ERROR_STOP=1 -h localhost -U lae -d "$LAE_CI_DATABASE" \
+          -f "$GITHUB_WORKSPACE/deploy/postgres/init.sql"
+        PGPASSWORD=lae psql -h localhost -U lae -d "$LAE_CI_DATABASE" -Atc \
+          "SELECT extname || ' ' || extversion FROM pg_extension ORDER BY 1"

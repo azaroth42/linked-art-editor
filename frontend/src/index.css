@@ -1,0 +1,12 @@
+@import "tailwindcss";
+
+/*
+ * Base styles: only logical properties (conventions §5), and a visible, high-contrast focus
+ * indicator on every focusable element (WCAG 2.4.7, 2.4.13).
+ */
+@layer base {
+  :focus-visible {
+    outline: 3px solid var(--color-blue-700);
+    outline-offset: 2px;
+  }
+}

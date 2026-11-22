@@ -7,6 +7,9 @@ structured ``{code, path, params}`` body. Its lifespan owns the two process-wide
 kept on ``app.state``: the SQLAlchemy async engine (with its session factory, see
 ``lae.db.session.get_session``) and one ``httpx.AsyncClient`` for outgoing calls (QLever,
 ``crdt-ws``).
+
+``openapi_document`` builds the same OpenAPI document as ``GET /openapi.json`` without serving
+the application; ``scripts/export_openapi.py`` writes it for the frontend's generated API types.
 """
 
 from __future__ import annotations
@@ -18,7 +21,7 @@ from typing import Annotated, Any, Literal
 
 import httpx
 from fastapi import APIRouter, Depends, FastAPI, Request, Response, status
-from pydantic import BaseModel
+from pydantic import BaseModel, SecretStr
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
 
@@ -169,3 +172,13 @@ def create_app(
     for router in api.routers():
         app.include_router(router)
     return app
+
+
+def openapi_document() -> dict[str, Any]:
+    """Return the ``api`` application's OpenAPI document without serving it or reading ``LAE_*``.
+
+    The routes do not depend on the settings, so the defaults are used; the environment is
+    ignored so the document is the same on every machine.
+    """
+    settings = Settings.model_construct(session_secret=SecretStr("openapi-export"))
+    return create_app(settings).openapi()
