@@ -1,4 +1,11 @@
-/** Application shell placeholder. Step 0.2 adds i18n and the first translated route. */
+import { useTranslation } from "react-i18next";
+
+/** Placeholder route for `/`: renders one translated string. Step 1.16 adds the router and shell. */
 export function App() {
-  return <main data-testid="app-root" />;
+  const { t } = useTranslation();
+  return (
+    <main data-testid="app-root">
+      <h1>{t("app.title")}</h1>
+    </main>
+  );
 }

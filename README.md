@@ -75,3 +75,17 @@ The equivalent direct commands:
 cd backend && uv run ruff check . && uv run ruff format --check . && uv run mypy src && uv run pytest -q
 cd frontend && corepack pnpm lint && corepack pnpm typecheck && corepack pnpm test
 ```
+
+Database tests use only `LAE_TEST_DATABASE_URL` (for example
+`postgresql+asyncpg://localhost:5432/lae_test`, a database with the extensions from
+`deploy/postgres/init.sql`); they are skipped when it is unset.
+
+End-to-end tests (Playwright + axe) run against the production build:
+
+```sh
+cd frontend && corepack pnpm exec playwright install chromium   # once
+cd frontend && corepack pnpm build && corepack pnpm test:e2e
+```
+
+CI (`.github/workflows/ci.yml`) runs the `backend`, `frontend`, `e2e`, and `config` jobs on every
+pull request; all four must be green before merging.

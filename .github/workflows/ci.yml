@@ -1,0 +1,201 @@
+# Every PR must be green on all four jobs before it merges (docs/agent-workflow.md §6).
+# No Docker: services (PostgreSQL, later QLever) are installed natively on the runner.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+env:
+  COREPACK_ENABLE_DOWNLOAD_PROMPT: "0"
+  FORCE_COLOR: "1"
+
+jobs:
+  backend:
+    name: backend
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    env:
+      LAE_TEST_DATABASE_URL: postgresql+asyncpg://lae:lae@localhost:5432/lae_test
+    steps:
+      - uses: actions/checkout@v7
+
+      # The runner image ships PostgreSQL 16 (service disabled) from PGDG; pgvector comes from
+      # the same repository so halfvec/HNSW (Phase 3) are available.
+      - name: Install PostgreSQL 16 and pgvector
+        run: |
+          sudo install -d /usr/share/postgresql-common/pgdg
+          sudo curl -fsSL -o /usr/share/postgresql-common/pgdg/apt.postgresql.org.asc \
+            https://www.postgresql.org/media/keys/ACCC4CF8.asc
+          echo "deb [signed-by=/usr/share/postgresql-common/pgdg/apt.postgresql.org.asc] https://apt.postgresql.org/pub/repos/apt $(lsb_release -cs)-pgdg main" \
+            | sudo tee /etc/apt/sources.list.d/pgdg.list > /dev/null
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends postgresql-16 postgresql-16-pgvector
+
+      - name: Start PostgreSQL and create the test database
+        run: |
+          sudo pg_ctlcluster 16 main start
+          for _ in $(seq 1 30); do pg_isready -h localhost -p 5432 && break; sleep 1; done
+          sudo -u postgres psql -v ON_ERROR_STOP=1 \
+            -c "CREATE ROLE lae LOGIN SUPERUSER PASSWORD 'lae'" \
+            -c "CREATE DATABASE lae_test OWNER lae"
+          PGPASSWORD=lae psql -v ON_ERROR_STOP=1 -h localhost -U lae -d lae_test \
+            -f deploy/postgres/init.sql
+          PGPASSWORD=lae psql -h localhost -U lae -d lae_test -Atc \
+            "SELECT extname || ' ' || extversion FROM pg_extension ORDER BY 1"
+
+      # Phase 1 integration tests: install QLever natively here (no Docker), build a small
+      # index, start the server with --persist-updates on localhost:7010, and export
+      # LAE_QLEVER_URL / LAE_QLEVER_UPDATE_URL for pytest.
+
+      - uses: astral-sh/setup-uv@v10.4.0
+        with:
+          version: "0.11.19"
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+          cache-python: true
+
+      - name: uv sync
+        working-directory: backend
+        run: uv sync --locked
+
+      - name: ruff check
+        working-directory: backend
+        run: uv run --locked ruff check --output-format=github .
+
+      - name: ruff format --check
+        working-directory: backend
+        run: uv run --locked ruff format --check .
+
+      - name: mypy
+        working-directory: backend
+        run: uv run --locked mypy src
+
+      - name: pytest
+        working-directory: backend
+        run: uv run --locked pytest -q -rs
+
+  frontend:
+    name: frontend
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - name: Locate the pnpm store
+        run: echo "PNPM_STORE=$(corepack pnpm store path --silent)" >> "$GITHUB_ENV"
+
+      - uses: actions/cache@v6
+        with:
+          path: ${{ env.PNPM_STORE }}
+          key: pnpm-${{ runner.os }}-${{ hashFiles('frontend/pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-
+
+      - name: pnpm install
+        run: corepack pnpm install --frozen-lockfile
+
+      - name: lint (eslint, i18next/no-literal-string, logical CSS)
+        run: corepack pnpm lint
+
+      - name: typecheck
+        run: corepack pnpm typecheck
+
+      - name: prettier
+        run: corepack pnpm format:check
+
+      - name: vitest
+        run: corepack pnpm test
+
+  e2e:
+    name: e2e
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 24
+          package-manager-cache: false
+
+      - name: Locate the pnpm store
+        run: echo "PNPM_STORE=$(corepack pnpm store path --silent)" >> "$GITHUB_ENV"
+
+      - uses: actions/cache@v6
+        with:
+          path: ${{ env.PNPM_STORE }}
+          key: pnpm-${{ runner.os }}-${{ hashFiles('frontend/pnpm-lock.yaml') }}
+          restore-keys: pnpm-${{ runner.os }}-
+
+      - name: pnpm install
+        run: corepack pnpm install --frozen-lockfile
+
+      - name: Read the Playwright version
+        run: echo "PLAYWRIGHT_VERSION=$(corepack pnpm exec playwright --version | awk '{print $2}')" >> "$GITHUB_ENV"
+
+      - name: Cache Playwright Chromium
+        id: playwright-cache
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ env.PLAYWRIGHT_VERSION }}-chromium
+
+      - name: Install Playwright Chromium
+        if: steps.playwright-cache.outputs.cache-hit != 'true'
+        run: corepack pnpm exec playwright install --with-deps --only-shell chromium
+
+      - name: Install Playwright system dependencies
+        if: steps.playwright-cache.outputs.cache-hit == 'true'
+        run: corepack pnpm exec playwright install-deps chromium
+
+      - name: build
+        run: corepack pnpm build
+
+      # Phase 0 serves the build with `vite preview`; Phase 1 switches to the FastAPI app.
+      - name: Playwright + axe
+        run: corepack pnpm test:e2e
+
+      - name: Upload the Playwright report
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: playwright-report
+          path: frontend/playwright-report
+          retention-days: 7
+
+  config:
+    name: config
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: astral-sh/setup-uv@v10.4.0
+        with:
+          version: "0.11.19"
+          enable-cache: true
+          cache-dependency-glob: backend/uv.lock
+          cache-python: true
+
+      - name: Validate profiles/ against their JSON schemas
+        run: uv run --locked --project backend python scripts/validate_profiles.py
