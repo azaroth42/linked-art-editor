@@ -57,6 +57,16 @@ cd frontend && corepack pnpm lint && corepack pnpm typecheck && corepack pnpm te
 5. **Non-critical steps:** when CI is green and the branch is up to date with main, merge with `gh pr merge <PR> --squash --delete-branch`. If the merge fails because main moved, rebase, re-check, push, wait for CI, and merge.
 6. **Critical steps** (issue labelled `critical-model`): do **not** merge. Leave the PR open and report. A separate reviewer agent on a larger model reviews, fixes, and merges.
 
+## 6a. Resolving rebase conflicts
+
+Parallel agents touch the same shared files. Resolve conflicts this way, never by discarding another agent's work:
+
+- `backend/uv.lock`: take main's version (`git checkout --theirs` during a rebase means *your* commit, so check carefully), merge the dependency lines in `pyproject.toml` by hand, then run `uv lock` to regenerate.
+- `frontend/pnpm-lock.yaml`: same approach: merge `package.json` by hand, take main's lockfile, run `corepack pnpm install` to regenerate.
+- Registries that list things (CLI sub-commands, FastAPI router registration, frontend routes, i18n namespaces, CI jobs, Makefile targets, compose services): keep both sides' entries.
+- Alembic: see §4 (single head, your migration on top).
+- After resolving, re-run every check from §5 before pushing.
+
 ## 7. Final report (your last message)
 
 Under 200 words: PR number and URL, merged or awaiting review, Verify results with key numbers, deviations from the guide, `docs/questions.md` entries, and anything the next step must know.
