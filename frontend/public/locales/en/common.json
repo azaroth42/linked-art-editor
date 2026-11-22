@@ -1,5 +1,34 @@
 {
   "app": {
-    "title": "Linked Art Editor"
+    "title": "Linked Art Editor",
+    "page_title": "{page} – Linked Art Editor",
+    "skip_to_main": "Skip to main content"
+  },
+  "action": {
+    "retry": "Try again"
+  },
+  "auth": {
+    "signed_in_as": "Signed in as {name} ({roles})",
+    "sign_in": "Sign in",
+    "sign_out": "Sign out"
+  },
+  "error": {
+    "unavailable": "The server cannot be reached right now."
+  },
+  "home": {
+    "intro": "Catalog, edit, and publish Linked Art records together."
+  },
+  "login": {
+    "title": "Sign in",
+    "intro": "Sign in with your organization’s account to edit and publish records.",
+    "action": "Continue to sign-in"
+  },
+  "not_found": {
+    "title": "Page not found",
+    "body": "There is no page at {path}.",
+    "home": "Go to the home page"
+  },
+  "status": {
+    "loading": "Loading…"
   }
 }

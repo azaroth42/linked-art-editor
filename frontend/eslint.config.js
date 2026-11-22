@@ -17,7 +17,8 @@ export default tseslint.config(
   },
   {
     // No user-facing literal strings in components (conventions §5): JSX text, string children,
-    // and string attributes are errors unless the attribute is in the allow-list below.
+    // and string attributes are errors unless the attribute is in the allow-list below. `to`
+    // (router paths) and `permission` (RequirePermission, spec §8.2 names) are identifiers.
     files: ["**/*.tsx"],
     plugins: { i18next },
     rules: {
@@ -25,7 +26,9 @@ export default tseslint.config(
         "error",
         {
           mode: "jsx-only",
-          "jsx-attributes": { exclude: ["data-testid", "className", "href", "src", "type"] },
+          "jsx-attributes": {
+            exclude: ["data-testid", "className", "href", "src", "type", "to", "permission"],
+          },
         },
       ],
       // Gaps in the plugin: it treats `<a>` as an SVG tag and skips all its attributes, and it

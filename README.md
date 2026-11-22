@@ -64,6 +64,13 @@ cd backend && uv run lae --help        # process sub-commands: api, crdt-ws, syn
 cd frontend && corepack pnpm dev       # Vite dev server
 ```
 
+The Vite dev server (and `corepack pnpm preview`) proxies `/api`, `/auth`, `/health`, `/id`, and
+`/ws` to the API at `VITE_API_TARGET` (default `http://localhost:8000`), so the SPA and the API
+share one origin and the session cookie. The SPA's API types, `frontend/src/api/schema.d.ts`, are
+generated from the backend's OpenAPI document without a running server; after changing an
+endpoint, run `cd frontend && corepack pnpm api:generate` and commit the result (CI's
+`api:check` fails while it is stale).
+
 ## Run tests
 
 ```sh
@@ -85,11 +92,17 @@ session drops and recreates that database (its name must end in `_test`), applie
 `deploy/postgres/init.sql` and the migrations, and drops it at the end. The tests are skipped when
 the variable is unset (under CI they fail).
 
-End-to-end tests (Playwright + axe) run against the production build:
+End-to-end tests (Playwright + axe) run the production build in `vite preview` against a real
+`lae api`, which Playwright starts with `LAE_DEV_USER=e2e-editor@example.org:Editor` and
+`LAE_ENV=test` on a migrated database named by `LAE_DATABASE_URL`. `LAE_E2E_PORT` (default 4173)
+and `LAE_E2E_API_PORT` (default 8000) choose the ports; outside CI a server already listening on
+one of them is reused, so an API there must run with that dev user:
 
 ```sh
 cd frontend && corepack pnpm exec playwright install chromium   # once
-cd frontend && corepack pnpm build && corepack pnpm test:e2e
+(cd backend && LAE_DATABASE_URL=postgresql+asyncpg://localhost:5432/lae uv run lae migrate)
+cd frontend && corepack pnpm build && \
+  LAE_DATABASE_URL=postgresql+asyncpg://localhost:5432/lae corepack pnpm test:e2e
 ```
 
 CI (`.github/workflows/ci.yml`) runs the `backend`, `frontend`, `e2e`, and `config` jobs on every

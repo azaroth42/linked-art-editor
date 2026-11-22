@@ -72,6 +72,7 @@ Decisions made during the November 2026 design review are also written up as ADR
 | D8 | Public Reader is server-rendered (Jinja2) at `/id/{uuid}`; the React editor loads only on Edit. | locked | spec §6.6, §12; Phase 1 Step 1.21 |
 | D9 | WCAG 2.2 AA throughout; axe + Playwright on every route; `aria-live` only for the listed events; targets ≥ 24×24 px. | locked | spec §6.9 |
 | D10 | i18n: `react-i18next` + `i18next-icu`, namespaces `common`, `editor`, `reader`, `graph`, `vocab_admin`, `errors`, `admin`; `no-literal-string` lint as error; pseudo-locale in dev; ship `en` only at first. | locked | spec §6.7; Phase 0 Step 0.2 |
+| D11 | SPA routing is `react-router` (data router, one `routes` table in `src/app/routes.tsx`); the API client is `openapi-fetch` over `src/api/schema.d.ts`, generated offline from `lae.app.openapi_document()` (`corepack pnpm api:generate`) and checked for staleness in CI (`api:check`); non-2xx responses throw `ApiError` with the backend's `{code, path, params}`. | fixed | ADR-0022; Phase 1 Step 1.16 |
 
 ## E. Security, agents, LLMs
 
