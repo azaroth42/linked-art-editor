@@ -17,7 +17,7 @@ Every implementing agent follows this procedure for exactly one GitHub issue (on
 | QLever | Homebrew 0.6.0: `qlever-index`, `qlever-server` (the IndexBuilderMain/ServerMain binaries) and `qlever` (qlever-control). Source for reference: `/Users/rs2668/Development/lux/qlever-dev`. |
 | Python | `uv` 0.11; use Python 3.12 via `uv python install 3.12` (the repo pins it). System `python3` is 3.14; do not use it for the project venv. |
 | Node | Node 26, npm 11. Use pnpm through Corepack (`corepack pnpm …`) as set up in Step 0.1. |
-| LUX data | **Never request LUX online** (`lux.collections.yale.edu` runs on LUX's production machine). Use only the local dump at `/Users/rs2668/Development/lux/dataset/jsonl/*.jsonl.gz` (check `gzip -t` first) and the 40 LUX records already in `tests/corpus/lux/`. The owner allowed one sample of 40 records; anything more online is not acceptable. |
+| LUX data | **Never request LUX online** (`lux.collections.yale.edu` runs on LUX's production machine). Use only the local dump at `/Users/rs2668/Development/lux/dataset/jsonl/*.jsonl.gz` (check `gzip -t` first) and the LUX records already in `tests/corpus/lux/` (32 kept from a one-time sample of 40 fetches). The owner allowed that one sample; anything more online is not acceptable. |
 | Ollama | Installed, not running. Only Phase 3–4 steps may start it, and only if the step needs a real local model. Tests always use LiteLLM `mock_response`. |
 
 ## 3. Isolation rules for parallel agents

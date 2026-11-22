@@ -319,6 +319,15 @@ Spike S6 (`docs/spikes/S6-bootstrap.md`) is a **GO**: 1M records bootstrap in 10
    JSON-LD of the previous `records.data` and its N-Triples) in the same transaction.
    `lae.api.records.load_version` already serves such a row.
 
+## Owner decisions, 2026-11-22 (import and validation)
+
+Answers to the Step 1.12 and Step 1.9 questions. ADR numbers are pre-assigned to avoid collisions between parallel agents.
+
+1. **Bulk-loaded records are re-minted** as `<base_uri><uuidv7>` (`/id/{uuidv7}`). The source URI is kept in `equivalent`; a second pass rewrites every reference to a re-minted record; old URIs are kept as aliases so later imports and lookups resolve them, and the editor redirects any old URI it can serve. **ADR-0030 supersedes ADR-0024** (implemented in the bootstrap rework).
+2. **Load and flag:** records that fail the JSON Schema are loaded anyway when they can be written to RDF; each failure becomes a QA finding (the `qa_findings` table is created now, with the Phase 3 Step 3.10 schema), and the record cannot be re-published until fixed. Records that cannot be written to RDF at all are rejected at load, so PostgreSQL and QLever never disagree (orchestrator decision on Step 1.12 item 3). A post-load pass strips `_label` from references whose target is known (orchestrator decision on Step 1.12 item 4). Part of ADR-0030.
+3. **Ignore embedded-node ids in schema validation:** ids on embedded (non-reference) nodes are stripped before the JSON Schema check, as internal node IRIs already are; storage keeps them and RDF handles them per ADR-0021. **ADR-0028.**
+4. **Import robustness (orchestrator decision, reversible, consistent with "load and flag"):** a nested `@context` identical to the record's pinned context is accepted and ignored (any other nested context is still rejected); IRIs containing characters not allowed in IRIs (such as spaces in Wikimedia Commons URLs) are percent-encoded in RDF only, with a warning diagnostic, instead of rejecting the record. **ADR-0028.**
+
 ## Step 1.12
 
 `lae bootstrap` (load, export-nt, build-index, aat-labels) is built and was run at 1M records
