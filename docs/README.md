@@ -53,6 +53,7 @@ Detailed per-step checkboxes live at the bottom of each phase guide (Exit Checkl
 | `phases/phase-4-explorers-translation-admin.md` | ResultSet contract, graph/map/timeline explorers, query builder, YASGUI, LLM routing, i18n pipeline, data translation, split, reclassify, inverse links, smart paste, rebase modal, admin control plane, webhooks, exports, hardening. |
 | `glossary.md` | Terms. |
 | `conventions.md` | Engineering rules and the model-tier policy. |
+| `agent-workflow.md` | The exact procedure an implementing agent follows for one issue: isolation slots, local environment, PR and merge rules. |
 | `reuse_map.md` | What to take from the adjacent repositories, file by file. |
 | `spikes/` | Created in Phase 0. One report per spike with GO / NO-GO. |
 | `questions.md` | Created on first use. Questions for humans, with the step number. |
