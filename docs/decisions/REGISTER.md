@@ -2,7 +2,7 @@
 
 Every decision that an implementer might otherwise have to make again, in one place. **Status:** `locked` (changing it needs a human and an ADR), `fixed` (a tooling/naming choice made in the guides; change only with an ADR), `open` (not yet decided; see the named spike or step). "Source" points at the authoritative text.
 
-Decisions made during the November 2026 design review are also written up as ADRs `0001`–`0015` in this directory; the register links them.
+Decisions made during the November 2026 design review are also written up as ADRs `0001`–`0017` in this directory; the register links them.
 
 ## A. Architecture and storage
 
@@ -10,7 +10,7 @@ Decisions made during the November 2026 design review are also written up as ADR
 | :-- | :-- | :-- | :-- |
 | A1 | PostgreSQL is the single system of record; QLever is a derived index rebuilt from Postgres. | locked | spec §1, §2 |
 | A2 | All mutations commit to Postgres first; a transactional outbox (`outbox_events`, `LISTEN/NOTIFY` + 1 s poll) feeds a sync worker that updates QLever. | locked | spec §2, §4.1; Phase 1 Step 1.11 |
-| A3 | Processes: `api`, `crdt-ws`, `sync-worker`, `scheduler`, `embedder`, `reconcile`, `llm`, `qlever`, `postgres`. Same names for compose services and `lae` CLI sub-commands. | locked | spec §4.2; conventions §1; ADR-0011 |
+| A3 | Processes: `api`, `crdt-ws`, `sync-worker`, `scheduler`, `embedder`, `reconcile`, `llm`, `qlever`, `postgres`. Same names for Procfile entries, systemd units, and `lae` CLI sub-commands. | locked | spec §4.2; conventions §1; ADR-0011 |
 | A4 | Validate and publish requests needing the live Y.Doc are routed from `api` to `crdt-ws` over an internal HTTP RPC (`/internal/...`, header `X-Internal-Token`). `crdt-ws` is a single process. | locked | spec §4.2; Phase 1 Step 1.8; ADR-0011 |
 | A5 | Single tenant per installation; fully open published data; no field-level redaction. | locked | spec §1, §8 |
 | A6 | Record ids are UUIDv7; public URIs are flat `/id/{uuidv7}`; no class-typed paths. | locked | spec §3.1 |
@@ -22,7 +22,7 @@ Decisions made during the November 2026 design review are also written up as ADR
 | A12 | Foreign references are reduced to `{"id"}` before expansion so no `rdf:type` or label triples are emitted for subjects the record does not own. | locked | spec §3.3; Phase 1 Step 1.3 |
 | A13 | Sync uses revision-diff `DELETE DATA` / `INSERT DATA`. For the first edit of a bulk-loaded record whose bootstrap context/expander version differs from the current one, use `DELETE WHERE { <s> ?p ?o }` over owned subjects instead. | locked | spec §3.3; ADR-0007 |
 | A14 | QLever runs with `--persist-updates`; `sync_state.qlever_index_watermark` records the last applied outbox id; rebuilds are blue/green (snapshot at watermark, build in a new directory, replay, atomic swap, keep previous for rollback), triggered by delta-triple threshold or on demand, never by editor idleness. | locked | spec §3.3; Phase 2 Step 2.18; ADR-0002 |
-| A15 | QLever is built from `/Users/rs2668/Development/lux/qlever-dev` (upstream master) at the commit in `deploy/QLEVER_COMMIT`; Qleverfile uses `TEXT_INDEX = from_literals` and `ADD_HAS_WORD_TRIPLES = true`. | fixed | reuse_map; Phase 0 Step 0.3 |
+| A15 | QLever is installed natively (Homebrew on macOS; native packages or a source build from `lux/qlever-dev` on Linux) at the version in `deploy/QLEVER_VERSION`; Qleverfile uses `SYSTEM = native`, `TEXT_INDEX = from_literals` and `ADD_HAS_WORD_TRIPLES = true`. | fixed | reuse_map; Phase 0 Step 0.3 |
 | A16 | Autocomplete, backlinks, delete protection, merge referrer discovery, and the Tier 2 backlink guardrail use QLever (not a Postgres edge table). A Postgres `entity_labels` overlay is used only if Spike S1 shows text-index staleness. | locked | ADR-0001; Phase 1 Step 1.13 |
 | A17 | External authorities are local sidecar datasets in `urn:graph:sidecar:<id>` graphs plus `entity_labels` rows; no live external calls during editing; the existing LUX Wikidata subset is the Wikidata source; no on-demand single-entity import in v1. | locked | spec §3.2, §10.5; ADR-0009 |
 | A18 | Drafts are never indexed in QLever and are not searchable; new unpublished stubs have no `entity_labels` row until published. | locked | spec §4.1; ADR-0010 |
@@ -65,7 +65,7 @@ Decisions made during the November 2026 design review are also written up as ADR
 | D1 | Frontend is TypeScript + React 19 + Vite + pnpm; TanStack Query for data; TanStack Table for grids; Tailwind with logical utilities only. | fixed | spec §11; Phase 0 Step 0.1 |
 | D2 | UI Profiles are YAML per class in `profiles/ui/` (schema in `profiles/ui/_schema.json`): sections → slots → widgets, with `path`, `widget`, `value_set`, `multiple`, `required`, `advanced`. Widget names: `text`, `langtext`, `edtf`, `entity_ref`, `classification`, `dimension`, `identifier`, `statement`, `wkt`, `production`. | fixed | Phase 0 Step 0.12; Phase 1 Step 1.18 |
 | D3 | Phase 1 profiles: `HumanMadeObject`, `Person`, `Place`, `Type`; Phase 2 adds `Group`, `VisualItem`, `LinguisticObject`, `Set`, `Activity`/`Event`. | fixed | implementation_phases |
-| D4 | IIIF viewer is Canvas Panel (Digirati web component); Clover IIIF only for A/V; Mirador is not used. | locked | ADR-0012; spec §6.2 |
+| D4 | IIIF viewer is Canvas Panel (Digirati web component) for all media, including A/V; Clover and Mirador are not used. Gaps found by Spike S5 go to the owner, not to another viewer. | locked | ADR-0012; spec §6.2 |
 | D5 | Map authoring is MapLibre GL JS + Terra Draw; geometry stored as one LWW WKT value; raw WKT textarea and `.geojson` drop are the accessible equivalents. | locked | spec §6.2 |
 | D6 | Drag-and-drop uses `@dnd-kit` with HTML5 fallback and MIME `application/x-linked-art-ref+json` plus `text/uri-list`; every drag has a keyboard "Link to slot…" equivalent. | locked | spec §6.4, §6.9 |
 | D7 | Force graph is Sigma.js + Graphology; mini-graph is React Flow (`@xyflow/react`); diagrams are client-side Mermaid; all explorers consume one `ResultSet` contract. | fixed | spec §6.6; Phase 4 Steps 4.1–4.3 |
@@ -95,11 +95,12 @@ Decisions made during the November 2026 design review are also written up as ADR
 | :-- | :-- | :-- | :-- |
 | F1 | Monorepo layout `backend/`, `frontend/`, `profiles/`, `deploy/`, `scripts/`, `tests/corpus/`, `docs/`; Python package `lae` (src layout). | fixed | conventions §1 |
 | F2 | Python 3.12, `uv`, `hatchling`, FastAPI, SQLAlchemy 2 async + `asyncpg`, Alembic, `pydantic-settings` (`LAE_` prefix), `structlog`, `orjson`, `zstandard`, `uuid-utils`, `pyld` (expansion), `pyoxigraph` (Turtle), `pyshacl`, `jsonschema` + `referencing`, `httpx[http2]`, `apscheduler` or asyncio loop for the scheduler. | fixed | Phase 0 Step 0.1; Phase 1 |
-| F3 | Lint and types: `ruff` (line 100), `mypy --strict`; tests: `pytest` + `pytest-asyncio` (auto), `hypothesis`, `testcontainers` locally and a service container in CI. | fixed | Phase 0 Step 0.1 |
+| F3 | Lint and types: `ruff` (line 100), `mypy --strict`; tests: `pytest` + `pytest-asyncio` (auto), `hypothesis`; tests run against a native PostgreSQL via `LAE_TEST_DATABASE_URL` locally and in CI. | fixed | Phase 0 Step 0.1 |
 | F4 | Migrations numbered by phase: 0001–0009 (Phases 0–1), 0010–0019 (2), 0020–0029 (3), 0030–0039 (4); every migration has a downgrade; merged migrations are never edited. | fixed | conventions §3 |
 | F5 | Commit format `<type>(<scope>): <summary>`; one guide step per PR; PR names the step. | fixed | conventions §7 |
 | F6 | Nothing from adjacent repos is imported as a package; code is vendored with a `# Vendored from <repo>/<path> @ <commit>` header and tests. | fixed | conventions §8; reuse_map |
 | F7 | The golden corpus is the 211 linked.art examples plus ≥20 institutional records; 100% round-trip is a hard gate from Phase 1 on. | locked | Phase 0 Step 0.4; Phase 1 Step 1.4 |
 | F8 | Default implementer is Claude Opus 5.5; steps marked **CRITICAL** are implemented and reviewed by a model from the tier above (Claude Fable/Mythos class). | fixed | ADR-0015; conventions §10 |
 | F9 | Spikes S1–S6 produce written GO/NO-GO reports in `docs/spikes/`; a NO-GO stops the phase until a human acknowledges. | fixed | Phase 0 |
+| F11 | No Docker or containers anywhere: development, CI, and production install PostgreSQL, QLever, and the Python processes natively. | locked | ADR-0017 |
 | F10 | Questions go to `docs/questions.md`; design changes go to `docs/decisions/NNNN-*.md`; the spec is never edited to match code. | fixed | conventions §8 |

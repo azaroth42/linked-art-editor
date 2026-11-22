@@ -6,7 +6,7 @@
 
 * **Interactive Users:** Standard OIDC / OAuth 2.0 integration (supporting institutional SSO/SAML bridges, GitHub, Google, ORCID, or local Keycloak) via Python `Authlib`.  
 * **Programmatic Access:** Scoped Personal Access Tokens (PATs) and OAuth2 Client Credentials (service accounts) for ETL scripts, migration pipelines, and CI validation.  
-* **Single-Tenant Deployment Model:** Each installation serves a single institution or community with one base URI namespace, one PostgreSQL database, one QLever instance, and one configuration set (OIDC providers, UI profiles, SHACL shapes). Running separate platforms is handled cleanly via separate container deployments rather than multi-tenant data partitioning.
+* **Single-Tenant Deployment Model:** Each installation serves a single institution or community with one base URI namespace, one PostgreSQL database, one QLever instance, and one configuration set (OIDC providers, UI profiles, SHACL shapes). Running separate platforms is handled cleanly via separate native deployments rather than multi-tenant data partitioning.
 
 ### 8.2 Open Published Data & Write-Only Governance
 

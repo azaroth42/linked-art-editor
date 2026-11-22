@@ -227,7 +227,7 @@ Rules for this phase:
 3. `lae sync-worker --once` processes one batch and exits (for tests and CI).
 4. Integration tests (marked `integration`): publish → within 1 s the triple is in QLever; change a title → exactly one DELETE and one INSERT in the sent update (assert via a recording client); failed update ends in `failed` with the error text; worker restart resumes from pending.
 
-**Verify:** `uv run pytest -m integration tests/sync -q` with compose services up.
+**Verify:** `uv run pytest -m integration tests/sync -q` with native PostgreSQL and QLever running (`make up` with your slot's overrides).
 
 **Commit:** `feat(sync): outbox worker with revision-diff updates, drift fallback, watermark, dead letters`
 

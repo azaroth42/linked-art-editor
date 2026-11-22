@@ -12,7 +12,7 @@ Every implementing agent follows this procedure for exactly one GitHub issue (on
 
 | Tool | How to use it |
 | :-- | :-- |
-| Docker | **Not available.** Write `deploy/docker-compose.yml` and Dockerfiles as specified, but verify behaviour with the native setup below. CI on GitHub Actions has Docker. |
+| Docker | **Not used by this project** (ADR-0017). Everything is installed and run natively, including in CI. Never add Docker, Compose, container images, or `testcontainers`. |
 | PostgreSQL | Postgres.app 18 running on `localhost:5432`, user `rs2668`, trust auth, extensions `vector` 0.8.7, `pg_trgm`, `btree_gin`. Binaries in `/Applications/Postgres.app/Contents/Versions/latest/bin` (add to `PATH`). |
 | QLever | Homebrew 0.6.0: `qlever-index`, `qlever-server` (the IndexBuilderMain/ServerMain binaries) and `qlever` (qlever-control). Source for reference: `/Users/rs2668/Development/lux/qlever-dev`. |
 | Python | `uv` 0.11; use Python 3.12 via `uv python install 3.12` (the repo pins it). System `python3` is 3.14; do not use it for the project venv. |
@@ -63,7 +63,7 @@ Parallel agents touch the same shared files. Resolve conflicts this way, never b
 
 - `backend/uv.lock`: take main's version (`git checkout --theirs` during a rebase means *your* commit, so check carefully), merge the dependency lines in `pyproject.toml` by hand, then run `uv lock` to regenerate.
 - `frontend/pnpm-lock.yaml`: same approach: merge `package.json` by hand, take main's lockfile, run `corepack pnpm install` to regenerate.
-- Registries that list things (CLI sub-commands, FastAPI router registration, frontend routes, i18n namespaces, CI jobs, Makefile targets, compose services): keep both sides' entries.
+- Registries that list things (CLI sub-commands, FastAPI router registration, frontend routes, i18n namespaces, CI jobs, Makefile targets, Procfile entries, systemd units): keep both sides' entries.
 - Alembic: see §4 (single head, your migration on top).
 - After resolving, re-run every check from §5 before pushing.
 

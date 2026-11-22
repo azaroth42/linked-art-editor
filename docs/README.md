@@ -44,7 +44,7 @@ Detailed per-step checkboxes live at the bottom of each phase guide (Exit Checkl
 | `spec/README.md` and `spec/*.md` | The design, split by topic. Section numbers (§) are preserved from the original design document; guides cite them as "spec §3.2". |
 | `spec/api-index.md` | Generated index of every endpoint, WebSocket route, MCP tool, and CLI command with the guide step that builds it. |
 | `decisions/REGISTER.md` | Consolidated decision register (architecture, editing, validation, UI, security, tooling). |
-| `decisions/NNNN-*.md` | Architecture Decision Records. `0001`–`0015` are Accepted; `0016` is Proposed and is finalized in Phase 3 Step 3.3. |
+| `decisions/NNNN-*.md` | Architecture Decision Records. `0001`–`0015` and `0017` are Accepted; `0016` is Proposed and is finalized in Phase 3 Step 3.3. |
 | `implementation_phases.md` | Roadmap: phases, exit criteria, cross-phase workstreams, what is deliberately late. |
 | `phases/phase-0-foundations.md` | Monorepo, CI, schema, golden corpus, six spikes. |
 | `phases/phase-1-core-loop.md` | Records, RDF layer, projection, labels, API, auth, CRDT rooms, validation, publish, sync, bootstrap, autocomplete, revisions, reaper, frontend foundation, editor, reader, scale gate. |

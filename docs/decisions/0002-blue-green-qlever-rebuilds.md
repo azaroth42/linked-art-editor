@@ -9,4 +9,4 @@ The original design rebuilt the index when zero editors were logged in and the d
 Run QLever with `--persist-updates`. Keep `sync_state.qlever_index_watermark`. Rebuild by snapshotting at a watermark, building a second index, replaying outbox events past the watermark, and swapping atomically; keep the previous index for rollback. Trigger by threshold or on demand, never by idleness.
 
 ## Consequences
-Phase 2 Step 2.18 implements it; the sync worker must accept a target URL; the Qleverfile and compose define two index directories.
+Phase 2 Step 2.18 implements it; the sync worker must accept a target URL; the Qleverfile and Makefile define two index directories.
