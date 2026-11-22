@@ -90,7 +90,7 @@ The QLever source the project builds from. It is upstream master, not the older 
 
 ## lux/dataset — `/Users/rs2668/Development/lux/dataset/jsonl/`
 
-The full LUX export: gzipped JSONL files (`export_full_*.jsonl.gz`), one merged Linked Art record per line, with LUX URIs.
+The full LUX export: gzipped JSONL files (`export_full_*.jsonl.gz`), one merged Linked Art record per line, with LUX URIs. **This is the only permitted source of LUX data:** never request `lux.collections.yale.edu` online, because it runs on LUX's production machine (owner instruction, 2026-11-22).
 
 | Use | Path | Notes |
 | :-- | :-- | :-- |
