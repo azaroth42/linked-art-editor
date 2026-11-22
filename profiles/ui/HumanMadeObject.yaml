@@ -1,0 +1,126 @@
+# yaml-language-server: $schema=_schema.json
+# UI Profile for HumanMadeObject. Path syntax and the per-widget path contract are in
+# profiles/README.md; property names follow the Linked Art model (linked.art docs/model/object/).
+class: HumanMadeObject
+version: 1
+sections:
+  - id: identification
+    label:
+      en: Identification
+    slots:
+      - id: title
+        label:
+          en: Title
+        help_text:
+          en: Names of the object. Mark the main title in each language as the Primary Name.
+        path: identified_by[Name]
+        widget: langtext
+        value_set: vocab:work_title_types
+        multiple: true
+        required: true
+        advanced: false
+      - id: identifiers
+        label:
+          en: Identifiers
+        help_text:
+          en: Accession numbers and other identifiers assigned to the object.
+        path: identified_by[Identifier]
+        widget: identifier
+        value_set: vocab:identifier_types
+        multiple: true
+        required: false
+        advanced: false
+      - id: type_of_work
+        label:
+          en: Type of Work
+        help_text:
+          en: What kind of object this is, for example painting, print, or sculpture.
+        path: classified_as
+        widget: classification
+        value_set: vocab:type_of_work
+        multiple: true
+        required: false
+        advanced: false
+  - id: production
+    label:
+      en: Production
+    slots:
+      - id: creator
+        label:
+          en: Creator
+        help_text:
+          en: People or groups who made the object.
+        path: produced_by.carried_out_by
+        widget: entity_ref
+        allowed_classes: [Person, Group]
+        multiple: true
+        required: false
+        advanced: false
+      - id: production_date
+        label:
+          en: Production Date
+        help_text:
+          en: "When the object was made, as an EDTF date such as 1642 or 1880~/1895?"
+        path: produced_by.timespan
+        widget: edtf
+        multiple: false
+        required: false
+        advanced: false
+      - id: production_place
+        label:
+          en: Production Place
+        help_text:
+          en: Where the object was made.
+        path: produced_by.took_place_at
+        widget: entity_ref
+        allowed_classes: [Place]
+        multiple: true
+        required: false
+        advanced: false
+  - id: physical
+    label:
+      en: Physical Description
+    slots:
+      - id: materials
+        label:
+          en: Materials
+        help_text:
+          en: Materials the object is made of, for example oil paint or canvas.
+        path: made_of
+        widget: classification
+        value_set: vocab:material
+        multiple: true
+        required: false
+        advanced: false
+      - id: dimensions
+        label:
+          en: Dimensions
+        help_text:
+          en: Measured dimensions, each with a type, a value, and a unit.
+        path: dimension
+        widget: dimension
+        value_set: vocab:dimension_types
+        multiple: true
+        required: false
+        advanced: false
+  - id: about
+    label:
+      en: Description
+    slots:
+      - id: description
+        label:
+          en: Description
+        help_text:
+          en: Descriptions and other statements about the object, each with a statement type.
+        path: referred_to_by[LinguisticObject]
+        widget: statement
+        value_set: vocab:statement_types
+        multiple: true
+        required: false
+        advanced: false
+grid_columns:
+  - slot: title
+  - slot: identifiers
+  - slot: type_of_work
+  - slot: creator
+  - slot: production_date

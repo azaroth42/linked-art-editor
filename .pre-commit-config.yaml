@@ -23,6 +23,12 @@ repos:
         types_or: [python, pyi]
         files: ^backend/
         pass_filenames: false
+      - id: validate-profiles
+        name: validate profiles (UI Profiles, Value Sets)
+        entry: uv run --project backend python scripts/validate_profiles.py
+        language: system
+        files: ^(profiles/|scripts/validate_profiles\.py$|backend/src/lae/profiles/)
+        pass_filenames: false
       - id: eslint
         name: eslint (frontend)
         entry: corepack pnpm --dir frontend lint

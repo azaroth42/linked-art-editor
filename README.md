@@ -64,7 +64,8 @@ cd frontend && corepack pnpm dev       # Vite dev server
 ## Run tests
 
 ```sh
-make lint     # ruff check, ruff format --check, mypy (backend); eslint, tsc, prettier (frontend)
+make lint     # ruff check, ruff format --check, mypy (backend); eslint, tsc, prettier (frontend);
+              # and `make profiles`: profiles/ui and profiles/vocab YAML against their schemas
 make test     # pytest (backend); vitest (frontend)
 ```
 

@@ -43,3 +43,17 @@ the step's follow-up issue.
    cardinality). They are listed in `tests/corpus/KNOWN_FAILURES.md`. Decide whether the schema or
    the examples should change upstream; Step 1.9 makes JSON Schema the publish gate, so as things
    stand these records would be blocked from publishing.
+
+## Step 0.12
+
+1. **One Value Set per `(class, path)`, or several?** Spec §7.2 binds Gender, Occupation, and
+   Nationality to the same `(Person, classified_as)`, and spec §6.1 partitions one `classified_as`
+   array into several cards (Type of Work, Style, Shape). Phase 2 Step 2.1, however, makes
+   `slot_vocabulary_bindings` unique on `(entity_class, property_path)`, which allows only one
+   Value Set per path. The Step 0.12 schema and validator follow the spec: several bindings may
+   share a `(class, path)`, and uniqueness is on `(class, path, value_set)`. Please confirm, so
+   that Step 2.1 can make its unique constraint `(entity_class, property_path, vocabulary_id)`.
+   Step 2.2 is affected too: its rule flags every value at the path that is outside one bound
+   Value Set, so under a strict Gender binding every Occupation would be a violation. A rule that
+   accepts a value claimed by any Value Set bound at that path, and leaves unclaimed values to the
+   Other Classifications bucket (decision C5), would match the spec.

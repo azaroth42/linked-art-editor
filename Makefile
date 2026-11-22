@@ -22,15 +22,18 @@ PG      := $(if $(PG_BIN),$(PG_BIN)/)
 QLEVER  ?= qlever
 QLEVER_CMD := $(QLEVER) --qleverfile "$(CURDIR)/deploy/Qleverfile"
 
-.PHONY: setup lint test up down logs run
+.PHONY: setup lint profiles test up down logs run
 
 setup: ## Install backend (uv) and frontend (pnpm) dependencies from the lockfiles
 	cd backend && $(UV) sync --locked
 	cd frontend && $(PNPM) install --frozen-lockfile
 
-lint: ## Lint, format-check, and type-check backend and frontend
+lint: profiles ## Lint, format-check, and type-check backend and frontend; validate profiles/
 	cd backend && $(UV) run ruff check . && $(UV) run ruff format --check . && $(UV) run mypy src
 	cd frontend && $(PNPM) lint && $(PNPM) typecheck && $(PNPM) format:check
+
+profiles: ## Validate UI Profile and Value Set YAML against their JSON Schemas
+	$(UV) run --project backend python scripts/validate_profiles.py
 
 test: ## Run backend and frontend unit tests
 	cd backend && $(UV) run pytest -q
