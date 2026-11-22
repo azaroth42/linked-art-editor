@@ -168,6 +168,141 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/records": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Create Record
+         * @description Create a never-published record (``version = 0``) and return ``{id, uri, draft_epoch}``.
+         *
+         *     The row holds the skeleton ``{"@context", "id", "type"}``, plus the ``template``'s content
+         *     when one is given, with internal node IRIs assigned.
+         *
+         *     **Draft room (Step 1.8).** This endpoint does not open the draft yet and writes no
+         *     ``crdt_drafts`` row: Step 1.8 (``crdt-ws``, ``RoomManager.open``) wires room opening in here
+         *     and returns the room's ``draft_epoch``. Until then ``draft_epoch`` is that of a new record,
+         *     ``0`` (``records.draft_epoch``, migration ``0004``, defaults to 0). ``RoomManager.open``
+         *     hydrates the room from ``records.data``, so the template becomes the draft's content.
+         */
+        post: operations["create_record_api_records_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/records/{record_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Record
+         * @description Return the published JSON-LD with internal node IRIs and transcluded labels.
+         *
+         *     A never-published record (``version = 0``) is found only while it has a draft. Deleted →
+         *     410; merged → 301 to ``/api/records/{merged_into}``.
+         */
+        get: operations["get_record_api_records__record_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/records/{record_id}/revisions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Revisions
+         * @description List the record's versions, oldest first, whatever its status.
+         *
+         *     A current version without a revision row (bulk-loaded, decision A9) is listed with the
+         *     record's ``updated_at``, no authors, and no publisher.
+         */
+        get: operations["list_revisions_api_records__record_id__revisions_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/records/{record_id}/revisions/{version}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Revision
+         * @description Return the stored JSON-LD of one version (internal node IRIs kept, labels transcluded).
+         */
+        get: operations["get_revision_api_records__record_id__revisions__version__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/id/{record_uuid}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Dereference
+         * @description Serve a published record as JSON-LD, Turtle, or HTML (see the module docstring).
+         */
+        get: operations["dereference_id__record_uuid__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/id/{record_uuid}/node/{node_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Dereference Node
+         * @description Redirect (303) an internal or derived node IRI to the record that owns it.
+         */
+        get: operations["dereference_node_id__record_uuid__node__node_id__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -222,6 +357,58 @@ export interface components {
             components: {
                 [key: string]: "ok" | "error" | "not_configured";
             };
+        };
+        /**
+         * RecordCreate
+         * @description Body of ``POST /api/records``.
+         */
+        RecordCreate: {
+            /** Type */
+            type: string;
+            /** Template */
+            template?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /**
+         * RecordCreated
+         * @description Answer of ``POST /api/records``.
+         */
+        RecordCreated: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Uri */
+            uri: string;
+            /** Draft Epoch */
+            draft_epoch: number;
+        };
+        /**
+         * Representation
+         * @description A representation of a record; the value is what ``?format=`` takes.
+         * @enum {string}
+         */
+        Representation: "html" | "jsonld" | "ttl";
+        /**
+         * RevisionSummary
+         * @description One entry of ``GET /api/records/{id}/revisions`` (Step 1.14's shape).
+         */
+        RevisionSummary: {
+            /** Version */
+            version: number;
+            /**
+             * Created At
+             * Format: date-time
+             */
+            created_at: string;
+            /** Authors */
+            authors: string[];
+            /** Published By */
+            published_by: string | null;
+            /** Summary */
+            summary: string;
         };
         /**
          * TokenCreate
@@ -511,6 +698,271 @@ export interface operations {
         responses: {
             /** @description Successful Response */
             204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    create_record_api_records_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["RecordCreate"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordCreated"];
+                };
+            };
+            /** @description LAE-REC-005, LAE-REC-006 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    get_record_api_records__record_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                    "application/ld+json": unknown;
+                };
+            };
+            /** @description LAE-REC-003 */
+            301: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description LAE-REC-001 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description LAE-REC-002 */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    list_revisions_api_records__record_id__revisions_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RevisionSummary"][];
+                };
+            };
+            /** @description Not Found */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_revision_api_records__record_id__revisions__version__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_id: string;
+                version: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                    "application/ld+json": unknown;
+                };
+            };
+            /** @description LAE-REC-001, LAE-REC-004 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    dereference_id__record_uuid__get: {
+        parameters: {
+            query?: {
+                /** @description Serve this stored version */
+                version?: number | null;
+                /** @description Overrides Accept */
+                format?: components["schemas"]["Representation"] | null;
+            };
+            header?: never;
+            path: {
+                record_uuid: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/ld+json": unknown;
+                    "text/turtle": unknown;
+                    "text/html": unknown;
+                };
+            };
+            /** @description Merged (LAE-REC-003) */
+            301: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description If-None-Match matched */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description LAE-REC-001, LAE-REC-004 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Deleted (LAE-REC-002) */
+            410: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    dereference_node_id__record_uuid__node__node_id__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_uuid: string;
+                node_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description See the record that owns the node */
+            303: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description LAE-REC-001 */
+            404: {
                 headers: {
                     [name: string]: unknown;
                 };
