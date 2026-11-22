@@ -1,0 +1,196 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "Value Set file",
+  "description": "Value Set definitions and slot bindings (spec section 7). Any YAML file in profiles/vocab/ may hold value_sets, bindings, or both. Value Set ids are unique across all files. See profiles/README.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "minProperties": 1,
+  "properties": {
+    "value_sets": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/ValueSet" }
+    },
+    "bindings": {
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/Binding" }
+    }
+  },
+  "$defs": {
+    "ValueSet": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "version", "label", "mode", "enforcement"],
+      "properties": {
+        "id": { "$ref": "#/$defs/ValueSetId" },
+        "version": {
+          "description": "Definition version (vocabularies.version). Increment on every change.",
+          "type": "integer",
+          "minimum": 1
+        },
+        "label": { "$ref": "#/$defs/LangMap" },
+        "scope_note": { "$ref": "#/$defs/LangMap" },
+        "mode": {
+          "description": "enumerated: a small ordered list of terms. rule: membership resolved in QLever from the rule.",
+          "enum": ["enumerated", "rule"]
+        },
+        "enforcement": { "$ref": "#/$defs/Enforcement" },
+        "terms": {
+          "description": "Ordered terms (position = list order). Required for enumerated sets; for rule sets it is the optional pinned shortlist.",
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Term" }
+        },
+        "rule": { "$ref": "#/$defs/Rule" }
+      },
+      "allOf": [
+        {
+          "if": { "required": ["mode"], "properties": { "mode": { "const": "enumerated" } } },
+          "then": { "required": ["terms"], "not": { "required": ["rule"] } }
+        },
+        {
+          "if": { "required": ["mode"], "properties": { "mode": { "const": "rule" } } },
+          "then": { "required": ["rule"] }
+        }
+      ]
+    },
+    "Term": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["uri"],
+      "properties": {
+        "uri": { "$ref": "#/$defs/Uri" },
+        "label": {
+          "description": "Curated label (vocabulary_terms.label_override). When absent the label comes from entity_labels.",
+          "$ref": "#/$defs/LangMap"
+        },
+        "scope_note": { "$ref": "#/$defs/LangMap" },
+        "is_default": {
+          "description": "Preselected for new entries. Defaults to false.",
+          "type": "boolean"
+        },
+        "deprecated": {
+          "description": "Hidden from pickers for new values; still displayed where present. Defaults to false.",
+          "type": "boolean"
+        },
+        "flags": {
+          "description": "Term flags (vocabulary_terms.flags).",
+          "type": "object",
+          "additionalProperties": false,
+          "properties": {
+            "unique": {
+              "description": "Identifier type whose values are unique per record (e.g. accession number); cleared when a record is cloned.",
+              "type": "boolean"
+            }
+          }
+        }
+      },
+      "if": { "required": ["deprecated"], "properties": { "deprecated": { "const": true } } },
+      "then": { "properties": { "is_default": { "const": false } } }
+    },
+    "Rule": {
+      "description": "Membership rule for mode: rule. All four keys are present (use [] for none); at least one of metatype_uris, broader_roots, classes is non-empty.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["metatype_uris", "broader_roots", "exclusions", "classes"],
+      "properties": {
+        "metatype_uris": {
+          "description": "Concepts whose classified_as includes any of these metatypes are members.",
+          "$ref": "#/$defs/UriList"
+        },
+        "broader_roots": {
+          "description": "Concepts reachable through broader+ from any of these roots are members.",
+          "$ref": "#/$defs/UriList"
+        },
+        "exclusions": {
+          "description": "Concepts removed from membership.",
+          "$ref": "#/$defs/UriList"
+        },
+        "classes": {
+          "description": "Restrict members to these concept classes.",
+          "type": "array",
+          "uniqueItems": true,
+          "items": { "enum": ["Type", "Language", "Material", "MeasurementUnit", "Currency"] }
+        }
+      },
+      "anyOf": [
+        { "properties": { "metatype_uris": { "minItems": 1 } } },
+        { "properties": { "broader_roots": { "minItems": 1 } } },
+        { "properties": { "classes": { "minItems": 1 } } }
+      ]
+    },
+    "Binding": {
+      "description": "Binds a Value Set to the URI values found at (class, path).",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["class", "path", "value_set"],
+      "properties": {
+        "class": { "$ref": "#/$defs/RecordClass" },
+        "path": { "$ref": "#/$defs/Path" },
+        "value_set": { "$ref": "#/$defs/ValueSetId" },
+        "enforcement": {
+          "description": "Overrides the Value Set's enforcement for this binding. Absent = inherit.",
+          "$ref": "#/$defs/Enforcement"
+        }
+      }
+    },
+    "Enforcement": {
+      "description": "strict: violation (blocks publish). extensible: warning. advisory: info.",
+      "enum": ["strict", "extensible", "advisory"]
+    },
+    "Uri": {
+      "description": "Absolute http(s) URI. Prefixed names such as aat:300404670 are not accepted.",
+      "type": "string",
+      "pattern": "^https?://[^\\s<>\"{}|\\\\^`]+$"
+    },
+    "UriList": {
+      "type": "array",
+      "uniqueItems": true,
+      "items": { "$ref": "#/$defs/Uri" }
+    },
+    "LangMap": {
+      "description": "Human-readable string keyed by BCP-47 language tag in canonical case (language lower, Script title, REGION upper). 'en' is required. Values must contain a non-space character.",
+      "type": "object",
+      "required": ["en"],
+      "propertyNames": {
+        "pattern": "^[a-z]{2,3}(?:-[a-z]{3}){0,3}(?:-[A-Z][a-z]{3})?(?:-(?:[A-Z]{2}|[0-9]{3}))?(?:-(?:[a-z0-9]{5,8}|[0-9][a-z0-9]{3}))*(?:-[0-9a-wyz](?:-[a-z0-9]{2,8})+)*(?:-x(?:-[a-z0-9]{1,8})+)?$"
+      },
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "\\S"
+      }
+    },
+    "Path": {
+      "description": "Profile path: dot-separated Linked Art JSON-LD keys, each optionally filtered by class, e.g. identified_by[Name] or produced_by.timespan. Grammar in profiles/README.md.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*(?:\\[[A-Z][A-Za-z]*\\])?(?:\\.[a-z][a-z0-9_]*(?:\\[[A-Z][A-Za-z]*\\])?)*$"
+    },
+    "RecordClass": {
+      "description": "A top-level Linked Art record class (linked.art docs/ns/v1/record-types.json).",
+      "enum": [
+        "HumanMadeObject",
+        "DigitalObject",
+        "LinguisticObject",
+        "VisualItem",
+        "Set",
+        "Person",
+        "Group",
+        "Place",
+        "Type",
+        "Language",
+        "Material",
+        "MeasurementUnit",
+        "Currency",
+        "Period",
+        "Event",
+        "Activity"
+      ]
+    },
+    "ValueSetId": {
+      "description": "Value Set identifier, e.g. vocab:work_title_types.",
+      "type": "string",
+      "pattern": "^vocab:[a-z][a-z0-9_]*$"
+    }
+  }
+}

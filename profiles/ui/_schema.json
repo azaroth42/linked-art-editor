@@ -1,0 +1,175 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "UI Profile",
+  "description": "Declarative editing form for one Linked Art record class (spec section 6.1). One YAML file per class in profiles/ui/, named <class>.yaml. See profiles/README.md for the path syntax and the per-widget path contract.",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["class", "version", "sections"],
+  "properties": {
+    "class": {
+      "description": "The Linked Art record class this profile edits. Must equal the file name stem.",
+      "$ref": "#/$defs/RecordClass"
+    },
+    "version": {
+      "description": "Profile version. Increment when slots are added, removed, or re-pathed.",
+      "type": "integer",
+      "minimum": 1
+    },
+    "sections": {
+      "description": "Ordered form sections. Section ids are unique within the profile.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/Section" }
+    },
+    "grid_columns": {
+      "description": "Optional ordered column list for the grid view. When absent, the grid uses every non-advanced slot in form order.",
+      "type": "array",
+      "minItems": 1,
+      "items": { "$ref": "#/$defs/GridColumn" }
+    }
+  },
+  "$defs": {
+    "Section": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "slots"],
+      "properties": {
+        "id": { "$ref": "#/$defs/LocalId" },
+        "label": { "$ref": "#/$defs/LangMap" },
+        "advanced": {
+          "description": "When true the whole section is collapsed behind 'Add details'. Defaults to false.",
+          "type": "boolean"
+        },
+        "slots": {
+          "type": "array",
+          "minItems": 1,
+          "items": { "$ref": "#/$defs/Slot" }
+        }
+      }
+    },
+    "Slot": {
+      "description": "One editable field bound to a path. Slot ids are unique across the whole profile.",
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "path", "widget", "multiple", "required", "advanced"],
+      "properties": {
+        "id": { "$ref": "#/$defs/LocalId" },
+        "label": { "$ref": "#/$defs/LangMap" },
+        "help_text": { "$ref": "#/$defs/LangMap" },
+        "path": { "$ref": "#/$defs/Path" },
+        "widget": { "$ref": "#/$defs/Widget" },
+        "value_set": {
+          "description": "Value Set governing the Type references this slot edits (see profiles/README.md). Must exist in profiles/vocab/ once any Value Set is defined.",
+          "$ref": "#/$defs/ValueSetId"
+        },
+        "allowed_classes": {
+          "description": "Record classes a reference in this slot may point at. Drives autocomplete types and drag-and-drop targeting. Required for entity_ref slots, not allowed on other widgets.",
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "$ref": "#/$defs/RecordClass" }
+        },
+        "multiple": {
+          "description": "The slot holds an ordered collection of entries rather than at most one.",
+          "type": "boolean"
+        },
+        "required": {
+          "description": "UI hint: the form marks the slot as required and flags it while empty. Publish-blocking rules live in SHACL shapes, not here.",
+          "type": "boolean"
+        },
+        "advanced": {
+          "description": "The slot is hidden behind 'Add details' even inside a non-advanced section.",
+          "type": "boolean"
+        }
+      },
+      "allOf": [
+        {
+          "if": { "required": ["widget"], "properties": { "widget": { "const": "entity_ref" } } },
+          "then": { "required": ["allowed_classes"] },
+          "else": { "not": { "required": ["allowed_classes"] } }
+        },
+        {
+          "if": { "required": ["widget"], "properties": { "widget": { "const": "classification" } } },
+          "then": { "required": ["value_set"] }
+        }
+      ]
+    },
+    "GridColumn": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["slot"],
+      "properties": {
+        "slot": {
+          "description": "Id of a slot in this profile.",
+          "$ref": "#/$defs/LocalId"
+        },
+        "label": {
+          "description": "Column header. Defaults to the slot label.",
+          "$ref": "#/$defs/LangMap"
+        }
+      }
+    },
+    "Widget": {
+      "enum": [
+        "text",
+        "langtext",
+        "edtf",
+        "entity_ref",
+        "classification",
+        "dimension",
+        "identifier",
+        "statement",
+        "wkt",
+        "production"
+      ]
+    },
+    "LocalId": {
+      "description": "Profile-local identifier: lower snake_case.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*$"
+    },
+    "LangMap": {
+      "description": "Human-readable string keyed by BCP-47 language tag in canonical case (language lower, Script title, REGION upper). 'en' is required. Values must contain a non-space character.",
+      "type": "object",
+      "required": ["en"],
+      "propertyNames": {
+        "pattern": "^[a-z]{2,3}(?:-[a-z]{3}){0,3}(?:-[A-Z][a-z]{3})?(?:-(?:[A-Z]{2}|[0-9]{3}))?(?:-(?:[a-z0-9]{5,8}|[0-9][a-z0-9]{3}))*(?:-[0-9a-wyz](?:-[a-z0-9]{2,8})+)*(?:-x(?:-[a-z0-9]{1,8})+)?$"
+      },
+      "additionalProperties": {
+        "type": "string",
+        "pattern": "\\S"
+      }
+    },
+    "Path": {
+      "description": "Profile path: dot-separated Linked Art JSON-LD keys, each optionally filtered by class, e.g. identified_by[Name] or produced_by.timespan. Grammar in profiles/README.md.",
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9_]*(?:\\[[A-Z][A-Za-z]*\\])?(?:\\.[a-z][a-z0-9_]*(?:\\[[A-Z][A-Za-z]*\\])?)*$"
+    },
+    "RecordClass": {
+      "description": "A top-level Linked Art record class (linked.art docs/ns/v1/record-types.json).",
+      "enum": [
+        "HumanMadeObject",
+        "DigitalObject",
+        "LinguisticObject",
+        "VisualItem",
+        "Set",
+        "Person",
+        "Group",
+        "Place",
+        "Type",
+        "Language",
+        "Material",
+        "MeasurementUnit",
+        "Currency",
+        "Period",
+        "Event",
+        "Activity"
+      ]
+    },
+    "ValueSetId": {
+      "description": "Value Set identifier, e.g. vocab:work_title_types.",
+      "type": "string",
+      "pattern": "^vocab:[a-z][a-z0-9_]*$"
+    }
+  }
+}
