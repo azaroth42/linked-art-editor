@@ -22,11 +22,21 @@ FIELDS = (
     "oidc_issuer",
     "oidc_client_id",
     "oidc_client_secret",
+    "github_client_id",
+    "github_client_secret",
+    "github_allowed_orgs",
+    "github_allowed_users",
     "session_secret",
     "dev_user",
 )
 
-SECRETS = ("qlever_access_token", "internal_token", "oidc_client_secret", "session_secret")
+SECRETS = (
+    "qlever_access_token",
+    "internal_token",
+    "oidc_client_secret",
+    "github_client_secret",
+    "session_secret",
+)
 
 
 @pytest.fixture
@@ -56,6 +66,9 @@ def test_defaults(clean_env: pytest.MonkeyPatch) -> None:
     assert settings.crdt_ws_url == "http://crdt-ws:8001"
     assert settings.oidc_issuer is None
     assert settings.oidc_client_id is None
+    assert settings.github_client_id is None
+    assert settings.github_allowed_orgs == []
+    assert settings.github_allowed_users == []
     assert settings.dev_user is None
     for secret in SECRETS:
         assert getattr(settings, secret) is None
@@ -91,6 +104,25 @@ def test_reads_lae_prefixed_environment(clean_env: pytest.MonkeyPatch) -> None:
     assert settings.oidc_issuer == "https://idp.example.org/realms/lae"
     assert settings.oidc_client_id == "lae"
     assert settings.dev_user == "editor@example.org:Editor"
+
+
+@pytest.mark.parametrize(
+    ("value", "expected"),
+    [
+        ("linked-art", ["linked-art"]),
+        ("linked-art, getty ,yale", ["linked-art", "getty", "yale"]),
+        ("ada lovelace\tgrace", ["ada", "lovelace", "grace"]),
+        ("", []),
+    ],
+)
+def test_github_allowlists_are_comma_separated(
+    clean_env: pytest.MonkeyPatch, value: str, expected: list[str]
+) -> None:
+    clean_env.setenv("LAE_GITHUB_ALLOWED_ORGS", value)
+    clean_env.setenv("LAE_GITHUB_ALLOWED_USERS", value)
+    settings = Settings()
+    assert settings.github_allowed_orgs == expected
+    assert settings.github_allowed_users == expected
 
 
 @pytest.mark.parametrize("field", SECRETS)

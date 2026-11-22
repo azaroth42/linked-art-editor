@@ -29,6 +29,17 @@ function renderApp(path: string, api: Routes, language = "en") {
 
 const signedIn: Routes = { "GET /auth/me": () => Response.json(EDITOR) };
 
+/** `GET /auth/providers` of a server with OIDC and GitHub login. */
+const PROVIDERS = [
+  { id: "oidc", display_name: "OpenID Connect" },
+  { id: "github", display_name: "GitHub" },
+];
+
+const signedOut: Routes = {
+  "GET /auth/me": anonymous,
+  "GET /auth/providers": () => Response.json(PROVIDERS),
+};
+
 afterEach(() => {
   cleanup();
   vi.unstubAllGlobals();
@@ -47,17 +58,51 @@ describe("App", () => {
   });
 
   it("sends an anonymous visitor to the login page, which returns to the requested page", async () => {
-    const { router } = renderApp(`/edit/${RECORD_ID}?tab=names`, { "GET /auth/me": anonymous });
+    const { router } = renderApp(`/edit/${RECORD_ID}?tab=names`, signedOut);
     await screen.findByRole("heading", { level: 1, name: "Sign in" });
     expect(router.state.location.pathname).toBe("/login");
     const next = `/edit/${RECORD_ID}?tab=names`;
-    expect(router.state.location.search).toBe(`?${new URLSearchParams({ next }).toString()}`);
-    const link = screen.getByRole("link", { name: "Continue to sign-in" });
-    expect(link.getAttribute("href")).toBe(
-      `/auth/login?${new URLSearchParams({ next }).toString()}`,
-    );
+    const query = new URLSearchParams({ next }).toString();
+    expect(router.state.location.search).toBe(`?${query}`);
+    const oidc = await screen.findByRole("link", {
+      name: "Sign in with your organization’s account",
+    });
+    expect(oidc.getAttribute("href")).toBe(`/auth/login/oidc?${query}`);
+    const github = screen.getByRole("link", { name: "Sign in with GitHub" });
+    expect(github.getAttribute("href")).toBe(`/auth/login/github?${query}`);
+    // One button per provider, in the server's order (the default first).
+    expect(screen.getAllByRole("link", { name: /^Sign in with/ })).toEqual([oidc, github]);
     // The title is set in an effect after render; wait for it instead of reading it once.
     await waitFor(() => expect(document.title).toBe("Sign in – Linked Art Editor"));
+  });
+
+  it("names a provider it has no translation for by its display name", async () => {
+    renderApp("/login", {
+      ...signedOut,
+      "GET /auth/providers": () => Response.json([{ id: "orcid", display_name: "ORCID" }]),
+    });
+    const link = await screen.findByRole("link", { name: "Sign in with ORCID" });
+    expect(link.getAttribute("href")).toBe("/auth/login/orcid?next=%2F");
+  });
+
+  it("says so when the server offers no sign-in", async () => {
+    renderApp("/login", { ...signedOut, "GET /auth/providers": () => Response.json([]) });
+    await screen.findByText("Sign-in is not configured on this server.");
+    expect(screen.queryByRole("link", { name: /^Sign in with/ })).toBeNull();
+  });
+
+  it("offers a retry when the sign-in options cannot be loaded", async () => {
+    const user = userEvent.setup();
+    let up = false;
+    renderApp("/login", {
+      ...signedOut,
+      "GET /auth/providers": () =>
+        up ? Response.json(PROVIDERS) : errorResponse(503, "LAE-HTTP-503", "/auth/providers"),
+    });
+    await screen.findByText("The server cannot be reached right now.");
+    up = true;
+    await user.click(screen.getByRole("button", { name: "Try again" }));
+    await screen.findByRole("link", { name: "Sign in with GitHub" });
   });
 
   it("sends a signed-in user from the login page to next", async () => {
@@ -115,6 +160,7 @@ describe("App", () => {
     let session = true;
     const { router, requests } = renderApp(`/edit/${RECORD_ID}`, {
       "GET /auth/me": (request) => (session ? Response.json(EDITOR) : anonymous(request)),
+      "GET /auth/providers": () => Response.json(PROVIDERS),
       "POST /auth/logout": () => {
         session = false;
         return new Response(null, { status: 204 });
@@ -122,6 +168,7 @@ describe("App", () => {
     });
     await user.click(await screen.findByRole("button", { name: "Sign out" }));
     await screen.findByRole("heading", { level: 1, name: "Sign in" });
+    await screen.findByRole("link", { name: "Sign in with GitHub" });
     expect(requests.map((r) => `${r.method} ${new URL(r.url).pathname}`)).toContain(
       "POST /auth/logout",
     );

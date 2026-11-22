@@ -8,10 +8,10 @@ field is optional; secrets are ``SecretStr`` so they never appear in ``repr`` or
 from __future__ import annotations
 
 from functools import lru_cache
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import SecretStr
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import SecretStr, field_validator
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 Environment = Literal["development", "test", "staging", "production"]
 LogLevel = Literal["debug", "info", "warning", "error", "critical"]
@@ -70,11 +70,31 @@ class Settings(BaseSettings):
     oidc_client_secret: SecretStr | None = None
     """OpenID Connect client secret."""
 
+    github_client_id: str | None = None
+    """Client id of the GitHub OAuth App; GitHub login is enabled when it and the secret are set."""
+
+    github_client_secret: SecretStr | None = None
+    """Client secret of the GitHub OAuth App."""
+
+    github_allowed_orgs: Annotated[list[str], NoDecode] = []
+    """GitHub organizations whose active members may sign in (comma-separated; ADR-0026)."""
+
+    github_allowed_users: Annotated[list[str], NoDecode] = []
+    """GitHub logins that may sign in (comma-separated); with no allowlist, anyone may."""
+
     session_secret: SecretStr | None = None
     """Key that signs the session cookie (Step 1.7)."""
 
     dev_user: str | None = None
     """Development login bypass, ``<email>:<Role>``; refused when ``env`` is ``production``."""
+
+    @field_validator("github_allowed_orgs", "github_allowed_users", mode="before")
+    @classmethod
+    def _split_list(cls, value: object) -> object:
+        """Read a comma- or whitespace-separated string (the environment's form) as a list."""
+        if isinstance(value, str):
+            return [item for item in value.replace(",", " ").split() if item]
+        return value
 
 
 @lru_cache(maxsize=1)

@@ -6,8 +6,13 @@ Modules:
   §10.4, seeded by migration ``0002_auth_seed``), ``CurrentUser``, and the FastAPI dependencies
   ``optional_user``, ``current_user`` and ``require(*perms)``. Role permissions are read from the
   database once per request.
-- ``oidc``: ``GET /auth/login``, ``GET /auth/callback``, ``POST /auth/logout``, ``GET /auth/me``
-  with Authlib, and the signed session cookie ``lae_session``.
+- ``oidc``: the ``/auth`` routes (``GET /auth/providers``, ``GET /auth/login[/{provider}]``,
+  ``GET /auth/callback[/{provider}]``, ``POST /auth/logout``, ``GET /auth/me``), the OpenID
+  Connect provider (Authlib), and the signed session cookie ``lae_session``.
+- ``providers``: the sign-in provider abstraction (``LoginProvider``, ``LoginIdentity``) the
+  routes use, so several providers can be enabled at once (ADR-0026).
+- ``github``: GitHub login (OAuth 2.0 plus the GitHub REST API), with optional user and
+  organization allowlists.
 - ``tokens``: Personal Access Tokens, ``POST``/``GET /api/tokens`` and ``DELETE
   /api/tokens/{id}``, and ``Authorization: Bearer`` authentication.
 - ``dev``: the ``LAE_DEV_USER=<email>:<Role>`` development bypass (refused in production).

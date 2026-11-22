@@ -20,8 +20,13 @@
   },
   "login": {
     "title": "Sign in",
-    "intro": "Sign in with your organization’s account to edit and publish records.",
-    "action": "Continue to sign-in"
+    "intro": "Sign in to edit and publish records.",
+    "none": "Sign-in is not configured on this server.",
+    "provider": {
+      "oidc": "Sign in with your organization’s account",
+      "github": "Sign in with GitHub"
+    },
+    "provider_named": "Sign in with {name}"
   },
   "not_found": {
     "title": "Page not found",

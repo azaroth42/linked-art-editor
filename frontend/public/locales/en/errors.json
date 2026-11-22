@@ -9,6 +9,8 @@
   "LAE-AUTH-008": "The sign-in service cannot be reached. Please try again later.",
   "LAE-AUTH-009": "This account has been deactivated.",
   "LAE-AUTH-010": "No such access token.",
+  "LAE-AUTH-011": "There is no sign-in option called {provider} on this server.",
+  "LAE-AUTH-012": "This account is not allowed to sign in here. Ask an administrator for access.",
   "LAE-REC-001": "No such record.",
   "LAE-REC-002": "This record has been deleted.",
   "LAE-REC-003": "This record has been merged into {merged_into}.",
