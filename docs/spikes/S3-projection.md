@@ -327,7 +327,12 @@ object map. More than one, or a value that is not an object map, is rejected wit
 (default: the root), which is how one entry of an array is edited: the entry is found by its
 entry key (`get_entry`, `list_entries`) and passed as `base`; keys are never written into paths.
 Entries are named by their **entry key** (the map key of R6); `add_node` and `add_reference`
-return it. `get_path` follows the README's reading rules on the live document (entries in R13
+return it. A path given to an operation that writes or removes (every operation except
+`get_path`, `list_entries` and `get_entry`) may not name `id` or `type` in any segment
+(`LAE-PROJ-007`, checked before anything else): `id` is immutable (R5), `profiles/README.md`
+excludes both from paths, and every node a path creates (R21) already holds both, so such a
+write could only replace a node's identity or fail after the node was created. A `type` is set
+when its node is created (R21, R22) and changed by replacing the node. `get_path` follows the README's reading rules on the live document (entries in R13
 order, entries before a single value as in R11) and continues into opaque values as plain JSON,
 so it always equals evaluating the path on the projection.
 
@@ -366,7 +371,12 @@ there is no `Text` yet, one is created. Every other value is stored as `plain(v)
 property key and is always written, also when equal to the stored value. Rejected with
 `LAE-PROJ-007`: a property that has entries, and a property that holds an object map (use
 `set_object` or `remove_value`). `splice_text(path, index, delete, insert)` is the same splice
-given explicitly; a range outside the text is `LAE-PROJ-008`.
+given explicitly; a range outside the text is `LAE-PROJ-008`, and an `index` or `delete` that is
+not an integer, or an `insert` that is not a string, is `LAE-PROJ-007`. The prefix and suffix
+are compared code point by code point, with no normalization: `U+1F600` → `U+1F601` (same
+high surrogate in UTF-16) is `(i, 1, U+1F601)`, never a splice inside a surrogate pair, and
+`e` + `U+0301` → `U+00E9` replaces two code points with one
+(`text-surrogates-and-combining.json`).
 
 **R24. Single-valued objects.** `set_object(path, obj)` stores a node or reference under the
 property key, replacing whatever single value was there (R5, R14); `remove_value(path)` deletes

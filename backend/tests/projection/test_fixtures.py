@@ -47,7 +47,7 @@ def errors(fixture: dict[str, Any]) -> list[str]:
 
 def test_the_files_are_what_the_builder_defines() -> None:
     assert sorted(p.stem for p in FILES) == sorted(CASES)
-    assert len(FILES) == 10
+    assert len(FILES) == 11
 
 
 @pytest.mark.parametrize("path", FILES, ids=lambda p: p.stem)
@@ -283,7 +283,24 @@ def test_intermediate_nodes() -> None:
         "LAE-PROJ-007",  # neither node nor reference
         "LAE-PROJ-007",  # a scalar over a node
         "LAE-PROJ-007",  # remove_value on an array
+        *["LAE-PROJ-007"] * 7,  # a write path that names id or type
     ]
+    # ... and none of those left behind the intermediate node it would have created.
+    assert returns(fixture, "get_path")[:2] == [[], []]
+    assert expected["id"] == RECORD
+    assert production["type"] == "Production"
+
+
+def test_text_surrogates_and_combining() -> None:
+    fixture = load("text-surrogates-and-combining")
+    # Derived by hand from R23: (1, 1, U+1F601), (0, 1, U+1FA00), (3, 2, U+00E9), with b's
+    # concurrent insert after the replaced character each time.
+    assert returns(fixture, "get_path") == [["x\U0001f601!y", "\U0001fa00!z", "caf\u00e9s"]]
+    state = fixture["expected_state"]["map"]
+    assert state[entry_key(IDENT, n(1))]["map"]["content"] == {"text": "x\U0001f601!y"}
+    assert state[entry_key(IDENT, n(2))]["map"]["content"] == {"text": "\U0001fa00!z"}
+    assert state[entry_key(IDENT, n(3))]["map"]["content"] == {"text": "cafe\u0300s"}
+    assert errors(fixture) == ["LAE-PROJ-007"] * 3
 
 
 def test_move_and_remove() -> None:

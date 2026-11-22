@@ -479,6 +479,17 @@ CASES["intermediate-nodes"] = case(
         op("a", "remove_value", path="created_by.timespan"),
         op("a", "remove_value", path="destroyed_by.timespan"),
         op("a", "remove_value", path="identified_by"),
+        # A write path never names id or type (R20): nothing is overwritten, and no
+        # intermediate node is left behind by the calls that would have had to create one.
+        op("a", "set_scalar", path="id", value="https://example.org/id/another"),
+        op("a", "set_scalar", path="produced_by.type", value="Activity"),
+        op("a", "remove_value", path="produced_by.id"),
+        op("a", "set_object", path="produced_by.timespan.id", obj=ref(AAT + "1")),
+        op("a", "add_reference", path="identified_by[Identifier].type", uri=AAT + "1"),
+        op("a", "add_reference", path="destroyed_by.type[Type].technique", uri=AAT + "1"),
+        op("a", "set_scalar", path="destroyed_by.id.x_note", value="x"),
+        op("a", "get_path", path="identified_by[Identifier]"),
+        op("a", "get_path", path="destroyed_by"),
         op("a", "get_path", path="produced_by.part[Production].carried_out_by"),
         op("a", "get_path", path="produced_by.timespan.identified_by.content"),
     ],
@@ -626,6 +637,51 @@ CASES["single-value-and-entries"] = case(
             uri="https://example.org/id/visual-2",
             type="VisualItem",
         ),
+        sync("a", "b"),
+    ],
+    {"a": A, "b": B},
+)
+
+ONE, TWO, THREE = (
+    [{"path": IDENT, "key": ek(IDENT, n(1))}],
+    [{"path": IDENT, "key": ek(IDENT, n(2))}],
+    [{"path": IDENT, "key": ek(IDENT, n(3))}],
+)
+
+CASES["text-surrogates-and-combining"] = case(
+    "The splice of set_scalar is computed on code points, never on UTF-16 code units or on "
+    "normalized text. U+1F600 and U+1F601 share their high surrogate and U+1F600 and U+1FA00 "
+    "their low surrogate: a prefix or suffix counted in code units would cut a character in "
+    "half. 'e' + U+0301 and U+00E9 are different strings: both code points are replaced. Each "
+    "case has a concurrent insert next to the replaced character, which lands where it would "
+    "only if the splice is exactly (index, delete, insert) as R23 gives it. splice_text takes "
+    "integers and a string.",
+    ["R19", "R23"],
+    record(
+        identified_by=[
+            name(1, "x\U0001f600y"),
+            name(2, "\U0001f600z"),
+            name(3, "cafe\u0301"),
+        ]
+    ),
+    [
+        # (1, 1, U+1F601): the common prefix is "x", not "x" + a high surrogate.
+        op("a", "set_scalar", path="content", value="x\U0001f601y", base=ONE),
+        op("b", "splice_text", path="content", index=2, delete=0, insert="!", base=ONE),
+        # (0, 1, U+1FA00): the common suffix is "z", not a low surrogate + "z".
+        op("a", "set_scalar", path="content", value="\U0001fa00z", base=TWO),
+        op("b", "splice_text", path="content", index=1, delete=0, insert="!", base=TWO),
+        # (3, 2, U+00E9): no normalization, the combining mark is one position of its own.
+        op("a", "set_scalar", path="content", value="caf\u00e9", base=THREE),
+        op("b", "splice_text", path="content", index=5, delete=0, insert="s", base=THREE),
+        sync("a", "b"),
+        op("a", "get_path", path="identified_by[Name].content"),
+        # Between a base letter and its combining mark is a valid position.
+        op("b", "set_scalar", path="content", value="cafe\u0301s", base=THREE),
+        op("b", "splice_text", path="content", index=4, delete=1, insert="\u0300", base=THREE),
+        op("b", "splice_text", path="content", index=1.5, delete=0, insert="x", base=THREE),
+        op("b", "splice_text", path="content", index=0, delete=1, insert=5, base=THREE),
+        op("b", "splice_text", path="content", index=0, delete=1, insert=None, base=THREE),
         sync("a", "b"),
     ],
     {"a": A, "b": B},

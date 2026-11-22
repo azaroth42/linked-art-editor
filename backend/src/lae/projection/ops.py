@@ -11,7 +11,9 @@ Conventions for every function that takes a path:
   One entry of an array is reached by passing its map (from ``get_entry``, ``list_entries`` or
   ``get_path``) as ``base``, never by encoding its key in the path.
 - A write follows a single chain of nodes (R20). A missing intermediate node is created (R21);
-  functions that only read or remove never create anything.
+  functions that only read or remove never create anything. A path that is written through
+  never names ``id`` or ``type`` (``LAE-PROJ-007``); ``get_path``, ``list_entries`` and
+  ``get_entry`` may read them.
 - Every write is one transaction and is checked before it changes anything, so a rejected
   call leaves the document as it was. Callers that need an origin wrap the call in their own
   ``doc.transaction(origin=...)``.
@@ -45,6 +47,7 @@ from lae.projection.project import (
 )
 from lae.projection.rules import (
     EMPTY_ARRAY,
+    IDENTITY_KEYS,
     OPAQUE_KEYS,
     ORDER_KEY,
     PROJ_BAD_PATH,
@@ -57,6 +60,7 @@ from lae.projection.rules import (
     VALUE_KEY,
     ProjectionError,
     check_json,
+    check_text,
     decode_plain,
     encode_plain,
     entry_key,
@@ -292,6 +296,19 @@ def value_to_json(value: Any) -> Any:
 # --------------------------------------------------------------------------------------------
 
 
+def _write_path(path: str) -> tuple[PathSegment, ...]:
+    """Parse the path of an operation that writes; it may not name ``id`` or ``type`` (R20).
+
+    Checked before anything else: every node a path creates already holds both keys, so a
+    write through either would overwrite a node's identity or fail after creating the node.
+    """
+    segments = parse_path(path)
+    for segment in segments:
+        if segment.key in IDENTITY_KEYS:
+            raise ProjectionError(PROJ_BAD_PATH, f"a write path cannot name {segment.key!r}")
+    return segments
+
+
 def _locate(
     doc: Doc[Any], base: Map[Any] | None, segments: tuple[PathSegment, ...], *, create: bool
 ) -> tuple[Map[Any], tuple[PathSegment, ...]]:
@@ -459,7 +476,7 @@ def add_node(
     (R12). A node without ``type`` takes the class filter of the last segment (R22). A node
     whose ``id`` the array already holds is not added again (R7).
     """
-    segments = parse_path(path)
+    segments = _write_path(path)
     item = _with_type(node, segments[-1])
     if not is_node(item):
         raise ProjectionError(PROJ_BAD_PATH, "a node needs a type and, if it has an id, a string")
@@ -485,7 +502,7 @@ def add_reference(
     reference converge on one entry. ``type`` defaults to the class filter of the last segment;
     ``label`` is stored as ``_label``.
     """
-    segments = parse_path(path)
+    segments = _write_path(path)
     if not isinstance(uri, str):
         raise ProjectionError(PROJ_BAD_PATH, "a reference needs a string id")
     reference: dict[str, Any] = {"id": uri}
@@ -504,7 +521,7 @@ def remove_entry(doc: Doc[Any], path: str, key: str, *, base: Map[Any] | None = 
     someone else). Nothing but the one key is touched; removing the last entry leaves the
     property absent (R14).
     """
-    segments = parse_path(path)
+    segments = _write_path(path)
     _entry_prop(key, segments[-1].key)
     parent = _existing_parent(doc, base, segments)
     if parent is None or key not in parent:
@@ -523,7 +540,7 @@ def move_entry(
     is exhausted or tied and the property is rebalanced first (R12). Nothing is written if the
     entry is already in that position.
     """
-    segments = parse_path(path)
+    segments = _write_path(path)
     prop = segments[-1].key
     _entry_prop(key, prop)
     if before_key is not None:
@@ -579,7 +596,7 @@ def set_scalar(
     last-writer-wins register and is always written. Rejected with ``LAE-PROJ-007`` if the
     property has array entries or holds a node or reference.
     """
-    segments = parse_path(path)
+    segments = _write_path(path)
     last = segments[-1]
     if last.type_filter is not None:
         raise ProjectionError(PROJ_BAD_PATH, f"{last}: a scalar has no class")
@@ -618,11 +635,17 @@ def splice_text(
     """Edit the ``Text`` at ``path``: delete ``delete`` code points at ``index``, then insert.
 
     ``index`` and ``delete`` count Unicode code points (R19). ``LAE-PROJ-007`` if the path does
-    not address a ``Text``; ``LAE-PROJ-008`` if the range is outside it.
+    not address a ``Text`` or an argument has the wrong type; ``LAE-PROJ-008`` if the range is
+    outside the text.
     """
-    segments = parse_path(path)
+    segments = _write_path(path)
     last = segments[-1]
-    encode_plain(insert)
+    if not isinstance(insert, str):
+        raise ProjectionError(PROJ_BAD_PATH, "the text to insert must be a string")
+    for number in (index, delete):
+        if isinstance(number, bool) or not isinstance(number, int):
+            raise ProjectionError(PROJ_BAD_PATH, "index and delete must be integers")
+    check_text(insert, "the text to insert")
     parent = _existing_parent(doc, base, segments)
     text = None if parent is None or last.type_filter is not None else parent.get(last.key)
     if not isinstance(text, Text) or (parent is not None and sorted_entries(parent, last.key)):
@@ -647,7 +670,7 @@ def set_object(
     ``id`` get an internal node IRI; an object without ``type`` takes the last segment's class
     filter. Rejected with ``LAE-PROJ-007`` if the property has array entries.
     """
-    segments = parse_path(path)
+    segments = _write_path(path)
     last = segments[-1]
     item = _with_type(obj, last)
     if not is_structured(item):
@@ -673,7 +696,7 @@ def remove_value(doc: Doc[Any], path: str, *, base: Map[Any] | None = None) -> b
     class filter, its value is not an object of that class. Rejected with ``LAE-PROJ-007`` if
     the property has array entries: those are removed one by one with ``remove_entry``.
     """
-    segments = parse_path(path)
+    segments = _write_path(path)
     last = segments[-1]
     parent = _existing_parent(doc, base, segments)
     if parent is None:

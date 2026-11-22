@@ -281,6 +281,14 @@ Spike S6 (`docs/spikes/S6-bootstrap.md`) is a **GO**: 1M records bootstrap in 10
    node IRI, because that is what `remove_entry` and `move_entry` take (S3 section 5); (c) operations
    beyond the guide's six were needed and added: `set_object`, `remove_value`, `splice_text`,
    `list_entries`, `get_entry`, and a `base` argument for editing inside one array entry.
+   **Review (PR #117) added to R20:** a path given to an operation that writes or removes may
+   not name `id` or `type` (`LAE-PROJ-007`). Before that, `set_scalar(doc, "id", …)` replaced the
+   record URI, and a path that had to create a node and then write its `type` (for example
+   `add_reference(doc, "identified_by[Identifier].type", …)`) failed after creating the node. A
+   node's `type` is therefore changed only by replacing the node; say so if in-place type edits
+   are wanted, since they need a rule for the `content` `Text` (R8.2) as well. `_label` cannot be
+   named by a path either (the grammar excludes it): it is written with the node or reference
+   (`add_reference(label=…)`, `set_object`).
 2. **Not verified here:** the TypeScript mirror does not exist yet, so "same Y.Doc state in both
    implementations" rests on the shared fixtures plus a manual Yjs 13.6.33 check of the
    library-dependent outcomes (last-writer-wins by client id, write against removal, concurrent

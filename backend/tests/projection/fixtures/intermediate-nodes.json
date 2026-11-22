@@ -29,7 +29,7 @@
       }
     ]
   },
-  "initial_update": "AQ/Dpviegf3GBgAoAQZyZWNvcmQIQGNvbnRleHQBdyhodHRwczovL2xpbmtlZC5hcnQvbnMvdjEvbGlua2VkLWFydC5qc29uKAEGcmVjb3JkAmlkAXc7aHR0cHM6Ly9leGFtcGxlLm9yZy9pZC8wMTkyZjBjMS03YjFlLTdjM2EtOWQyZS01YTFiMmMzZDRlNWYoAQZyZWNvcmQEdHlwZQF3D0h1bWFuTWFkZU9iamVjdCcBBnJlY29yZHlbImlkZW50aWZpZWRfYnkiLCJodHRwczovL2V4YW1wbGUub3JnL2lkLzAxOTJmMGMxLTdiMWUtN2MzYS05ZDJlLTVhMWIyYzNkNGU1Zi9ub2RlLzAxOTJmMGMxLTdiMWUtNzAwMC04MDAwLTAwMDAwMDAwMDAwMSJdASgAw6b4noH9xgYDAmlkAXdlaHR0cHM6Ly9leGFtcGxlLm9yZy9pZC8wMTkyZjBjMS03YjFlLTdjM2EtOWQyZS01YTFiMmMzZDRlNWYvbm9kZS8wMTkyZjBjMS03YjFlLTcwMDAtODAwMC0wMDAwMDAwMDAwMDEoAMOm+J6B/cYGAwR0eXBlAXcETmFtZScAw6b4noH9xgYDB2NvbnRlbnQCBADDpviegf3GBgYDb25lKADDpviegf3GBgMGX29yZGVyAXwAAAAAJwEGcmVjb3JkeVsiaWRlbnRpZmllZF9ieSIsImh0dHBzOi8vZXhhbXBsZS5vcmcvaWQvMDE5MmYwYzEtN2IxZS03YzNhLTlkMmUtNWExYjJjM2Q0ZTVmL25vZGUvMDE5MmYwYzEtN2IxZS03MDAwLTgwMDAtMDAwMDAwMDAwMDAyIl0BKADDpviegf3GBgsCaWQBd2VodHRwczovL2V4YW1wbGUub3JnL2lkLzAxOTJmMGMxLTdiMWUtN2MzYS05ZDJlLTVhMWIyYzNkNGU1Zi9ub2RlLzAxOTJmMGMxLTdiMWUtNzAwMC04MDAwLTAwMDAwMDAwMDAwMigAw6b4noH9xgYLBHR5cGUBdwROYW1lJwDDpviegf3GBgsHY29udGVudAIEAMOm+J6B/cYGDgN0d28oAMOm+J6B/cYGCwZfb3JkZXIBfD+AAAAA",
+  "initial_update": "AQ+lhueExsLRDQAoAQZyZWNvcmQIQGNvbnRleHQBdyhodHRwczovL2xpbmtlZC5hcnQvbnMvdjEvbGlua2VkLWFydC5qc29uKAEGcmVjb3JkAmlkAXc7aHR0cHM6Ly9leGFtcGxlLm9yZy9pZC8wMTkyZjBjMS03YjFlLTdjM2EtOWQyZS01YTFiMmMzZDRlNWYoAQZyZWNvcmQEdHlwZQF3D0h1bWFuTWFkZU9iamVjdCcBBnJlY29yZHlbImlkZW50aWZpZWRfYnkiLCJodHRwczovL2V4YW1wbGUub3JnL2lkLzAxOTJmMGMxLTdiMWUtN2MzYS05ZDJlLTVhMWIyYzNkNGU1Zi9ub2RlLzAxOTJmMGMxLTdiMWUtNzAwMC04MDAwLTAwMDAwMDAwMDAwMSJdASgApYbnhMbC0Q0DAmlkAXdlaHR0cHM6Ly9leGFtcGxlLm9yZy9pZC8wMTkyZjBjMS03YjFlLTdjM2EtOWQyZS01YTFiMmMzZDRlNWYvbm9kZS8wMTkyZjBjMS03YjFlLTcwMDAtODAwMC0wMDAwMDAwMDAwMDEoAKWG54TGwtENAwR0eXBlAXcETmFtZScApYbnhMbC0Q0DB2NvbnRlbnQCBAClhueExsLRDQYDb25lKAClhueExsLRDQMGX29yZGVyAXwAAAAAJwEGcmVjb3JkeVsiaWRlbnRpZmllZF9ieSIsImh0dHBzOi8vZXhhbXBsZS5vcmcvaWQvMDE5MmYwYzEtN2IxZS03YzNhLTlkMmUtNWExYjJjM2Q0ZTVmL25vZGUvMDE5MmYwYzEtN2IxZS03MDAwLTgwMDAtMDAwMDAwMDAwMDAyIl0BKAClhueExsLRDQsCaWQBd2VodHRwczovL2V4YW1wbGUub3JnL2lkLzAxOTJmMGMxLTdiMWUtN2MzYS05ZDJlLTVhMWIyYzNkNGU1Zi9ub2RlLzAxOTJmMGMxLTdiMWUtNzAwMC04MDAwLTAwMDAwMDAwMDAwMigApYbnhMbC0Q0LBHR5cGUBdwROYW1lJwClhueExsLRDQsHY29udGVudAIEAKWG54TGwtENDgN0d28oAKWG54TGwtENCwZfb3JkZXIBfD+AAAAA",
   "initial_state": {
     "map": {
       "@context": {
@@ -387,6 +387,87 @@
     },
     {
       "client": "a",
+      "op": "set_scalar",
+      "args": {
+        "path": "id",
+        "value": "https://example.org/id/another"
+      },
+      "error": "LAE-PROJ-007"
+    },
+    {
+      "client": "a",
+      "op": "set_scalar",
+      "args": {
+        "path": "produced_by.type",
+        "value": "Activity"
+      },
+      "error": "LAE-PROJ-007"
+    },
+    {
+      "client": "a",
+      "op": "remove_value",
+      "args": {
+        "path": "produced_by.id"
+      },
+      "error": "LAE-PROJ-007"
+    },
+    {
+      "client": "a",
+      "op": "set_object",
+      "args": {
+        "path": "produced_by.timespan.id",
+        "obj": {
+          "id": "http://vocab.getty.edu/aat/1",
+          "type": "Type"
+        }
+      },
+      "error": "LAE-PROJ-007"
+    },
+    {
+      "client": "a",
+      "op": "add_reference",
+      "args": {
+        "path": "identified_by[Identifier].type",
+        "uri": "http://vocab.getty.edu/aat/1"
+      },
+      "error": "LAE-PROJ-007"
+    },
+    {
+      "client": "a",
+      "op": "add_reference",
+      "args": {
+        "path": "destroyed_by.type[Type].technique",
+        "uri": "http://vocab.getty.edu/aat/1"
+      },
+      "error": "LAE-PROJ-007"
+    },
+    {
+      "client": "a",
+      "op": "set_scalar",
+      "args": {
+        "path": "destroyed_by.id.x_note",
+        "value": "x"
+      },
+      "error": "LAE-PROJ-007"
+    },
+    {
+      "client": "a",
+      "op": "get_path",
+      "args": {
+        "path": "identified_by[Identifier]"
+      },
+      "returns": []
+    },
+    {
+      "client": "a",
+      "op": "get_path",
+      "args": {
+        "path": "destroyed_by"
+      },
+      "returns": []
+    },
+    {
+      "client": "a",
       "op": "get_path",
       "args": {
         "path": "produced_by.part[Production].carried_out_by"
@@ -397,8 +478,8 @@
           "id": "https://example.org/id/person-1"
         },
         {
-          "type": "Person",
-          "id": "https://example.org/id/person-2"
+          "id": "https://example.org/id/person-2",
+          "type": "Person"
         }
       ]
     },
@@ -415,13 +496,17 @@
   ],
   "expected": {
     "current_location": {
-      "id": "https://example.org/id/place-2",
-      "type": "Place"
+      "type": "Place",
+      "id": "https://example.org/id/place-2"
     },
-    "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f",
+    "type": "HumanMadeObject",
     "@context": "https://linked.art/ns/v1/linked-art.json",
+    "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f",
+    "created_by": {
+      "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000011",
+      "type": "Creation"
+    },
     "produced_by": {
-      "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000000a",
       "timespan": {
         "type": "TimeSpan",
         "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000000f",
@@ -434,51 +519,47 @@
           }
         ]
       },
+      "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000000a",
       "type": "Production",
       "part": [
         {
-          "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000000c",
           "type": "Production",
+          "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000000c",
+          "technique": [
+            {
+              "id": "http://vocab.getty.edu/aat/300054216",
+              "type": "Type"
+            }
+          ],
           "carried_out_by": [
             {
               "type": "Person",
               "id": "https://example.org/id/person-1"
             }
-          ],
-          "technique": [
-            {
-              "type": "Type",
-              "id": "http://vocab.getty.edu/aat/300054216"
-            }
           ]
         },
         {
-          "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000000d",
           "type": "Production",
+          "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000000d",
           "carried_out_by": [
             {
-              "type": "Person",
-              "id": "https://example.org/id/person-2"
+              "id": "https://example.org/id/person-2",
+              "type": "Person"
             }
           ]
         }
       ]
     },
-    "created_by": {
-      "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000011",
-      "type": "Creation"
-    },
-    "type": "HumanMadeObject",
     "identified_by": [
       {
+        "type": "Name",
         "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000001",
-        "content": "one",
-        "type": "Name"
+        "content": "one"
       },
       {
-        "type": "Name",
+        "content": "Two",
         "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002",
-        "content": "Two"
+        "type": "Name"
       }
     ]
   },

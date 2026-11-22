@@ -871,3 +871,82 @@ def test_sorted_entries_ignore_other_properties_and_escaped_keys() -> None:
     assert len(sorted_entries(root, "identified_by")) == 1
     assert sorted_entries(root, "identified") == []
     assert sorted_entries(root, "type") == []
+
+
+@pytest.mark.parametrize("key", ["id", "type"])
+def test_a_write_path_never_names_id_or_type(key: str) -> None:
+    """R5, R20: ``id`` and ``type`` are not written through paths (profiles/README.md).
+
+    Found in review: the node a path creates already holds both, so
+    ``add_reference(doc, "identified_by[Identifier].type", ...)`` created the Identifier and
+    then failed, leaving it behind; and ``set_scalar(doc, "id", ...)`` replaced the record URI.
+    """
+    doc = hydrate(record(identified_by=names("a"), timespan={"type": "TimeSpan"}))
+    (first,) = keys(doc, "identified_by")
+    entry = ops.get_entry(doc, "identified_by", first)
+
+    def never() -> str:
+        raise AssertionError("minted")
+
+    ref = {"id": AAT + "1", "type": "Type"}
+    calls: list[Any] = [
+        lambda: ops.set_scalar(doc, key, "x"),
+        lambda: ops.set_scalar(doc, key, "x", base=entry),
+        lambda: ops.set_scalar(doc, f"timespan.{key}", "x"),
+        lambda: ops.set_scalar(doc, f"produced_by.{key}", "x", mint=never),
+        lambda: ops.set_scalar(doc, f"produced_by.{key}[Type].x_note", "x", mint=never),
+        lambda: ops.set_object(doc, key, ref),
+        lambda: ops.set_object(doc, f"produced_by.timespan.{key}", ref, mint=never),
+        lambda: ops.remove_value(doc, key),
+        lambda: ops.remove_value(doc, f"timespan.{key}"),
+        lambda: ops.splice_text(doc, key, 0, 0, "x", base=entry),
+        lambda: ops.add_node(doc, key, {"type": "Name"}, mint=never),
+        lambda: ops.add_node(doc, f"identified_by[Identifier].{key}", {"type": "T"}, mint=never),
+        lambda: ops.add_reference(doc, f"identified_by[Identifier].{key}", AAT + "1", mint=never),
+        lambda: ops.add_reference(doc, f"produced_by.{key}[Type].technique", AAT + "1", mint=never),
+        lambda: ops.remove_entry(doc, key, entry_key(key, "x")),
+        lambda: ops.move_entry(doc, key, entry_key(key, "x"), None),
+    ]
+    for call in calls:
+        assert_rejected(doc, "LAE-PROJ-007", call)
+    assert project(doc)["id"] == URI
+    assert "produced_by" not in project(doc)
+    assert [i["type"] for i in project(doc)["identified_by"]] == ["Name"]
+    # Reading is not restricted.
+    assert ops.get_path(doc, key) == [project(doc)[key]]
+    assert ops.get_path(doc, f"timespan.{key}") == [project(doc)["timespan"][key]]
+
+
+def test_splice_text_takes_integers_and_a_string() -> None:
+    """Found in review: a non-string ``insert`` deleted the range and then failed."""
+    doc = hydrate(record(identified_by=names("abc")))
+    path = "identified_by.content"
+    calls: list[Any] = [
+        lambda: ops.splice_text(doc, path, 0, 1, 5),  # type: ignore[arg-type]
+        lambda: ops.splice_text(doc, path, 0, 1, None),  # type: ignore[arg-type]
+        lambda: ops.splice_text(doc, path, 0.0, 1, "x"),  # type: ignore[arg-type]
+        lambda: ops.splice_text(doc, path, 0, 1.0, "x"),  # type: ignore[arg-type]
+        lambda: ops.splice_text(doc, path, True, 0, "x"),
+        lambda: ops.splice_text(doc, path, 0, False, "x"),
+    ]
+    for call in calls:
+        assert_rejected(doc, "LAE-PROJ-007", call)
+    assert_rejected(doc, "LAE-PROJ-003", lambda: ops.splice_text(doc, path, 0, 1, "\ud800"))
+    assert contents(doc) == ["abc"]
+
+
+@pytest.mark.parametrize(
+    ("old", "new", "splice"),
+    [
+        ("x\U0001f600y", "x\U0001f601y", (1, 1, "\U0001f601")),  # same high surrogate
+        ("\U0001f600z", "\U0001fa00z", (0, 1, "\U0001fa00")),  # same low surrogate
+        ("cafe\u0301", "caf\u00e9", (3, 2, "\u00e9")),  # not normalized
+        ("", "", (0, 0, "")),
+        ("", "a", (0, 0, "a")),
+        ("a", "", (0, 1, "")),
+        ("aaa", "aa", (2, 1, "")),  # the prefix is taken first
+        ("aXa", "aa", (1, 1, "")),
+    ],
+)
+def test_text_change_cuts_between_code_points(old: str, new: str, splice: Any) -> None:
+    assert text_change(old, new) == splice
