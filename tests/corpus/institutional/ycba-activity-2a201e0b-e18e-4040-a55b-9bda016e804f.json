@@ -1,0 +1,154 @@
+{
+  "@context": "https://linked.art/ns/v1/linked-art.json",
+  "id": "https://ycba-lux.s3.amazonaws.com/v3/activity/2a/2a201e0b-e18e-4040-a55b-9bda016e804f.json",
+  "type": "Activity",
+  "_label": "Rebecca Salter (Yale Center for British Art, 2011-02-03 - 2011-05-01)",
+  "classified_as": [
+    {
+      "id": "http://vocab.getty.edu/aat/300054766",
+      "type": "Type",
+      "_label": "Exhibiting"
+    }
+  ],
+  "identified_by": [
+    {
+      "type": "Name",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300404670",
+          "type": "Type",
+          "_label": "Primary Name"
+        }
+      ],
+      "content": "Rebecca Salter (Yale Center for British Art, 2011-02-03 - 2011-05-01)"
+    },
+    {
+      "type": "Name",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300404669",
+          "type": "Type",
+          "_label": "Display Title"
+        }
+      ],
+      "content": "Rebecca Salter"
+    }
+  ],
+  "referred_to_by": [
+    {
+      "type": "LinguisticObject",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300435424",
+          "type": "Type",
+          "_label": "Exhibitions Description",
+          "classified_as": [
+            {
+              "id": "http://vocab.getty.edu/aat/300418049",
+              "type": "Type",
+              "_label": "Brief Text"
+            }
+          ]
+        }
+      ],
+      "content": "\nRebecca Salter (born 1955) is a British abstract artist who lives and works in London. After studying ceramics at Bristol Polytechnic, she won a scholarship to the Kyoto City University of the Arts and immediately developed a deep engagement with Japanese art, architecture, and aesthetics, remaining in Kyoto for six years. Despite enjoying a successful career as a ceramicist, Salter made a radical decision to abandon the medium; she began to make drawings and woodblock prints using Japanese papers, and after her return to England took up painting. Salter still views her practice as about \"making an object\" rather than a surface, and her laboriously constructed and multilayered two-dimensional works complicate the boundaries between painting, drawing, printmaking, and sculpture. Although Salter’s practice is studio-based, she makes an annual trip to the Lake District in the north of England to draw outdoors, and has described this process of experimentation in the landscape as \"that eternal quest to keep drawing alive.\" --- --- \n\nThis survey exhibition of Salter’s work consisted of more than 150 works, including paintings, drawings, prints, sculptures, and sketchbooks, supplemented by documentary material. The exhibition also included working drawings and photographs relating to Salter’s redesign in 2008 of the main entrance area of St. George’s Hospital, London, which demonstrated both her deep engagement with Japanese concepts of space and her firmly held belief in the therapeutic value of art. Although Salter’s work has been featured in numerous international solo and group exhibitions, this was her ?rst museum retrospective. --- --- \n\n\"into the light of things\" was more than a conventional retrospective of a single artist’s work; it was a sustained investigation of the centrality of drawing to art making and of the notion of a dialogue between Eastern and Western aesthetics, artistic practice, and architecture. --- --- \n\nA companion exhibition at the Yale University Art Gallery, Rebecca Salter and Japan, used Salter’s work as a starting point for exploring the complex relationship between Japanese and Western practice. Two of Salter’s key recent works were in dialogue with fifteen objects by Japanese and American artists drawn from the Art Gallery’s holdings and private collections. --- --- \n\nCredits --- --- \n\n\"into the light of things\" was organized by the Center and curated by Gillian Forrester, Curator of Prints and Drawings at the Yale Center for British Art. The exhibition was generously supported by an anonymous gift. The companion show at the Yale University Art Gallery was curated by Sadako Ohki, the Japan Foundation Associate Curator of Japanese Art at the Gallery. \n --- ---\n\nYale Center for British Art"
+    },
+    {
+      "type": "LinguisticObject",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300435424",
+          "type": "Type",
+          "_label": "Exhibitions Description"
+        }
+      ],
+      "content": "\nRebecca Salter (born 1955) is a British abstract artist who lives and works in London. After studying ceramics at Bristol Polytechnic, she won a scholarship to the Kyoto City University of the Arts and immediately developed a deep engagement with Japanese art, architecture, and aesthetics, remaining in Kyoto for six years. Despite enjoying a successful career as a ceramicist, Salter made a radical decision to abandon the medium; she began to make drawings and woodblock prints using Japanese papers, and after her return to England took up painting. Salter still views her practice as about “making an object” rather than a surface, and her laboriously constructed and multilayered two-dimensional works complicate the boundaries between painting, drawing, printmaking, and sculpture. Although Salter’s practice is studio-based, she makes an annual trip to the Lake District in the north of England to draw outdoors, and has described this process of experimentation in the landscape as “that eternal quest to keep drawing alive.” — — \n\nThis survey exhibition of Salter’s work consisted of more than 150 works, including paintings, drawings, prints, sculptures, and sketchbooks, supplemented by documentary material. The exhibition also included working drawings and photographs relating to Salter’s redesign in 2008 of the main entrance area of St. George’s Hospital, London, which demonstrated both her deep engagement with Japanese concepts of space and her firmly held belief in the therapeutic value of art. Although Salter’s work has been featured in numerous international solo and group exhibitions, this was her ?rst museum retrospective. — — \n\n“into the light of things” was more than a conventional retrospective of a single artist’s work; it was a sustained investigation of the centrality of drawing to art making and of the notion of a dialogue between Eastern and Western aesthetics, artistic practice, and architecture. \n\nA companion exhibition at the Yale University Art Gallery, Rebecca Salter and Japan, used Salter’s work as a starting point for exploring the complex relationship between Japanese and Western practice. Two of Salter’s key recent works were in dialogue with fifteen objects by Japanese and American artists drawn from the Art Gallery’s holdings and private collections. — — \n\nCredits — — \n\n“into the light of things” was organized by the Center and curated by Gillian Forrester, Curator of Prints and Drawings at the Yale Center for British Art. The exhibition was generously supported by an anonymous gift. The companion show at the Yale University Art Gallery was curated by Sadako Ohki, the Japan Foundation Associate Curator of Japanese Art at the Gallery. \n\n\n --- ---\n\nYale Center for British Art"
+    }
+  ],
+  "timespan": {
+    "type": "TimeSpan",
+    "identified_by": [
+      {
+        "type": "Name",
+        "classified_as": [
+          {
+            "id": "http://vocab.getty.edu/aat/300404669",
+            "type": "Type",
+            "_label": "Display Title"
+          }
+        ],
+        "content": "2011-02-03 - 2011-05-01"
+      }
+    ],
+    "begin_of_the_begin": "2011-02-03T00:00:00Z",
+    "end_of_the_begin": "2011-02-03T23:59:59Z",
+    "begin_of_the_end": "2011-05-01T00:00:00Z",
+    "end_of_the_end": "2011-05-01T23:59:59Z"
+  },
+  "took_place_at": [
+    {
+      "id": "https://ycba-lux.s3.amazonaws.com/v3/place/e1/e1558251-7ca6-4fd6-b9ff-3415641d48bb.json",
+      "type": "Place",
+      "_label": "Yale Center for British Art"
+    }
+  ],
+  "carried_out_by": [
+    {
+      "id": "https://ycba-lux.s3.amazonaws.com/v3/group/69/69e6b48e-3f35-42e1-bb96-3f6762668496.json",
+      "type": "Group",
+      "_label": "Yale Center for British Art"
+    }
+  ],
+  "used_specific_object": [
+    {
+      "id": "https://ycba-lux.s3.amazonaws.com/v3/set/ed/edff8df8-4d94-469a-8eba-1e94da45ef4e.json",
+      "type": "Set",
+      "_label": "YCBA Exhibit set for \"Rebecca Salter (Yale Center for British Art, 2011-02-03 - 2011-05-01)\""
+    }
+  ],
+  "subject_of": [
+    {
+      "type": "LinguisticObject",
+      "_label": "Home page for \"Rebecca Salter (Yale Center for British Art, 2011-02-03 - 2011-05-01)\"",
+      "digitally_carried_by": [
+        {
+          "type": "DigitalObject",
+          "_label": "Online home page for \"Rebecca Salter (Yale Center for British Art, 2011-02-03 - 2011-05-01)\"",
+          "classified_as": [
+            {
+              "id": "http://vocab.getty.edu/aat/300264578",
+              "type": "Type",
+              "_label": "Web Page"
+            }
+          ],
+          "identified_by": [
+            {
+              "type": "Name",
+              "classified_as": [
+                {
+                  "id": "http://vocab.getty.edu/aat/300404670",
+                  "type": "Type",
+                  "_label": "Primary Name"
+                }
+              ],
+              "content": "View the exhibition page on the Yale Center for British Art website"
+            }
+          ],
+          "format": "text/html",
+          "access_point": [
+            {
+              "id": "https://britishart.yale.edu/node/627",
+              "type": "DigitalObject"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "equivalent": [
+    {
+      "id": "https://media.art.yale.edu/content/lux/exb/3600.json",
+      "type": "Activity"
+    }
+  ]
+}

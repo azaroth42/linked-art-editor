@@ -1,0 +1,82 @@
+{
+  "@context": "https://linked.art/ns/v1/linked-art.json",
+  "id": "https://ycba-lux.s3.amazonaws.com/v3/visual/6a/6a51f607-47e9-4ed1-a8d2-091e68db2be8.json",
+  "type": "VisualItem",
+  "_label": "\"Omai, a Native of Utaietea, Brought into England in the Year 1774 by Tobias Funeaux Esqr., Commander of His Majesty's Sloop Adventure...\" - Visual Content",
+  "classified_as": [
+    {
+      "id": "http://vocab.getty.edu/aat/300015637",
+      "type": "Type",
+      "_label": "portrait",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300435443",
+          "type": "Type",
+          "_label": "Type of Work"
+        }
+      ]
+    }
+  ],
+  "identified_by": [
+    {
+      "type": "Name",
+      "content": "\"Omai, a Native of Utaietea, Brought into England in the Year 1774 by Tobias Funeaux Esqr., Commander of His Majesty's Sloop Adventure...\" - Visual Content",
+      "language": [
+        {
+          "id": "http://vocab.getty.edu/aat/300388277",
+          "type": "Language",
+          "_label": "English"
+        }
+      ]
+    }
+  ],
+  "created_by": {
+    "type": "Creation",
+    "part": [
+      {
+        "type": "Creation",
+        "_label": "Creation",
+        "classified_as": [
+          {
+            "id": "http://vocab.getty.edu/aat/300025103",
+            "type": "Type",
+            "_label": "Primary Artist"
+          }
+        ],
+        "carried_out_by": [
+          {
+            "id": "https://ycba-lux.s3.amazonaws.com/v3/person/2d/2d43f994-9ad1-46d1-8c41-95e83b50c9e6.json",
+            "type": "Person",
+            "_label": "Francesco Bartolozzi"
+          }
+        ]
+      }
+    ]
+  },
+  "subject_to": [
+    {
+      "type": "Right",
+      "_label": "Copyright of Image",
+      "classified_as": [
+        {
+          "id": "https://creativecommons.org/publicdomain/zero/1.0/",
+          "type": "Type",
+          "_label": "Public Domain"
+        }
+      ],
+      "identified_by": [
+        {
+          "type": "Name",
+          "classified_as": [
+            {
+              "id": "http://vocab.getty.edu/aat/300404669",
+              "type": "Type",
+              "_label": "Display Title"
+            }
+          ],
+          "content": "Public Domain"
+        }
+      ]
+    }
+  ]
+}

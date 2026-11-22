@@ -1,0 +1,779 @@
+{
+  "@context": "https://linked.art/ns/v1/linked-art.json",
+  "id": "https://ycba-lux.s3.amazonaws.com/v3/object/54/5497f1dd-415f-4c05-b593-2a87e00d2ee2.json",
+  "type": "HumanMadeObject",
+  "_label": "The Brown Tea Pot",
+  "classified_as": [
+    {
+      "id": "http://vocab.getty.edu/aat/300033618",
+      "type": "Type",
+      "_label": "painting",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300435443",
+          "type": "Type",
+          "_label": "Type of Work"
+        }
+      ]
+    },
+    {
+      "id": "http://vocab.getty.edu/aat/300191086",
+      "type": "Type",
+      "_label": "Visual Works",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300241507",
+          "type": "Type",
+          "_label": "Super Type"
+        }
+      ]
+    }
+  ],
+  "identified_by": [
+    {
+      "type": "Name",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300404670",
+          "type": "Type",
+          "_label": "Primary"
+        }
+      ],
+      "content": "The Brown Tea Pot",
+      "language": [
+        {
+          "id": "http://vocab.getty.edu/aat/300388277",
+          "type": "Language",
+          "_label": "English"
+        }
+      ]
+    },
+    {
+      "type": "Identifier",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300312355",
+          "type": "Type",
+          "_label": "Accession Number"
+        }
+      ],
+      "content": "B2001.2.107",
+      "assigned_by": [
+        {
+          "type": "AttributeAssignment",
+          "carried_out_by": [
+            {
+              "id": "https://ycba-lux.s3.amazonaws.com/v3/group/69/69e6b48e-3f35-42e1-bb96-3f6762668496.json",
+              "type": "Group",
+              "_label": "Yale Center for British Art"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "Identifier",
+      "_label": "Local System Number",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300435704",
+          "type": "Type",
+          "_label": "System-Assigned Number"
+        }
+      ],
+      "content": "38720",
+      "assigned_by": [
+        {
+          "type": "AttributeAssignment",
+          "carried_out_by": [
+            {
+              "id": "https://ycba-lux.s3.amazonaws.com/v3/group/69/69e6b48e-3f35-42e1-bb96-3f6762668496.json",
+              "type": "Group",
+              "_label": "Yale Center for British Art"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "referred_to_by": [
+    {
+      "type": "LinguisticObject",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300435430",
+          "type": "Type",
+          "_label": "Dimension Statement",
+          "classified_as": [
+            {
+              "id": "http://vocab.getty.edu/aat/300418049",
+              "type": "Type",
+              "_label": "Brief Text"
+            }
+          ]
+        }
+      ],
+      "content": "13 3/16 × 9 1/8 inches (33.5 × 23.2 cm)"
+    },
+    {
+      "type": "LinguisticObject",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300435430",
+          "type": "Type",
+          "_label": "Dimension Statement"
+        }
+      ],
+      "content": "Frame: 17 1/16 × 13 × 2 1/4 inches (43.3 × 33 × 5.7 cm)"
+    },
+    {
+      "type": "LinguisticObject",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300435429",
+          "type": "Type",
+          "_label": "Material Statement",
+          "classified_as": [
+            {
+              "id": "http://vocab.getty.edu/aat/300418049",
+              "type": "Type",
+              "_label": "Brief Text"
+            }
+          ]
+        }
+      ],
+      "content": "Oil on canvas"
+    },
+    {
+      "type": "LinguisticObject",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300435418",
+          "type": "Type",
+          "_label": "Credit Line",
+          "classified_as": [
+            {
+              "id": "http://vocab.getty.edu/aat/300418049",
+              "type": "Type",
+              "_label": "Brief Text"
+            }
+          ]
+        }
+      ],
+      "content": "Yale Center for British Art, Paul Mellon Collection"
+    },
+    {
+      "type": "LinguisticObject",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300048722",
+          "type": "Type",
+          "_label": "Gallery Label",
+          "classified_as": [
+            {
+              "id": "http://vocab.getty.edu/aat/300418049",
+              "type": "Type",
+              "_label": "Brief Text"
+            }
+          ]
+        }
+      ],
+      "content": "<span class=\"lux_data\">This painting is one of a series of four almost identical works (one of the others is owned by the Yale University Art Gallery) based on a seemingly drab, everyday scene. Although this interior does not feature any human figures, it is haunted by human presence with a teapot, cups and saucers, and a pot of paintbrushes on the mantelpiece. Gwen John, however, seems less interested in constructing a narrative as she is in assembling a tight, subtly colored composition—a legacy of studying with Whistler, who scorned the narrative art beloved by the Victorians and had praised her control of tone.</br></br>  Gallery label for installation of YCBA collection, 2016 </span>",
+      "identified_by": [
+        {
+          "type": "Name",
+          "classified_as": [
+            {
+              "id": "http://vocab.getty.edu/aat/300404669",
+              "type": "Type",
+              "_label": "Display Title"
+            }
+          ],
+          "content": "Gallery Label"
+        }
+      ]
+    },
+    {
+      "type": "LinguisticObject",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300435438",
+          "type": "Type",
+          "_label": "Provenance Statement",
+          "classified_as": [
+            {
+              "id": "http://vocab.getty.edu/aat/300418049",
+              "type": "Type",
+              "_label": "Brief Text"
+            }
+          ]
+        }
+      ],
+      "content": "<span class=\"lux_data\"></br></br></br>Created by Gwen John (1876-1939), the artist; acquired by Katherine Andrea Cowdin (née Parker) (1895-1978) at Matthiesen Gallery Ltd., London, England, 1946 [1]; acquired by Davis Galleries, New York, New York, 1969 [2]; acquired by Paul Mellon (1907-1999), 1969 [a]; by bequest to the Yale Center for British Art, 2001.  </br></br>Notes:  </br></br> </br>[1] When Matthisen exhibited Brown Tea Pot in its Gwen John Memorial Exhibition as cat. no. 26. See https://www.worldcat.org/title/22253500.   </br></br></br>[2] Known as Davis & Langdale Company since 1980. Davis Galleries from 1952-1973; Davis and Long from 1973-1980.  </br></br></br></br>Citations: </br></br></br>[a] Cecily Langdale, Gwen John: With a Catalogue Raisonne of the Paintings and a Selection of the Drawings, Yale University Press, New Haven, 1987, p. 150, no. 50, pl. 203 </br>  </br></br> </br> </span>"
+    },
+    {
+      "type": "LinguisticObject",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300133046",
+          "type": "Type",
+          "_label": "Access Statement",
+          "classified_as": [
+            {
+              "id": "http://vocab.getty.edu/aat/300418049",
+              "type": "Type",
+              "_label": "Brief Text"
+            }
+          ]
+        }
+      ],
+      "content": "Not on view"
+    },
+    {
+      "type": "LinguisticObject",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300025883",
+          "type": "Type",
+          "_label": "Visitors' Statement",
+          "classified_as": [
+            {
+              "id": "http://vocab.getty.edu/aat/300418049",
+              "type": "Type",
+              "_label": "Brief Text"
+            }
+          ]
+        }
+      ],
+      "content": "<a target='_blank' href='https://britishart.yale.edu/hours-and-visitor-guidelines'>Plan Your Visit to the Yale Center for British Art</a>"
+    },
+    {
+      "type": "LinguisticObject",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300311705",
+          "type": "Type",
+          "_label": "Citation",
+          "classified_as": [
+            {
+              "id": "http://vocab.getty.edu/aat/300418049",
+              "type": "Type",
+              "_label": "Brief Text"
+            }
+          ]
+        }
+      ],
+      "content": "Alexis Goodin, A room of her own : women artist-activists in Britain, 1875-1945,  Clark Art Institute, Williamstown, MA, 2025, pp. 140,145, no. 12, N6767 .R66 2025 Oversize (YCBA)  ",
+      "identified_by": [
+        {
+          "type": "Name",
+          "classified_as": [
+            {
+              "id": "http://vocab.getty.edu/aat/300404669",
+              "type": "Type",
+              "_label": "Display Title"
+            }
+          ],
+          "content": "Selected Bibliography"
+        }
+      ]
+    },
+    {
+      "type": "LinguisticObject",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300311705",
+          "type": "Type",
+          "_label": "Citation"
+        }
+      ],
+      "content": "Cecily Langdale, Gwen John : With a Catalogue Raisonne of the Paintings and a Selection of the Drawings, ,  Yale University Press, New Haven and London, 1987, pp. 59, 60, 150, no. 50, pl. 203, NJ18 J594 A12 L25 (YCBA)  ",
+      "identified_by": [
+        {
+          "type": "Name",
+          "classified_as": [
+            {
+              "id": "http://vocab.getty.edu/aat/300404669",
+              "type": "Type",
+              "_label": "Display Title"
+            }
+          ],
+          "content": "Selected Bibliography"
+        }
+      ]
+    },
+    {
+      "type": "LinguisticObject",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300311705",
+          "type": "Type",
+          "_label": "Citation"
+        }
+      ],
+      "content": "Judith Mackrell, Artists, siblings, visionaries : the lives and loves of Augustus and Gwen John,  Picador, London, 2025, pp. 238, 276-277, fig. 24, NJ18 .J594 M33 2025 (YCBA)  ",
+      "identified_by": [
+        {
+          "type": "Name",
+          "classified_as": [
+            {
+              "id": "http://vocab.getty.edu/aat/300404669",
+              "type": "Type",
+              "_label": "Display Title"
+            }
+          ],
+          "content": "Selected Bibliography"
+        }
+      ]
+    },
+    {
+      "type": "LinguisticObject",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300311705",
+          "type": "Type",
+          "_label": "Citation"
+        }
+      ],
+      "content": "Matthiesen Ltd., Catalogue of the Gwen John memorial exhibition,  London, 1946, p. 13, no. 26, Not at Yale  ",
+      "identified_by": [
+        {
+          "type": "Name",
+          "classified_as": [
+            {
+              "id": "http://vocab.getty.edu/aat/300404669",
+              "type": "Type",
+              "_label": "Display Title"
+            }
+          ],
+          "content": "Selected Bibliography"
+        }
+      ]
+    },
+    {
+      "type": "LinguisticObject",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300311705",
+          "type": "Type",
+          "_label": "Citation"
+        }
+      ],
+      "content": "Pamela Gerrish Nunn, From Victorian to Modern : Innovation and Tradition in the Work of Vanessa Bell, Gwen John and Laura Knight,  Philip Wilson Publishers Ltd, London, 2006, pp. 64, 108, fig. 49, N6767.5.V52 N85 2006 (YCBA)  ",
+      "identified_by": [
+        {
+          "type": "Name",
+          "classified_as": [
+            {
+              "id": "http://vocab.getty.edu/aat/300404669",
+              "type": "Type",
+              "_label": "Display Title"
+            }
+          ],
+          "content": "Selected Bibliography"
+        }
+      ]
+    },
+    {
+      "type": "LinguisticObject",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300311705",
+          "type": "Type",
+          "_label": "Citation"
+        }
+      ],
+      "content": "Paul Mellon's Legacy : a passion for British art [large print labels], ,  Yale Center for British Art, New Haven, CT, 2007, v. 1, N5220 M552 P381 2007 Oversize  (YCBA)  ",
+      "identified_by": [
+        {
+          "type": "Name",
+          "classified_as": [
+            {
+              "id": "http://vocab.getty.edu/aat/300404669",
+              "type": "Type",
+              "_label": "Display Title"
+            }
+          ],
+          "content": "Selected Bibliography"
+        }
+      ]
+    },
+    {
+      "type": "LinguisticObject",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300311705",
+          "type": "Type",
+          "_label": "Citation"
+        }
+      ],
+      "content": "Rachel Stratton, Gwen John : strange beauties,  Yale Center for British Art, New Haven, 2026, pp. 75, 139, 240, pl. 66, NJ18 .J594 A12 2026 (YCBA)  ",
+      "identified_by": [
+        {
+          "type": "Name",
+          "classified_as": [
+            {
+              "id": "http://vocab.getty.edu/aat/300404669",
+              "type": "Type",
+              "_label": "Display Title"
+            }
+          ],
+          "content": "Selected Bibliography"
+        }
+      ]
+    },
+    {
+      "type": "LinguisticObject",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300311705",
+          "type": "Type",
+          "_label": "Citation"
+        }
+      ],
+      "content": "Maria Tamboukou, Nomadic narratives, visual forces : Gwen John's letters and paintings, ,  , Peter Lang, New York, 2010, pp,114,125, NJ18 J594 T36 2010 (YCBA)  ",
+      "identified_by": [
+        {
+          "type": "Name",
+          "classified_as": [
+            {
+              "id": "http://vocab.getty.edu/aat/300404669",
+              "type": "Type",
+              "_label": "Display Title"
+            }
+          ],
+          "content": "Selected Bibliography"
+        }
+      ]
+    }
+  ],
+  "dimension": [
+    {
+      "type": "Dimension",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300055644",
+          "type": "Type",
+          "_label": "Height"
+        }
+      ],
+      "value": 33.5,
+      "unit": {
+        "id": "http://vocab.getty.edu/aat/300379098",
+        "type": "MeasurementUnit",
+        "_label": "centimeters"
+      }
+    },
+    {
+      "type": "Dimension",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300055647",
+          "type": "Type",
+          "_label": "Width"
+        }
+      ],
+      "value": 23.2,
+      "unit": {
+        "id": "http://vocab.getty.edu/aat/300379098",
+        "type": "MeasurementUnit",
+        "_label": "centimeters"
+      }
+    },
+    {
+      "type": "Dimension",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300055644",
+          "type": "Type",
+          "_label": "Height"
+        },
+        {
+          "id": "https://ycba-lux.s3.amazonaws.com/v3/concept/c0/c0508a26-71f9-4748-8e8f-7d6b4ddd04e1.json",
+          "type": "Type",
+          "_label": "Frame"
+        }
+      ],
+      "value": 43.3,
+      "unit": {
+        "id": "http://vocab.getty.edu/aat/300379098",
+        "type": "MeasurementUnit",
+        "_label": "centimeters"
+      }
+    },
+    {
+      "type": "Dimension",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300055647",
+          "type": "Type",
+          "_label": "Width"
+        },
+        {
+          "id": "https://ycba-lux.s3.amazonaws.com/v3/concept/c0/c0508a26-71f9-4748-8e8f-7d6b4ddd04e1.json",
+          "type": "Type",
+          "_label": "Frame"
+        }
+      ],
+      "value": 33.0,
+      "unit": {
+        "id": "http://vocab.getty.edu/aat/300379098",
+        "type": "MeasurementUnit",
+        "_label": "centimeters"
+      }
+    },
+    {
+      "type": "Dimension",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300072633",
+          "type": "Type",
+          "_label": "Depth"
+        },
+        {
+          "id": "https://ycba-lux.s3.amazonaws.com/v3/concept/c0/c0508a26-71f9-4748-8e8f-7d6b4ddd04e1.json",
+          "type": "Type",
+          "_label": "Frame"
+        }
+      ],
+      "value": 5.7,
+      "unit": {
+        "id": "http://vocab.getty.edu/aat/300379098",
+        "type": "MeasurementUnit",
+        "_label": "centimeters"
+      }
+    }
+  ],
+  "made_of": [
+    {
+      "id": "http://vocab.getty.edu/aat/300015050",
+      "type": "Material",
+      "_label": "oil paint"
+    },
+    {
+      "id": "http://vocab.getty.edu/aat/300014078",
+      "type": "Material",
+      "_label": "canvas"
+    }
+  ],
+  "member_of": [
+    {
+      "id": "https://ycba-lux.s3.amazonaws.com/v3/set/e1/e17eb563-ec61-4dc8-a157-4d7ec7c6f52c.json",
+      "type": "Set",
+      "_label": "Paintings and Sculpture Collection, Yale Center for British Art"
+    },
+    {
+      "id": "https://ycba-lux.s3.amazonaws.com/v3/set/5f/5f4f5401-1f70-453d-a8cb-10e49a05749d.json",
+      "type": "Set",
+      "_label": "YCBA Exhibit set for \"Gwen John: Art and Life in London and Paris (Pallant House Gallery, 2023-05-13 - 2023-10-08)\""
+    },
+    {
+      "id": "https://ycba-lux.s3.amazonaws.com/v3/set/9f/9f2978ec-8e50-4ee3-97cc-ea041beb0f07.json",
+      "type": "Set",
+      "_label": "YCBA Exhibit set for \"Revisiting Traditions [BAC 20th century painting & sculpture] (Yale Center for British Art, 2002-04-30 - 2005-05-18)\""
+    }
+  ],
+  "shows": [
+    {
+      "id": "https://ycba-lux.s3.amazonaws.com/v3/visual/91/91c19345-8e7f-46c4-9d2d-f05f05adfcb4.json",
+      "type": "VisualItem",
+      "_label": "\"The Brown Tea Pot\" - Visual Content"
+    }
+  ],
+  "equivalent": [
+    {
+      "id": "http://www.wikidata.org/entity/Q23744707",
+      "type": "HumanMadeObject"
+    }
+  ],
+  "current_location": {
+    "id": "https://ycba-lux.s3.amazonaws.com/v3/place/90/902eb306-d7a2-4b44-8692-20ab9d7c6277.json",
+    "type": "Place",
+    "_label": "Yale Center for British Art"
+  },
+  "produced_by": {
+    "type": "Production",
+    "technique": [
+      {
+        "id": "http://vocab.getty.edu/aat/300054216",
+        "type": "Type",
+        "_label": "painting (technique)"
+      }
+    ],
+    "timespan": {
+      "type": "TimeSpan",
+      "identified_by": [
+        {
+          "type": "Name",
+          "classified_as": [
+            {
+              "id": "http://vocab.getty.edu/aat/300404669",
+              "type": "Type",
+              "_label": "Display Title"
+            }
+          ],
+          "content": "between 1915 and 1916"
+        }
+      ],
+      "begin_of_the_begin": "1915-01-01T00:00:00Z",
+      "end_of_the_begin": "1915-12-31T23:59:59Z",
+      "begin_of_the_end": "1916-01-01T00:00:00Z",
+      "end_of_the_end": "1916-12-31T23:59:59Z"
+    },
+    "during": [
+      {
+        "id": "https://ycba-lux.s3.amazonaws.com/v3/event/b8/b8e11789-5b5d-4e0a-8fab-ccac65a9094b.json",
+        "type": "Period",
+        "_label": "20th century"
+      }
+    ],
+    "part": [
+      {
+        "type": "Production",
+        "classified_as": [
+          {
+            "id": "http://vocab.getty.edu/aat/300025103",
+            "type": "Type",
+            "_label": "Primary Artist"
+          }
+        ],
+        "carried_out_by": [
+          {
+            "id": "https://ycba-lux.s3.amazonaws.com/v3/person/b9/b9e4861a-83be-4037-a534-1bb01f120644.json",
+            "type": "Person",
+            "_label": "Gwen John"
+          }
+        ]
+      }
+    ]
+  },
+  "current_owner": [
+    {
+      "id": "https://ycba-lux.s3.amazonaws.com/v3/group/69/69e6b48e-3f35-42e1-bb96-3f6762668496.json",
+      "type": "Group",
+      "_label": "Yale Center for British Art"
+    }
+  ],
+  "subject_of": [
+    {
+      "type": "LinguisticObject",
+      "_label": "Home page for \"The Brown Tea Pot\"",
+      "digitally_carried_by": [
+        {
+          "type": "DigitalObject",
+          "_label": "Online home page for \"The Brown Tea Pot\"",
+          "classified_as": [
+            {
+              "id": "http://vocab.getty.edu/aat/300264578",
+              "type": "Type",
+              "_label": "Web Page"
+            }
+          ],
+          "identified_by": [
+            {
+              "type": "Name",
+              "classified_as": [
+                {
+                  "id": "http://vocab.getty.edu/aat/300404670",
+                  "type": "Type",
+                  "_label": "Primary Name"
+                }
+              ],
+              "content": "View this record on the Yale Center for British Art website"
+            }
+          ],
+          "format": "text/html",
+          "access_point": [
+            {
+              "id": "https://collections.britishart.yale.edu/catalog/tms:38720",
+              "type": "DigitalObject"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "LinguisticObject",
+      "_label": "IIIF v2 manifest for \"The Brown Tea Pot\"",
+      "digitally_carried_by": [
+        {
+          "type": "DigitalObject",
+          "_label": "IIIF v2 manifest for \"The Brown Tea Pot\"",
+          "identified_by": [
+            {
+              "type": "Name",
+              "content": "IIIF v2 manifest for \"The Brown Tea Pot\""
+            }
+          ],
+          "conforms_to": [
+            {
+              "id": "http://iiif.io/api/presentation/2/context.json",
+              "type": "InformationObject"
+            }
+          ],
+          "format": "application/ld+json",
+          "access_point": [
+            {
+              "id": "https://manifests.collections.yale.edu/v2/ycba/obj/38720",
+              "type": "DigitalObject"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "LinguisticObject",
+      "_label": "IIIF v3 manifest for \"The Brown Tea Pot\"",
+      "digitally_carried_by": [
+        {
+          "type": "DigitalObject",
+          "_label": "IIIF v3 manifest for \"The Brown Tea Pot\"",
+          "identified_by": [
+            {
+              "type": "Name",
+              "content": "IIIF v3 manifest for \"The Brown Tea Pot\""
+            }
+          ],
+          "conforms_to": [
+            {
+              "id": "http://iiif.io/api/presentation/3/context.json",
+              "type": "InformationObject"
+            }
+          ],
+          "format": "application/ld+json",
+          "access_point": [
+            {
+              "id": "https://manifests.collections.yale.edu/ycba/obj/38720",
+              "type": "DigitalObject"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "representation": [
+    {
+      "type": "VisualItem",
+      "_label": "Primary Image",
+      "digitally_shown_by": [
+        {
+          "type": "DigitalObject",
+          "_label": "Primary Image",
+          "classified_as": [
+            {
+              "id": "http://vocab.getty.edu/aat/300215302",
+              "type": "Type",
+              "_label": "Digital Image"
+            }
+          ],
+          "access_point": [
+            {
+              "id": "https://media.collections.yale.edu/thumbnail/ycba/obj/38720",
+              "type": "DigitalObject"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

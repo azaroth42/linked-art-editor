@@ -1059,6 +1059,7 @@ dependencies = [
     { name = "pyoxigraph" },
     { name = "pyshacl" },
     { name = "python-multipart" },
+    { name = "referencing" },
     { name = "sqlalchemy", extra = ["asyncio"] },
     { name = "uuid-utils" },
     { name = "uvicorn", extra = ["standard"] },
@@ -1074,6 +1075,7 @@ dev = [
     { name = "pytest-cov" },
     { name = "ruff" },
     { name = "testcontainers" },
+    { name = "types-jsonschema" },
 ]
 
 [package.metadata]
@@ -1093,6 +1095,7 @@ requires-dist = [
     { name = "pyoxigraph", specifier = ">=0.5.13" },
     { name = "pyshacl", specifier = ">=0.40.2" },
     { name = "python-multipart", specifier = ">=0.0.34" },
+    { name = "referencing", specifier = ">=0.37.0" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2" },
     { name = "uuid-utils", specifier = ">=1.2.0" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.54.0" },
@@ -1108,6 +1111,7 @@ dev = [
     { name = "pytest-cov", specifier = ">=7.1.0" },
     { name = "ruff", specifier = ">=0.17.6" },
     { name = "testcontainers", extras = ["postgres"], specifier = ">=4.15.0" },
+    { name = "types-jsonschema", specifier = ">=4.26.0.20261006" },
 ]
 
 [[package]]
@@ -2350,6 +2354,18 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/4b/13/2cc466bddf26d0085f30a2b2bd56b7f8708b54a54db833eec97c5c69129b/testcontainers-4.15.0.tar.gz", hash = "sha256:085cde086337632e19002719460b7b80bbab2bdd51bb3ea04f77d0de96504706", size = 95340, upload-time = "2026-07-24T23:08:01.731Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/00/7e/424aac8b355597835deb333e757a0e94b5ccf38ad00f07fe6ed1f4e17c88/testcontainers-4.15.0-py3-none-any.whl", hash = "sha256:8796c14e76604031ad39cf0ed3b8e9806283a1fbf5270965c2b1c594caa31b74", size = 160771, upload-time = "2026-07-24T23:08:00.13Z" },
+]
+
+[[package]]
+name = "types-jsonschema"
+version = "4.26.0.20261006"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "referencing" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/29/d2/1f742605f5a6d39f993134885b8de41c98af606871d3ebddaf3e776bd1eb/types_jsonschema-4.26.0.20261006.tar.gz", hash = "sha256:3eb7db61b6819d40addfdaac7173e749071a7d4a9a4394f0c844598ec84b2500", size = 16843, upload-time = "2026-10-06T08:16:07.318Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/8b/a0/4f2e3c0dc3d5cad958006f2e0307065cc8fe4fbf0393ff0b69d55ee9bbe5/types_jsonschema-4.26.0.20261006-py3-none-any.whl", hash = "sha256:29301f4e65e3928540cdf5e23ad716e38bb0c0b416a48dada213edd3d70206ec", size = 16113, upload-time = "2026-10-06T08:16:06.355Z" },
 ]
 
 [[package]]

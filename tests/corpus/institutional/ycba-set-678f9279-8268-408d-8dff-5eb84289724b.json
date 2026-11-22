@@ -1,0 +1,35 @@
+{
+  "@context": "https://linked.art/ns/v1/linked-art.json",
+  "id": "https://ycba-lux.s3.amazonaws.com/v3/set/67/678f9279-8268-408d-8dff-5eb84289724b.json",
+  "type": "Set",
+  "_label": "YCBA Exhibit set for \"Richard Dadd: Beyond Bedlam (Royal Academy of Arts, 2026-07-25 - 2026-10-25)\"",
+  "classified_as": [
+    {
+      "id": "http://vocab.getty.edu/aat/300054766",
+      "type": "Type",
+      "_label": "Exhibition"
+    }
+  ],
+  "identified_by": [
+    {
+      "type": "Identifier",
+      "content": "exhibitset-1139-2026-07-25",
+      "assigned_by": [
+        {
+          "type": "AttributeAssignment",
+          "carried_out_by": [
+            {
+              "id": "https://ycba-lux.s3.amazonaws.com/v3/group/69/69e6b48e-3f35-42e1-bb96-3f6762668496.json",
+              "type": "Group",
+              "_label": "Yale Center for British Art"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "Name",
+      "content": "YCBA Exhibit set for \"Richard Dadd: Beyond Bedlam (Royal Academy of Arts, 2026-07-25 - 2026-10-25)\""
+    }
+  ]
+}

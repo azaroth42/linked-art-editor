@@ -1,0 +1,110 @@
+{
+  "@context": "https://linked.art/ns/v1/linked-art.json",
+  "id": "https://ycba-lux.s3.amazonaws.com/v3/person/bd/bd41568c-1207-4cc9-83d8-b3148e639cdd.json",
+  "type": "Person",
+  "_label": "Robert Clee",
+  "classified_as": [
+    {
+      "id": "http://vocab.getty.edu/aat/300111159",
+      "type": "Type",
+      "_label": "British",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300379842",
+          "type": "Type",
+          "_label": "Nationality"
+        }
+      ]
+    },
+    {
+      "id": "http://vocab.getty.edu/aat/300189559",
+      "type": "Type",
+      "_label": "Male",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300055147",
+          "type": "Type",
+          "_label": "Gender"
+        }
+      ]
+    }
+  ],
+  "identified_by": [
+    {
+      "type": "Identifier",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300435704",
+          "type": "Type",
+          "_label": "System-Assigned Number"
+        }
+      ],
+      "content": "ycba_actor_12251",
+      "assigned_by": [
+        {
+          "type": "AttributeAssignment",
+          "carried_out_by": [
+            {
+              "id": "https://ycba-lux.s3.amazonaws.com/v3/group/69/69e6b48e-3f35-42e1-bb96-3f6762668496.json",
+              "type": "Group",
+              "_label": "Yale Center for British Art"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "Name",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300404670",
+          "type": "Type",
+          "_label": "Primary Name"
+        }
+      ],
+      "content": "Robert Clee",
+      "language": [
+        {
+          "id": "http://vocab.getty.edu/aat/300388277",
+          "type": "Language",
+          "_label": "English"
+        }
+      ]
+    },
+    {
+      "type": "Name",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300451544",
+          "type": "Type",
+          "_label": "Sort Name"
+        }
+      ],
+      "content": "Clee Robert, 1711?–1773"
+    },
+    {
+      "type": "Name",
+      "content": "Robert Clee, 1711?–1773"
+    },
+    {
+      "type": "Name",
+      "content": "Published by Robert Clee, 1711?–1773"
+    }
+  ],
+  "born": {
+    "type": "Birth",
+    "timespan": {
+      "type": "TimeSpan",
+      "begin_of_the_begin": "1711-01-01T00:00:00Z",
+      "end_of_the_end": "1711-12-31T23:59:59Z"
+    }
+  },
+  "died": {
+    "type": "Death",
+    "timespan": {
+      "type": "TimeSpan",
+      "begin_of_the_begin": "1773-01-01T00:00:00Z",
+      "end_of_the_end": "1773-12-31T23:59:59Z"
+    }
+  }
+}

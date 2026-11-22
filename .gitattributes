@@ -1,0 +1,4 @@
+# Corpus and vendored files are kept byte-for-byte as copied (Step 0.4): no line-ending conversion.
+tests/corpus/**/*.json -text
+profiles/schema/*.json -text
+profiles/context/*.json -text

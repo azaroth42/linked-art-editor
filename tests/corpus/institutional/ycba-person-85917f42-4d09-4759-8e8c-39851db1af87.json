@@ -1,0 +1,116 @@
+{
+  "@context": "https://linked.art/ns/v1/linked-art.json",
+  "id": "https://ycba-lux.s3.amazonaws.com/v3/person/85/85917f42-4d09-4759-8e8c-39851db1af87.json",
+  "type": "Person",
+  "_label": "Haveill Gillbank",
+  "classified_as": [
+    {
+      "id": "http://vocab.getty.edu/aat/300111159",
+      "type": "Type",
+      "_label": "British",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300379842",
+          "type": "Type",
+          "_label": "Nationality"
+        }
+      ]
+    },
+    {
+      "id": "http://vocab.getty.edu/aat/300189559",
+      "type": "Type",
+      "_label": "Male",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300055147",
+          "type": "Type",
+          "_label": "Gender"
+        }
+      ]
+    }
+  ],
+  "identified_by": [
+    {
+      "type": "Identifier",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300435704",
+          "type": "Type",
+          "_label": "System-Assigned Number"
+        }
+      ],
+      "content": "ycba_actor_5325",
+      "assigned_by": [
+        {
+          "type": "AttributeAssignment",
+          "carried_out_by": [
+            {
+              "id": "https://ycba-lux.s3.amazonaws.com/v3/group/69/69e6b48e-3f35-42e1-bb96-3f6762668496.json",
+              "type": "Group",
+              "_label": "Yale Center for British Art"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "Name",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300404670",
+          "type": "Type",
+          "_label": "Primary Name"
+        }
+      ],
+      "content": "Haveill Gillbank",
+      "language": [
+        {
+          "id": "http://vocab.getty.edu/aat/300388277",
+          "type": "Language",
+          "_label": "English"
+        }
+      ]
+    },
+    {
+      "type": "Name",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300451544",
+          "type": "Type",
+          "_label": "Sort Name"
+        }
+      ],
+      "content": "Gillbank Haveill, 18th–19th centuries"
+    },
+    {
+      "type": "Name",
+      "content": "Haveill Gillbank, 18th–19th centuries"
+    },
+    {
+      "type": "Name",
+      "content": "Print made by Haveill Gillbank, 18th–19th centuries"
+    }
+  ],
+  "born": {
+    "type": "Birth",
+    "timespan": {
+      "type": "TimeSpan",
+      "begin_of_the_begin": "1700-01-01T00:00:00Z",
+      "end_of_the_end": "1700-12-31T23:59:59Z"
+    }
+  },
+  "died": {
+    "type": "Death",
+    "timespan": {
+      "type": "TimeSpan",
+      "begin_of_the_begin": "1899-01-01T00:00:00Z",
+      "end_of_the_end": "1899-12-31T23:59:59Z"
+    }
+  },
+  "equivalent": [
+    {
+      "id": "http://vocab.getty.edu/ulan/500048499",
+      "type": "Person"
+    }
+  ]
+}

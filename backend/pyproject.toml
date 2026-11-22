@@ -21,6 +21,7 @@ dependencies = [
     "pyoxigraph>=0.5.13",
     "pyshacl>=0.40.2",
     "python-multipart>=0.0.34",
+    "referencing>=0.37.0",
     "sqlalchemy[asyncio]>=2",
     "uuid-utils>=1.2.0",
     "uvicorn[standard]>=0.54.0",
@@ -66,4 +67,5 @@ dev = [
     "pytest-cov>=7.1.0",
     "ruff>=0.17.6",
     "testcontainers[postgres]>=4.15.0",
+    "types-jsonschema>=4.26.0.20261006",
 ]

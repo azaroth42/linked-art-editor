@@ -1,0 +1,148 @@
+{
+  "@context": "https://linked.art/ns/v1/linked-art.json",
+  "id": "https://ycba-lux.s3.amazonaws.com/v3/activity/f0/f0daae04-b2a7-4d18-8fdc-d93e17a9fe51.json",
+  "type": "Activity",
+  "_label": "Art and Emancipation in Jamaica: Isaac Mendes Belisario and his Worlds (Yale Center for British Art, 2007-09-27 - 2007-12-30)",
+  "classified_as": [
+    {
+      "id": "http://vocab.getty.edu/aat/300054766",
+      "type": "Type",
+      "_label": "Exhibiting"
+    }
+  ],
+  "identified_by": [
+    {
+      "type": "Name",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300404670",
+          "type": "Type",
+          "_label": "Primary Name"
+        }
+      ],
+      "content": "Art and Emancipation in Jamaica: Isaac Mendes Belisario and his Worlds (Yale Center for British Art, 2007-09-27 - 2007-12-30)"
+    },
+    {
+      "type": "Name",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300404669",
+          "type": "Type",
+          "_label": "Display Title"
+        }
+      ],
+      "content": "Art and Emancipation in Jamaica: Isaac Mendes Belisario and his Worlds"
+    }
+  ],
+  "referred_to_by": [
+    {
+      "type": "LinguisticObject",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300435424",
+          "type": "Type",
+          "_label": "Exhibitions Description",
+          "classified_as": [
+            {
+              "id": "http://vocab.getty.edu/aat/300418049",
+              "type": "Type",
+              "_label": "Brief Text"
+            }
+          ]
+        }
+      ],
+      "content": "\nOrganized to commemorate the bicentenary of the abolition of the British slave trade, Art and Emancipation in Jamaica was the first exhibition to focus exclusively on the visual and material culture of slavery and emancipation in Jamaica. It featured works produced in the Caribbean and Britain, including a number lent from public and private collections in Jamaica that had rarely or never been exhibited. The exhibition chronicled the iconography of sugar, slavery, and the topography of Jamaica from the beginning of British rule in 1655 to the aftermath of emancipation in the 1840s, with a particular focus on the turbulent years preceding and immediately following emancipation in 1838. Gathered together for the first time were drawings and prints depicting life on a Jamaican sugar plantation, and images used by the anti-slavery campaign. Many works were selected from the Center’s extraordinarily rich holdings relating to the Caribbean, which provided the original impetus for the exhibition. — —  \n\nAt the center of the exhibition was the remarkable lithographic series Sketches of Character, In Illustration of the Habits, Occupation, and Costume of the Negro Population in the Island of Jamaica, made by Jewish Jamaican-born artist Isaac Mendes Belisario. Published in Jamaica in 1837–38, Sketches of Character provides the first detailed visual representation of Jonkonnu (or John Canoe), the celebrated Afro-Jamaican masquerade performed by the enslaved during the Christmas and New Year holidays. Tracing the West African roots of Jonkonnu, its evolution in Jamaica, and its continuing transformation into the twenty-first century, the exhibition featured Jamaican and West African costumes and musical instruments, accompanied by video footage of historic and contemporary performances, as well as a specially commissioned sound track. The exhibition concluded with work by contemporary Jamaican and Afro-Caribbean artists investigating the complex legacy of slavery and emancipation. — —  \n\nCredits — —  \n\nArt and Emancipation in Jamaica was curated by Gillian Forrester, Associate Curator of Prints and Drawings at the Center; Tim Barringer, Paul Mellon Professor of the History of Art, Yale University; and Barbaro Martinez-Ruiz, Assistant Professor, Department of Art History, Stanford University. Generous support for the project was provided by the Reed Foundation. \n --- ---\n\nYale Center for British Art"
+    },
+    {
+      "type": "LinguisticObject",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300435424",
+          "type": "Type",
+          "_label": "Exhibitions Description"
+        }
+      ],
+      "content": "\nOrganized to commemorate the bicentenary of the abolition of the British slave trade, Art and Emancipation in Jamaica was the first exhibition to focus exclusively on the visual and material culture of slavery and emancipation in Jamaica. It featured works produced in the Caribbean and Britain, including a number lent from public and private collections in Jamaica that had rarely or never been exhibited. The exhibition chronicled the iconography of sugar, slavery, and the topography of Jamaica from the beginning of British rule in 1655 to the aftermath of emancipation in the 1840s, with a particular focus on the turbulent years preceding and immediately following emancipation in 1838. Gathered together for the first time were drawings and prints depicting life on a Jamaican sugar plantation, and images used by the anti-slavery campaign. Many works were selected from the Center’s extraordinarily rich holdings relating to the Caribbean, which provided the original impetus for the exhibition. — — \n\nAt the center of the exhibition was the remarkable lithographic series Sketches of Character, In Illustration of the Habits, Occupation, and Costume of the Negro Population in the Island of Jamaica, made by Jewish Jamaican-born artist Isaac Mendes Belisario. Published in Jamaica in 1837–38, Sketches of Character provides the first detailed visual representation of Jonkonnu (or John Canoe), the celebrated Afro-Jamaican masquerade performed by the enslaved during the Christmas and New Year holidays. Tracing the West African roots of Jonkonnu, its evolution in Jamaica, and its continuing transformation into the twenty-first century, the exhibition featured Jamaican and West African costumes and musical instruments, accompanied by video footage of historic and contemporary performances, as well as a specially commissioned sound track. The exhibition concluded with work by contemporary Jamaican and Afro-Caribbean artists investigating the complex legacy of slavery and emancipation. — — \n\nCredits — — \n\nArt and Emancipation in Jamaica was curated by Gillian Forrester, Associate Curator of Prints and Drawings at the Center; Tim Barringer, Paul Mellon Professor of the History of Art, Yale University; and Barbaro Martinez-Ruiz, Assistant Professor, Department of Art History, Stanford University. Generous support for the project was provided by the Reed Foundation. \n\n\n --- ---\n\nYale Center for British Art"
+    }
+  ],
+  "timespan": {
+    "type": "TimeSpan",
+    "identified_by": [
+      {
+        "type": "Name",
+        "classified_as": [
+          {
+            "id": "http://vocab.getty.edu/aat/300404669",
+            "type": "Type",
+            "_label": "Display Title"
+          }
+        ],
+        "content": "2007-09-27 - 2007-12-30"
+      }
+    ],
+    "begin_of_the_begin": "2007-09-27T00:00:00Z",
+    "end_of_the_begin": "2007-09-27T23:59:59Z",
+    "begin_of_the_end": "2007-12-30T00:00:00Z",
+    "end_of_the_end": "2007-12-30T23:59:59Z"
+  },
+  "took_place_at": [
+    {
+      "id": "https://ycba-lux.s3.amazonaws.com/v3/place/e1/e1558251-7ca6-4fd6-b9ff-3415641d48bb.json",
+      "type": "Place",
+      "_label": "Yale Center for British Art"
+    }
+  ],
+  "carried_out_by": [
+    {
+      "id": "https://ycba-lux.s3.amazonaws.com/v3/group/69/69e6b48e-3f35-42e1-bb96-3f6762668496.json",
+      "type": "Group",
+      "_label": "Yale Center for British Art"
+    }
+  ],
+  "used_specific_object": [
+    {
+      "id": "https://ycba-lux.s3.amazonaws.com/v3/set/a2/a2e7a018-13cb-4e5c-8748-d22e9e39d7ea.json",
+      "type": "Set",
+      "_label": "YCBA Exhibit set for \"Art and Emancipation in Jamaica: Isaac Mendes Belisario and his Worlds (Yale Center for British Art, 2007-09-27 - 2007-12-30)\""
+    }
+  ],
+  "subject_of": [
+    {
+      "type": "LinguisticObject",
+      "_label": "Home page for \"Art and Emancipation in Jamaica: Isaac Mendes Belisario and his Worlds (Yale Center for British Art, 2007-09-27 - 2007-12-30)\"",
+      "digitally_carried_by": [
+        {
+          "type": "DigitalObject",
+          "_label": "Online home page for \"Art and Emancipation in Jamaica: Isaac Mendes Belisario and his Worlds (Yale Center for British Art, 2007-09-27 - 2007-12-30)\"",
+          "classified_as": [
+            {
+              "id": "http://vocab.getty.edu/aat/300264578",
+              "type": "Type",
+              "_label": "Web Page"
+            }
+          ],
+          "identified_by": [
+            {
+              "type": "Name",
+              "classified_as": [
+                {
+                  "id": "http://vocab.getty.edu/aat/300404670",
+                  "type": "Type",
+                  "_label": "Primary Name"
+                }
+              ],
+              "content": "View the exhibition page on the Yale Center for British Art website"
+            }
+          ],
+          "format": "text/html",
+          "access_point": [
+            {
+              "id": "https://britishart.yale.edu/node/654/",
+              "type": "DigitalObject"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}
