@@ -143,7 +143,7 @@ async def test_validate_uses_entity_labels_and_record_status(
     material = f"https://example.org/material/{new_uuid7()}"
     person = f"https://example.org/person/{new_uuid7()}"
     async with AsyncSession(db_engine) as session:
-        session.add(EntityLabel(uri=material, type="Type", default_label="not a material"))
+        session.add(EntityLabel(uri=material, type="Place", default_label="not a material"))
         deleted = Record(uri=person, type="Person", etag="e", data={}, context_version=1)
         deleted.status = RecordStatus.DELETED
         session.add(deleted)
@@ -170,7 +170,7 @@ async def test_validate_takes_a_record_uri(db_url: str, db_engine: AsyncEngine) 
     body = {"jsonld": base(), "record_uri": "https://example.org/object/another"}
     async with serve_app(db_url) as served:
         response = await served.client.post("/api/validate", json=body, headers=headers)
-    assert summary(response.json()) == [("LAE-RDF-002", "violation", "")]
+    assert summary(response.json()) == [("LAE-RDF-002", "violation", "/id")]
 
 
 # --- POST /api/records/{id}/draft/validate --------------------------------------------------

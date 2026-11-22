@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from datetime import UTC, datetime, timedelta, timezone
+from datetime import UTC, date, datetime, timedelta, timezone
 from fractions import Fraction
 
 import pytest
@@ -62,6 +62,14 @@ def test_valid(value: str) -> None:
         "642-01-01T00:00:00Z",
         "01642-01-01T00:00:00Z",
         " 1642-01-01T00:00:00Z",
+        "1642-01-01T00:00:00Z\n",
+        "+1642-01-01T00:00:00Z",
+        "1642-01-01T24:00:00.001Z",
+        "1642-01-01T12:00:00+14:01",
+        "1642-01-01T12:00:00z",
+        # Digits of other scripts, which Python's \d (and so VALID_DATETIME) accepts.
+        "\u0661\u0666\u0664\u0662-01-01T00:00:00Z",
+        "1642-01-01T00:00:0\uff10Z",
         "",
         None,
         1642,
@@ -97,6 +105,26 @@ def test_time_zones_and_fractions_compare_as_instants() -> None:
 
 def test_epoch() -> None:
     assert instant("1970-01-01T00:00:00Z") == 0
+
+
+def test_minus_zero_is_year_zero_and_end_of_day_may_have_zero_fractions() -> None:
+    """Both are in the XSD 1.1 lexical space (yearFrag, endOfDayFrag)."""
+    assert instant("-0000-06-01T00:00:00Z") == instant("0000-06-01T00:00:00Z")
+    assert instant("1642-01-01T24:00:00.000Z") == instant("1642-01-02T00:00:00Z")
+
+
+@given(
+    st.dates(min_value=date(1, 1, 1), max_value=date(4000, 12, 31)),
+    st.integers(min_value=1, max_value=30),
+)
+def test_years_before_one_follow_the_400_year_cycle(day: date, cycles: int) -> None:
+    """The proleptic Gregorian calendar repeats every 146,097 days: a date 400 * n years
+    earlier, in year 0 or before, is that many days earlier."""
+    year = day.year - 400 * cycles
+    sign = "-" if year < 0 else ""
+    earlier = f"{sign}{abs(year):04d}-{day.month:02d}-{day.day:02d}T00:00:00Z"
+    later = f"{day.year:04d}-{day.month:02d}-{day.day:02d}T00:00:00Z"
+    assert instant(later) - instant(earlier) == cycles * 146_097 * 86_400
 
 
 @given(

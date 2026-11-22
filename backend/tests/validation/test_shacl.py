@@ -19,6 +19,7 @@ from lae.validation.shacl import (
     build_index,
     class_iri,
     load_shapes,
+    reference_classes,
     shape_codes,
     shapes_graph,
     validate_shacl,
@@ -173,13 +174,70 @@ def test_class_iri_comes_from_the_pinned_context() -> None:
 
 def test_entity_labels_type_wins_over_the_declared_type() -> None:
     material = "http://vocab.getty.edu/aat/300015050"
-    assert found(run(base(), {material: "Type"})) == [("LAE-SHACL-006", "violation", "/made_of/0")]
+    assert found(run(base(), {material: "Place"})) == [("LAE-SHACL-006", "violation", "/made_of/0")]
     declared_wrong = base("HumanMadeObject", ["/made_of/0/type", "Type"])
     assert run(declared_wrong, {material: "Material"}) == []
     # A class name the context does not know types nothing, so the constraint fails.
     assert found(run(base(), {material: "NoSuchClass"})) == [
         ("LAE-SHACL-006", "violation", "/made_of/0")
     ]
+
+
+@pytest.mark.parametrize(
+    ("known", "declared", "expected"),
+    [
+        (None, {"Person"}, {"Person"}),
+        (None, set(), set()),
+        (None, {"Material"}, {"Material", "Type"}),
+        (None, {"Person", "Group"}, {"Person", "Group"}),
+        ("Place", {"Material"}, {"Place"}),
+        ("Person", {"Group"}, {"Person"}),
+        # The registry knows AAT concepts only as Type: a declared subclass of Type stands.
+        ("Type", {"Material"}, {"Type", "Material"}),
+        ("Type", {"Language", "Type"}, {"Type", "Language"}),
+        ("Type", {"Person"}, {"Type"}),
+        ("Type", set(), {"Type"}),
+        # The registry is specific: a different declared subclass does not.
+        ("Language", {"Material"}, {"Language", "Type"}),
+        ("Material", {"Type"}, {"Material", "Type"}),
+    ],
+)
+def test_reference_classes(known: str | None, declared: set[str], expected: set[str]) -> None:
+    assert reference_classes(known, declared) == expected
+
+
+def test_a_type_in_the_registry_does_not_contradict_a_declared_subclass_of_type() -> None:
+    """Every AAT concept is a plain ``Type`` in ``entity_labels`` (``lae.bootstrap.aat``)."""
+    doc = base()
+    seeded = {
+        doc["made_of"][0]["id"]: "Type",
+        doc["identified_by"][0]["language"][0]["id"]: "Type",
+        doc["dimension"][0]["unit"]["id"]: "Type",
+    }
+    assert run(doc, seeded) == []
+    # But a Type that the record itself only calls a Type is still not a Material.
+    declared_type = base("HumanMadeObject", ["/made_of/0/type", "Type"])
+    assert found(run(declared_type, seeded)) == [("LAE-SHACL-006", "violation", "/made_of/0")]
+
+
+def test_a_subclass_of_type_is_a_type() -> None:
+    """``broader`` accepts any concept class; a Material reference is one without ``sh:or`` too."""
+    index = build_index(with_node_iris(base()), base()["id"])
+    lines = shacl.reference_type_triples(index, {}, 1)
+    material = base()["made_of"][0]["id"]
+    assert f"<{material}> <{shacl._RDF_TYPE}> <{CRM}E57_Material> ." in lines
+    assert f"<{material}> <{shacl._RDF_TYPE}> <{CRM}E55_Type> ." in lines
+
+
+def test_every_declared_type_of_a_reference_counts_whatever_the_order() -> None:
+    person = {"id": "https://example.org/actor/1", "type": "Person"}
+    group = {"id": "https://example.org/actor/1", "type": "Group"}
+    for first, second in ((person, group), (group, person)):
+        doc = base()
+        doc["produced_by"]["carried_out_by"] = [dict(first)]
+        doc["produced_by"]["part"][0]["carried_out_by"] = [dict(second)]
+        index = build_index(with_node_iris(doc), doc["id"])
+        assert index.reference_types["https://example.org/actor/1"] == {"Person", "Group"}
 
 
 def test_a_referenced_entity_is_never_a_focus_node() -> None:
@@ -218,8 +276,8 @@ def test_index_maps_every_subject_to_its_json_pointer() -> None:
     assert index.path_of(doc["produced_by"]["timespan"]["id"]) == "/produced_by/timespan"
     assert index.path_of(doc["produced_by"]["part"][0]["id"]) == "/produced_by/part/0"
     assert index.path_of("https://example.org/person/1") is None
-    assert index.reference_types["https://example.org/person/1"] == "Person"
-    assert index.reference_types["http://vocab.getty.edu/aat/300015050"] == "Material"
+    assert index.reference_types["https://example.org/person/1"] == {"Person"}
+    assert index.reference_types["http://vocab.getty.edu/aat/300015050"] == {"Material"}
     assert len(index.nodes) == 8
 
 
@@ -318,6 +376,54 @@ def test_a_value_that_occurs_twice_is_located_by_the_path_that_reaches_it() -> N
     assert found(run(doc)) == [
         ("LAE-SHACL-005", "violation", "/produced_by/part/1/carried_out_by/0")
     ]
+
+
+def test_a_value_reached_in_several_places_is_reported_at_each() -> None:
+    """SHACL reports a value node once per focus node. The same wrong actor on the production
+    and on two of its parts is three places to correct, in an order that never changes."""
+    actor = {"id": "https://example.org/actor/9", "type": "Person"}
+    doc = base()
+    doc["produced_by"]["carried_out_by"] = [dict(actor)]
+    doc["produced_by"]["part"][0]["carried_out_by"].append(dict(actor))
+    doc["produced_by"]["part"].append({"type": "Production", "carried_out_by": [dict(actor)]})
+    items = run(doc, {actor["id"]: "Place"})
+    assert [(item.code, item.path) for item in items] == [
+        ("LAE-SHACL-005", "/produced_by/carried_out_by/0"),
+        ("LAE-SHACL-005", "/produced_by/part/0/carried_out_by/1"),
+        ("LAE-SHACL-005", "/produced_by/part/1/carried_out_by/0"),
+    ]
+    assert {item.params["value"] for item in items} == {actor["id"]}
+
+
+def test_a_literal_is_matched_after_rdflib_normalised_it() -> None:
+    from rdflib import Literal as RdfLiteral
+    from rdflib import URIRef as RdfIri
+
+    integer = "http://www.w3.org/2001/XMLSchema#integer"
+    stored = shacl.ox.Literal("007", datatype=shacl.ox.NamedNode(integer))
+    assert shacl._same_term(stored, RdfLiteral("007", datatype=RdfIri(integer)))
+    assert shacl._same_term(stored, RdfLiteral("7", datatype=RdfIri(integer)))
+    assert not shacl._same_term(stored, RdfLiteral("8", datatype=RdfIri(integer)))
+    assert not shacl._same_term(stored, RdfLiteral("007"))
+    tagged = shacl.ox.Literal("oil", language="en")
+    assert shacl._same_term(tagged, RdfLiteral("oil", lang="en"))
+
+
+def test_a_focus_node_in_the_record_namespace_is_never_dropped() -> None:
+    """Dropping is for references. A subject of the record that the index somehow lacks keeps
+    its finding, at the record; a *reference* into the namespace is still a reference."""
+    doc = with_node_iris(base("HumanMadeObject", ["/dimension/0/value", "wide"]))
+    index = build_index(doc, doc["id"])
+    dimension = doc["dimension"][0]["id"]
+    del index.nodes[dimension]
+    triples = shacl.expand_or_diagnose(doc, doc["id"], 1)[0]
+    assert triples is not None
+    items = shacl.run_shapes(triples, index, {}, 1, doc["id"])
+    assert found(items) == [("LAE-SHACL-007", "violation", "")]
+    assert "/node/" not in items[0].model_dump_json()
+
+    index.reference_types[dimension] = {"Dimension"}
+    assert shacl.run_shapes(triples, index, {}, 1, doc["id"]) == []
 
 
 def test_nested_parts_are_followed() -> None:

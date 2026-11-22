@@ -7,8 +7,16 @@ instead (``docs/questions.md``, Step 0.9; ``docs/spikes/S4-shacl.md``, finding 6
 
 The lexical form is the one ``lae.rdf.sanitize.VALID_DATETIME`` accepts, so that the schema
 check, the rules and RDF expansion agree; on top of it the fields must be in range (month 1-12,
-a day the month has, ``24:00:00`` as the only hour 24, no leap second). Years are astronomical
-and the calendar proleptic Gregorian, as in XSD 1.1: ``0000`` is 1 BCE, ``-0001`` is 2 BCE.
+a day the month has, ``24:00:00`` as the only hour 24, no leap second, a zone offset of at most
+14:00) and the digits must be ASCII: Python's regular-expression class for digits also matches
+the digits of other scripts, which ``VALID_DATETIME`` therefore lets through and XSD does not.
+Years are astronomical and the calendar proleptic Gregorian, as in XSD 1.1 and ISO 8601:
+``0000`` is 1 BCE, ``-0001`` is 2 BCE.
+
+Order is the order of instants on the UTC timeline: the zone offset is subtracted, fractional
+seconds are exact, and ``24:00:00`` is the first instant of the next day. A value without a zone
+is read as UTC. (XSD leaves such a value unordered against a zoned one within 14 hours; Linked
+Art bounds are written with ``Z``, and a rule has to decide.)
 """
 
 from __future__ import annotations
@@ -50,7 +58,9 @@ def parse_datetime(value: object) -> Fraction | None:
     A value without a time zone is read as UTC. The result is exact (fractional seconds
     included), so two results compare as the instants do.
     """
-    if not isinstance(value, str) or not VALID_DATETIME.fullmatch(value):
+    if not isinstance(value, str) or not value.isascii():
+        return None
+    if not VALID_DATETIME.fullmatch(value):
         return None
     match = _FIELDS.fullmatch(value)
     if match is None:

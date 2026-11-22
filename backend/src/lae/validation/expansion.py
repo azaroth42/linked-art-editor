@@ -13,12 +13,17 @@ code of its own:
 | ``LAE-RDF-004`` | ``InvalidLiteralError`` | a literal is not valid for its datatype |
 | ``LAE-RDF-005`` | ``ExpansionError`` | anything else JSON-LD processing rejects |
 
-All are violations at the record root (the exception does not say where in the document the
-term is); ``params.detail`` carries the exception text for logs and developers.
+All are violations, and ``params.detail`` carries the exception text for logs and developers.
+The exception does not say where in the document the term is, so the path is the record root
+(``""``) unless the cause is one this module can find again in the JSON-LD: a root ``id`` that
+is not the record URI (``/id``), and a literal that is not valid Unicode or not a finite number
+(its own pointer). Malformed IRIs and date-times never get this far in ``validate``: the JSON
+Schema ``format`` checks report them first, with their paths.
 """
 
 from __future__ import annotations
 
+import math
 from typing import Any, Final
 
 from lae.rdf import (
@@ -29,7 +34,7 @@ from lae.rdf import (
     OwnershipError,
     expand_to_ntriples,
 )
-from lae.validation.diagnostics import Diagnostic, diagnostic
+from lae.validation.diagnostics import Diagnostic, child, diagnostic
 
 RDF_BLANK_NODE: Final = "LAE-RDF-001"
 RDF_OWNERSHIP: Final = "LAE-RDF-002"
@@ -49,10 +54,53 @@ RDF_CODES: Final = tuple(code for _, code in _CODE_BY_ERROR)
 """Every code this module emits."""
 
 
-def expansion_diagnostic(error: ExpansionError) -> Diagnostic:
-    """Return the violation for an expansion failure, by its most specific class."""
+def _unwritable_literal(value: Any, path: str) -> str | None:
+    """Return the pointer of the first literal RDF cannot hold (bad Unicode, non-finite number)."""
+    if isinstance(value, str):
+        try:
+            value.encode("utf-8")
+        except UnicodeEncodeError:
+            return path
+    elif isinstance(value, float):
+        if not math.isfinite(value):
+            return path
+    elif isinstance(value, list):
+        for position, item in enumerate(value):
+            found = _unwritable_literal(item, child(path, position))
+            if found is not None:
+                return found
+    elif isinstance(value, dict):
+        for key, item in value.items():
+            found = _unwritable_literal(item, child(path, key))
+            if found is not None:
+                return found
+    return None
+
+
+def _place(error: ExpansionError, jsonld: Any, record_uri: str | None) -> str:
+    """Return the JSON Pointer of what caused ``error`` when it can be found again, else ``""``."""
+    if not isinstance(jsonld, dict):
+        return ""
+    if isinstance(error, InvalidLiteralError):
+        return _unwritable_literal(jsonld, "") or ""
+    if isinstance(error, OwnershipError):
+        root_id = jsonld.get("id")
+        if isinstance(root_id, str) and record_uri is not None and root_id != record_uri:
+            return child("", "id")
+    return ""
+
+
+def expansion_diagnostic(
+    error: ExpansionError, jsonld: Any = None, record_uri: str | None = None
+) -> Diagnostic:
+    """Return the violation for an expansion failure, by its most specific class.
+
+    With the document that failed, the path names the cause where that is possible (module
+    docstring); without it the path is the record root.
+    """
     code = next(code for cls, code in _CODE_BY_ERROR if isinstance(error, cls))
-    return diagnostic(code, "", "violation", {"detail": str(error)})
+    path = _place(error, jsonld, record_uri)
+    return diagnostic(code, path, "violation", {"detail": str(error)})
 
 
 def expand_or_diagnose(
@@ -62,4 +110,4 @@ def expand_or_diagnose(
     try:
         return expand_to_ntriples(jsonld, context_version, record_uri=record_uri), []
     except ExpansionError as error:
-        return None, [expansion_diagnostic(error)]
+        return None, [expansion_diagnostic(error, jsonld, record_uri)]

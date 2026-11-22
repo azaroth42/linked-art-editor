@@ -195,11 +195,18 @@
       "expect": [["LAE-SHACL-006", "violation", "/made_of/0"]]
     },
     {
-      "name": "object-made_of-is-a-type-according-to-entity_labels",
+      "name": "object-made_of-is-a-place-according-to-entity_labels",
+      "base": "HumanMadeObject",
+      "set": [],
+      "referenced_types": {"http://vocab.getty.edu/aat/300015050": "Place"},
+      "expect": [["LAE-SHACL-006", "violation", "/made_of/0"]]
+    },
+    {
+      "name": "object-made_of-is-only-a-type-in-entity_labels-and-declared-a-material",
       "base": "HumanMadeObject",
       "set": [],
       "referenced_types": {"http://vocab.getty.edu/aat/300015050": "Type"},
-      "expect": [["LAE-SHACL-006", "violation", "/made_of/0"]]
+      "expect": []
     },
     {
       "name": "object-made_of-is-a-material-according-to-entity_labels",

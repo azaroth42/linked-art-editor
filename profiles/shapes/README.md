@@ -3,9 +3,9 @@
 SHACL shapes in Turtle. Linked Art publishes no SHACL; these are written for this project
 (decision C1, ADR-0008). JSON Schema runs first; a record reaches SHACL only when it passes the
 schema. `lae.validation.shacl` (Phase 1 Step 1.9) loads every `*.ttl` here into one shapes graph
-at startup and runs it with pyshacl over one record's data graph: the record's expansion plus one
-`rdf:type` triple per referenced entity (from `entity_labels.type`, else the `type` the reference
-declares).
+at startup and runs it with pyshacl over one record's data graph: the record's expansion plus the
+`rdf:type` of every referenced entity (from `entity_labels.type`, else the `type` the reference
+declares; rule 10).
 
 | File | Covers | Since |
 | :-- | :-- | :-- |
@@ -56,8 +56,13 @@ validation result of the shape it annotates, for example `lae:code "LAE-SHACL-00
 5. Use SHACL Core and SHACL-SPARQL only, so pyshacl runs with `advanced=False`.
 6. Referenced entities are in the data graph with their class, so `sh:targetClass` selects them
    too. The validator drops every result whose focus node is not a node of the record, so a shape
-   cannot fail on a reference. A "must have" shape should still exempt a node that has nothing but
-   a type and a label (a new draft), as `LAE-SHACL-001` does.
+   cannot fail on a reference. **So a constraint on what a property may refer to must be a
+   property shape whose focus node is the node that has the property** (`sh:targetClass` of the
+   owner, `sh:path` the property, `sh:class` the expected class, as `LAE-SHACL-006` does). Written
+   the other way round, as a node shape that targets the referenced entities
+   (`sh:targetObjectsOf crm:P45_consists_of ; sh:class crm:E57_Material`), its results would all
+   be dropped and the rule would never fire. A "must have" shape should still exempt a node that
+   has nothing but a type and a label (a new draft), as `LAE-SHACL-001` does.
 7. Performance (measured in `docs/spikes/S4-shacl.md`): express cross-node conditions in
    SHACL-SPARQL, not as `sh:or` over `sh:closed` or qualified shapes. pyshacl builds and discards
    a full result for every failing `sh:or` member, which made one such shape cost 50 ms on a
@@ -74,6 +79,16 @@ validation result of the shape it annotates, for example `lae:code "LAE-SHACL-00
    followed; a result of a shape with `sh:inversePath` is placed at its focus node. A
    SHACL-SPARQL constraint on a node shape should bind `?path` to the property it is about
    (`SELECT $this (crm:P1_is_identified_by AS ?path)`), or its results are placed at the node.
+   When a value is reached from the focus node in several places, there is one diagnostic for
+   each.
+10. **Classes.** The data graph has no `rdfs:subClassOf` triples and nothing is inferred, so
+   `sh:class crm:E39_Actor` matches nothing: name the classes Linked Art uses, with `sh:or`
+   where several are allowed (`LAE-SHACL-005`). The one exception is `Type`: a reference whose
+   class is `Material`, `Language`, `MeasurementUnit` or `Currency` is a `crm:E55_Type` too, and
+   an entity that `entity_labels` knows only as a `Type` (every seeded AAT concept) also has the
+   subclass of `Type` that the reference declares. So `sh:class crm:E57_Material` on `made_of`
+   holds for an AAT concept that the record calls a `Material`, and fails for one it calls a
+   `Type`.
 
 ## Codes
 

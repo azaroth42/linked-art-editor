@@ -44,7 +44,7 @@ KNOWN_FAILURES = set(
 )
 
 
-NOT_A_MATERIAL = ReferenceFacts({MATERIAL: "Type"})
+NOT_A_MATERIAL = ReferenceFacts({MATERIAL: "Place"})
 """The schema already pins the declared ``type`` of a ``made_of`` reference, so a record that
 passes it can only fail ``LAE-SHACL-006`` on what ``entity_labels`` says about the target."""
 
@@ -143,7 +143,7 @@ def test_record_uri_defaults_to_the_root_id() -> None:
 
 def test_root_id_that_is_not_the_record_uri_is_an_ownership_violation() -> None:
     result = validate_document(base(), "https://example.org/object/another")
-    assert found(result.items) == [("LAE-RDF-002", "violation", "")]
+    assert found(result.items) == [("LAE-RDF-002", "violation", "/id")]
 
 
 def test_not_a_record() -> None:
@@ -171,6 +171,27 @@ def test_each_expansion_error_has_its_own_code(error: ExpansionError, code: str)
     assert code in RDF_CODES and len(set(RDF_CODES)) == 5
 
 
+def test_an_expansion_error_whose_cause_cannot_be_found_is_at_the_root() -> None:
+    """``InvalidLiteralError`` for a reason other than bad Unicode or a non-finite number."""
+    item = expansion_diagnostic(InvalidLiteralError("l"), base(), base()["id"])
+    assert item.path == ""
+    assert expansion_diagnostic(OwnershipError("o"), base(), base()["id"]).path == ""
+    assert expansion_diagnostic(OwnershipError("o"), [1], None).path == ""
+
+
+def test_non_ascii_digits_in_a_date_are_a_schema_violation_with_a_path() -> None:
+    """``lae.rdf.sanitize.VALID_DATETIME`` would let them through to the N-Triples."""
+    doc = base(
+        "HumanMadeObject",
+        ["/produced_by/timespan/begin_of_the_begin", "\u0661\u0666\u0664\u0662-01-01T00:00:00Z"],
+    )
+    result = validate_document(doc)
+    assert not result.ok
+    assert {(item.code, item.path) for item in result.items} == {
+        ("LAE-SCHEMA-format", "/produced_by/timespan/begin_of_the_begin")
+    }
+
+
 def test_every_expansion_error_subclass_is_mapped() -> None:
     def subclasses(cls: type) -> set[type]:
         return {cls}.union(*(subclasses(sub) for sub in cls.__subclasses__()))
@@ -189,11 +210,16 @@ def test_schema_valid_records_that_cannot_be_expanded_are_violations_not_excepti
     nested_context["produced_by"]["@context"] = {"content": "http://example.org/evil"}
     assert found(validate_document(nested_context).items) == [("LAE-RDF-005", "violation", "")]
 
+    # A literal RDF cannot hold is found again in the document, so the editor can focus it.
     lone_surrogate = base("HumanMadeObject", ["/identified_by/0/content", "bad \ud800 text"])
-    assert found(validate_document(lone_surrogate).items) == [("LAE-RDF-004", "violation", "")]
+    assert found(validate_document(lone_surrogate).items) == [
+        ("LAE-RDF-004", "violation", "/identified_by/0/content")
+    ]
 
     overflow = base("HumanMadeObject", ["/dimension/0/value", float("inf")])
-    assert found(validate_document(overflow).items) == [("LAE-RDF-004", "violation", "")]
+    assert found(validate_document(overflow).items) == [
+        ("LAE-RDF-004", "violation", "/dimension/0/value")
+    ]
 
     assert found(validate_document(base(), "not an iri").items) == [
         ("LAE-RDF-003", "violation", "")
@@ -277,12 +303,35 @@ async def test_validate_runs_off_the_event_loop(monkeypatch: pytest.MonkeyPatch)
 
 
 async def test_referenced_types_come_from_entity_labels(db_session: AsyncSession) -> None:
-    db_session.add(EntityLabel(uri=MATERIAL, type="Type", default_label="oil paint"))
+    db_session.add(EntityLabel(uri=MATERIAL, type="Place", default_label="oil paint"))
     await db_session.flush()
     facts = await load_reference_facts(db_session, {MATERIAL, PERSON})
-    assert facts == ReferenceFacts({MATERIAL: "Type"}, frozenset())
+    assert facts == ReferenceFacts({MATERIAL: "Place"}, frozenset())
     result = await validate(base(), None, db_session)
     assert found(result.items) == [("LAE-SHACL-006", "violation", "/made_of/0")]
+
+
+async def test_aat_concepts_seeded_as_type_keep_their_declared_subclass(
+    db_session: AsyncSession,
+) -> None:
+    """``lae bootstrap aat-labels`` stores every AAT concept as ``Type``. A record that uses one
+    as a Material, a Language or a MeasurementUnit must still be publishable."""
+    doc = base()
+    references = [
+        doc["made_of"][0],
+        doc["identified_by"][0]["language"][0],
+        doc["dimension"][0]["unit"],
+    ]
+    assert [reference["type"] for reference in references] == [
+        "Material",
+        "Language",
+        "MeasurementUnit",
+    ]
+    for reference in references:
+        db_session.add(EntityLabel(uri=reference["id"], type="Type", default_label="x"))
+    await db_session.flush()
+    result = await validate(doc, None, db_session)
+    assert result.items == []
 
 
 async def test_reference_to_a_deleted_record(db_session: AsyncSession) -> None:
@@ -332,7 +381,7 @@ async def test_validate_many_uses_a_process_pool_for_large_batches() -> None:
 
 
 async def test_validate_many_reads_facts_once_for_the_batch(db_session: AsyncSession) -> None:
-    db_session.add(EntityLabel(uri=MATERIAL, type="Type", default_label="oil paint"))
+    db_session.add(EntityLabel(uri=MATERIAL, type="Place", default_label="oil paint"))
     record = Record(uri=PERSON, type="Person", etag="e", data={}, context_version=1)
     record.status = RecordStatus.DELETED
     db_session.add(record)

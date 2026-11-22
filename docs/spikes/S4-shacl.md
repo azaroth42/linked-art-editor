@@ -342,6 +342,12 @@ Two things differ from Appendix A. JSON Schema now runs first, so the 60 files i
 `tests/corpus/KNOWN_FAILURES.md` stop there and never reach SHACL. And a referenced entity is no
 longer a focus node, so only nodes of the record are reported.
 
+The critical-step review changed three things in the SHACL layer (ADR-0025, items 5 to 7): an
+entity that `entity_labels` knows only as a `Type` keeps the subclass of `Type` a reference
+declares for it, a value reached in several places is reported at each, and a focus node in the
+record's namespace is never dropped. None changes the corpus result below; the reviewer measured
+2.5 ms p50, 10.5 ms p95 and 21.5 ms max on the same machine.
+
 **Corpus result (244 files):** 60 fail JSON Schema, exactly the known failures. The other 184
 have **zero violations** from SHACL and the Python rules, and these warnings
 (`backend/tests/validation/test_engine.py` pins the counts):
