@@ -207,7 +207,7 @@ def test_corpus_schema_failures_are_exactly_the_known_ones() -> None:
         if items:
             failing.add(path.relative_to(CORPUS_DIR).as_posix())
     assert failing == KNOWN_FAILURES
-    assert len(failing) == 60
+    assert len(failing) == 92
 
 
 def test_every_keyword_the_vendored_schemas_use_is_known() -> None:

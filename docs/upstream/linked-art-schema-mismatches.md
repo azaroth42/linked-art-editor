@@ -6,7 +6,7 @@ Generated 2026-11-22 by `scripts/report_schema_mismatches.py`. Inputs: linked.ar
 uv run --project backend python scripts/report_schema_mismatches.py
 ```
 
-**57 linked.art examples** and **3 institutional records** fail. Each linked.art entry names the example file, the model page and line of the `crom` block that generates it, and every error. "Schema location" is the definition that rejected the value (the last `$ref` followed). For `anyOf` failures the closest alternative is shown, because that is usually the real problem.
+**57 linked.art examples**, **3 institutional records** and **32 LUX records** fail. Each linked.art entry names the example file, the model page and line of the `crom` block that generates it, and every error. "Schema location" is the definition that rejected the value (the last `$ref` followed). For `anyOf` failures the closest alternative is shown, because that is usually the real problem.
 
 When an upstream fix lands, remove the file's row from `tests/corpus/KNOWN_FAILURES.md`; the corpus test fails on any listed file that starts to validate, so the list stays honest.
 
@@ -265,6 +265,177 @@ These come from public YCBA, YUAG, and Yale Library feeds (`tests/corpus/SOURCE.
   - `/about/2` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('created_by', 'identified_by' were unexpected) — schema: `image.json#/properties/about/items/additionalProperties`
   - `/about/4` **required** (reference-without-id): 'id' is a required property — schema: `image.json#/properties/about/items/required`
   - `/about/4` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('created_by', 'identified_by' were unexpected) — schema: `image.json#/properties/about/items/additionalProperties`
+
+## LUX records (LUX data, not linked.art upstream)
+
+These are merged records from `lux.collections.yale.edu` (`tests/corpus/SOURCE.md`). Every one carries LUX's own underscore-prefixed API keys (`_links`, and often `_content_html` or `_seconds_since_epoch_*`), which no entry-point schema allows. They are listed for completeness; fix them with LUX or accept them as known failures.
+
+- [ ] `tests/corpus/lux/activity-2fcb9f1b-0de3-4bb9-966c-11d160ab00a8.json` — `Period` → `event.json` — 2 error(s)
+  - `/` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_links' was unexpected) — schema: `event.json#/additionalProperties`
+  - `/equivalent/0/type` **const** (enum-or-const): 'Activity' was expected — schema: `event.json#/properties/equivalent/allOf/1/items/properties/type/allOf/1/const`
+- [ ] `tests/corpus/lux/activity-efeb56f7-9a98-449d-9234-375555814114.json` — `Activity` → `event.json` — 1 error(s)
+  - `/` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_links' was unexpected) — schema: `event.json#/additionalProperties`
+- [ ] `tests/corpus/lux/concept-2d7ee50e-14c2-4477-b076-e22a3fd600a1.json` — `Type` → `concept.json` — 1 error(s)
+  - `/` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_links' was unexpected) — schema: `concept.json#/additionalProperties`
+- [ ] `tests/corpus/lux/concept-710b7648-91ce-438a-865d-c39588b7e2c8.json` — `MeasurementUnit` → `concept.json` — 1 error(s)
+  - `/` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_links' was unexpected) — schema: `concept.json#/additionalProperties`
+- [ ] `tests/corpus/lux/concept-8da5c4f7-2f76-4861-b58e-7f15ffd6ef18.json` — `Material` → `concept.json` — 1 error(s)
+  - `/` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_links' was unexpected) — schema: `concept.json#/additionalProperties`
+- [ ] `tests/corpus/lux/concept-a7a11bba-fd6b-4c35-97d7-3c3e421e95d9.json` — `Type` → `concept.json` — 1 error(s)
+  - `/` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_links' was unexpected) — schema: `concept.json#/additionalProperties`
+- [ ] `tests/corpus/lux/concept-b3e797cd-7e04-45d5-9c44-64a62d4e95a4.json` — `Currency` → `concept.json` — 1 error(s)
+  - `/` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_links' was unexpected) — schema: `concept.json#/additionalProperties`
+- [ ] `tests/corpus/lux/concept-d06d30df-b3fd-4f09-8b15-b1927843b612.json` — `Type` → `concept.json` — 1 error(s)
+  - `/` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_links' was unexpected) — schema: `concept.json#/additionalProperties`
+- [ ] `tests/corpus/lux/concept-ddd29579-6862-417a-9ffe-5d0798be7e24.json` — `Language` → `concept.json` — 1 error(s)
+  - `/` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_links' was unexpected) — schema: `concept.json#/additionalProperties`
+- [ ] `tests/corpus/lux/concept-e7ac1a41-319a-4e1f-bb30-d12f19a42902.json` — `Type` → `concept.json` — 1 error(s)
+  - `/` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_links' was unexpected) — schema: `concept.json#/additionalProperties`
+- [ ] `tests/corpus/lux/concept-f7ef5bb4-e7fb-443d-9c6b-371a23e717ec.json` — `Type` → `concept.json` — 1 error(s)
+  - `/` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_links' was unexpected) — schema: `concept.json#/additionalProperties`
+- [ ] `tests/corpus/lux/concept-f989a0fc-f3dd-4d82-8580-fcc9bcb5be89.json` — `Language` → `concept.json` — 1 error(s)
+  - `/` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_links' was unexpected) — schema: `concept.json#/additionalProperties`
+- [ ] `tests/corpus/lux/digital-6302dd42-df1d-5b06-980c-b672bfae6cdc.json` — `DigitalObject` → `digital.json` — 2 error(s)
+  - `/` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_links' was unexpected) — schema: `digital.json#/additionalProperties`
+  - `/referred_to_by/0` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `digital.json#/properties/referred_to_by/items/additionalProperties`
+- [ ] `tests/corpus/lux/group-41310ca5-8137-45fe-ac2c-a6a04e2235f1.json` — `Group` → `group.json` — 4 error(s)
+  - `/` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_links' was unexpected) — schema: `group.json#/additionalProperties`
+  - `/carried_out/0/timespan` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_seconds_since_epoch_begin_of_the_begin' was unexpected) — schema: `group.json#/properties/carried_out/items/properties/timespan/additionalProperties`
+  - `/formed_by/timespan` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_seconds_since_epoch_begin_of_the_begin', '_seconds_since_epoch_end_of_the_end' were unexpected) — schema: `group.json#/properties/formed_by/properties/timespan/additionalProperties`
+  - `/representation/0/digitally_shown_by/0/referred_to_by/1` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `group.json#/properties/representation/items/properties/digitally_shown_by/items/properties/referred_to_by/items/additionalProperties`
+- [ ] `tests/corpus/lux/group-91803a28-6135-4564-ae16-c6658000d088.json` — `Group` → `group.json` — 1 error(s)
+  - `/` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_links' was unexpected) — schema: `group.json#/additionalProperties`
+- [ ] `tests/corpus/lux/object-6a76f826-54e7-4b94-8fee-f043b29bb2b8.json` — `HumanMadeObject` → `object.json` — 71 error(s)
+  - `/` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_links', 'see_also' were unexpected) — schema: `object.json#/additionalProperties`
+  - `/identified_by/11` **anyOf** (enum-or-const): matches none of the 2 allowed shapes — schema: `object.json#/properties/identified_by/items/anyOf/0/properties/type/allOf/1/const`
+    - closest alternative: `/identified_by/11/type` const: 'Name' was expected
+  - `/identified_by/12` **anyOf** (enum-or-const): matches none of the 2 allowed shapes — schema: `object.json#/properties/identified_by/items/anyOf/0/properties/type/allOf/1/const`
+    - closest alternative: `/identified_by/12/type` const: 'Name' was expected
+  - `/produced_by/timespan` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_seconds_since_epoch_begin_of_the_begin', '_seconds_since_epoch_end_of_the_end' were unexpected) — schema: `object.json#/properties/produced_by/properties/timespan/additionalProperties`
+  - `/referred_to_by/1` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_audioguide_url', '_content_html' were unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/2` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/3` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/4` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/5` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/6` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/7` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/8` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/9` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/10` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/11` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/12` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/13` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/14` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/15` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/16` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/17` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/18` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/19` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/20` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/21` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/22` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/23` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/24` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/25` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/26` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/27` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/28` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/29` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/30` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/31` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/32` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/33` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/34` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/35` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/36` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/37` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/38` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/39` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/40` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/41` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/42` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/43` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/44` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/45` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/46` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/47` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/48` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/49` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/50` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/51` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/52` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/53` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/54` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/55` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/56` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/57` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/58` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/59` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/60` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/61` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/62` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/63` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/64` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/67` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/74` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/representation/1/digitally_shown_by/0/referred_to_by/0` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/representation/items/properties/digitally_shown_by/items/properties/referred_to_by/items/additionalProperties`
+- [ ] `tests/corpus/lux/object-9e77d0f8-b0ac-402c-bfe3-3b8121ae9f58.json` — `HumanMadeObject` → `object.json` — 4 error(s)
+  - `/` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_links' was unexpected) — schema: `object.json#/additionalProperties`
+  - `/produced_by/timespan` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_seconds_since_epoch_begin_of_the_begin', '_seconds_since_epoch_end_of_the_end' were unexpected) — schema: `object.json#/properties/produced_by/properties/timespan/additionalProperties`
+  - `/referred_to_by/3` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/11` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+- [ ] `tests/corpus/lux/object-b7285efb-e100-43e1-ba55-6dde6ea4b556.json` — `HumanMadeObject` → `object.json` — 1 error(s)
+  - `/` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_links' was unexpected) — schema: `object.json#/additionalProperties`
+- [ ] `tests/corpus/lux/object-c1b6648b-caf8-4a1f-b28d-43ce8c83a852.json` — `HumanMadeObject` → `object.json` — 5 error(s)
+  - `/` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_links' was unexpected) — schema: `object.json#/additionalProperties`
+  - `/produced_by/timespan` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_seconds_since_epoch_begin_of_the_begin', '_seconds_since_epoch_end_of_the_end' were unexpected) — schema: `object.json#/properties/produced_by/properties/timespan/additionalProperties`
+  - `/referred_to_by/0` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/1` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+  - `/referred_to_by/10` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `object.json#/properties/referred_to_by/items/additionalProperties`
+- [ ] `tests/corpus/lux/person-07cd63b8-4bd2-460a-b6cb-c8d5bd1d0b4f.json` — `Person` → `person.json` — 4 error(s)
+  - `/` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_links' was unexpected) — schema: `person.json#/additionalProperties`
+  - `/born/timespan` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_seconds_since_epoch_begin_of_the_begin', '_seconds_since_epoch_end_of_the_end' were unexpected) — schema: `person.json#/properties/born/properties/timespan/additionalProperties`
+  - `/died/timespan` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_seconds_since_epoch_begin_of_the_begin', '_seconds_since_epoch_end_of_the_end' were unexpected) — schema: `person.json#/properties/died/properties/timespan/additionalProperties`
+  - `/representation/0/digitally_shown_by/0/referred_to_by/1` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `person.json#/properties/representation/items/properties/digitally_shown_by/items/properties/referred_to_by/items/additionalProperties`
+- [ ] `tests/corpus/lux/person-2107305b-7a4c-4af8-9d02-7a75bb1b2a4e.json` — `Person` → `person.json` — 5 error(s)
+  - `/` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_links' was unexpected) — schema: `person.json#/additionalProperties`
+  - `/born/timespan` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_seconds_since_epoch_begin_of_the_begin', '_seconds_since_epoch_end_of_the_end' were unexpected) — schema: `person.json#/properties/born/properties/timespan/additionalProperties`
+  - `/carried_out/0/timespan` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_seconds_since_epoch_begin_of_the_begin', '_seconds_since_epoch_end_of_the_end' were unexpected) — schema: `person.json#/properties/carried_out/items/properties/timespan/additionalProperties`
+  - `/died/timespan` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_seconds_since_epoch_begin_of_the_begin', '_seconds_since_epoch_end_of_the_end' were unexpected) — schema: `person.json#/properties/died/properties/timespan/additionalProperties`
+  - `/representation/0/digitally_shown_by/0/referred_to_by/0` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `person.json#/properties/representation/items/properties/digitally_shown_by/items/properties/referred_to_by/items/additionalProperties`
+- [ ] `tests/corpus/lux/person-252d23b3-b84f-4cc5-94ca-9e98928bea48.json` — `Person` → `person.json` — 6 error(s)
+  - `/` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_links' was unexpected) — schema: `person.json#/additionalProperties`
+  - `/born/timespan` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_seconds_since_epoch_begin_of_the_begin', '_seconds_since_epoch_end_of_the_end' were unexpected) — schema: `person.json#/properties/born/properties/timespan/additionalProperties`
+  - `/carried_out/0/timespan` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_seconds_since_epoch_begin_of_the_begin', '_seconds_since_epoch_end_of_the_end' were unexpected) — schema: `person.json#/properties/carried_out/items/properties/timespan/additionalProperties`
+  - `/died/timespan` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_seconds_since_epoch_begin_of_the_begin', '_seconds_since_epoch_end_of_the_end' were unexpected) — schema: `person.json#/properties/died/properties/timespan/additionalProperties`
+  - `/representation/0/digitally_shown_by/0/referred_to_by/1` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `person.json#/properties/representation/items/properties/digitally_shown_by/items/properties/referred_to_by/items/additionalProperties`
+  - `/representation/1/digitally_shown_by/0/referred_to_by/1` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `person.json#/properties/representation/items/properties/digitally_shown_by/items/properties/referred_to_by/items/additionalProperties`
+- [ ] `tests/corpus/lux/person-3c22919c-57e0-4cf0-84c3-0b4cd8a78572.json` — `Person` → `person.json` — 5 error(s)
+  - `/` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_links' was unexpected) — schema: `person.json#/additionalProperties`
+  - `/born/timespan` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_seconds_since_epoch_begin_of_the_begin', '_seconds_since_epoch_end_of_the_end' were unexpected) — schema: `person.json#/properties/born/properties/timespan/additionalProperties`
+  - `/died/timespan` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_seconds_since_epoch_begin_of_the_begin', '_seconds_since_epoch_end_of_the_end' were unexpected) — schema: `person.json#/properties/died/properties/timespan/additionalProperties`
+  - `/representation/0/digitally_shown_by/0/referred_to_by/1` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `person.json#/properties/representation/items/properties/digitally_shown_by/items/properties/referred_to_by/items/additionalProperties`
+  - `/representation/1/digitally_shown_by/0/referred_to_by/1` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `person.json#/properties/representation/items/properties/digitally_shown_by/items/properties/referred_to_by/items/additionalProperties`
+- [ ] `tests/corpus/lux/place-1d61ce08-b737-4326-97ba-85e5e6f9cff7.json` — `Place` → `place.json` — 1 error(s)
+  - `/` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_links' was unexpected) — schema: `place.json#/additionalProperties`
+- [ ] `tests/corpus/lux/place-a5b17437-4725-48ec-8a9f-b014e3187b64.json` — `Place` → `place.json` — 2 error(s)
+  - `/` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_links' was unexpected) — schema: `place.json#/additionalProperties`
+  - `/representation/0/digitally_shown_by/0/referred_to_by/1` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_content_html' was unexpected) — schema: `place.json#/properties/representation/items/properties/digitally_shown_by/items/properties/referred_to_by/items/additionalProperties`
+- [ ] `tests/corpus/lux/place-bb47b983-248b-5a9f-93c9-eb400993b94a.json` — `Place` → `place.json` — 1 error(s)
+  - `/` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_links' was unexpected) — schema: `place.json#/additionalProperties`
+- [ ] `tests/corpus/lux/place-f10c9789-68d5-4543-a782-82f151babc5a.json` — `Place` → `place.json` — 1 error(s)
+  - `/` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_links' was unexpected) — schema: `place.json#/additionalProperties`
+- [ ] `tests/corpus/lux/place-fff6ea51-e555-4b4e-92b1-8b378d0f913b.json` — `Place` → `place.json` — 1 error(s)
+  - `/` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_links' was unexpected) — schema: `place.json#/additionalProperties`
+- [ ] `tests/corpus/lux/set-703438a0-4a84-4bc8-8c9c-28e8d3e944f8.json` — `Set` → `set.json` — 1 error(s)
+  - `/` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_links' was unexpected) — schema: `set.json#/additionalProperties`
+- [ ] `tests/corpus/lux/set-92e30c6b-6b10-46f9-b460-9c2ec2914e16.json` — `Set` → `set.json` — 1 error(s)
+  - `/` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_links' was unexpected) — schema: `set.json#/additionalProperties`
+- [ ] `tests/corpus/lux/text-a76b91ea-b120-466f-bb38-973e1aa0221d.json` — `LinguisticObject` → `text.json` — 2 error(s)
+  - `/` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_links' was unexpected) — schema: `text.json#/additionalProperties`
+  - `/used_for/0/timespan` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_seconds_since_epoch_begin_of_the_begin', '_seconds_since_epoch_end_of_the_end' were unexpected) — schema: `text.json#/properties/used_for/items/properties/timespan/additionalProperties`
+- [ ] `tests/corpus/lux/visual-cd439eb0-d7a5-41dd-bf2f-f5d95e7d1bc1.json` — `VisualItem` → `image.json` — 1 error(s)
+  - `/` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('_links', 'representation' were unexpected) — schema: `image.json#/additionalProperties`
 
 ## `id` on embedded nodes (not counted above)
 

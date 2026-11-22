@@ -26,6 +26,16 @@ INSTITUTIONAL_CLASSES = {
     "Set",
     "Activity",
 }
+LUX_RECORDS = 32
+LUX_CLASSES = INSTITUTIONAL_CLASSES | {
+    "DigitalObject",
+    "Language",
+    "Material",
+    "Currency",
+    "MeasurementUnit",
+    "Period",
+}
+LUX_DATA = "https://lux.collections.yale.edu/data/"
 
 FILES = corpus_files()
 
@@ -57,6 +67,16 @@ def test_corpus_size_and_institutional_coverage() -> None:
     assert per_subset["institutional"] >= MIN_INSTITUTIONAL
     institutional_types = {r["type"] for p, r in records if p.parent.name == "institutional"}
     assert INSTITUTIONAL_CLASSES <= institutional_types
+
+
+def test_lux_records_cover_every_top_level_class() -> None:
+    lux = [(path, record) for path, record in iter_corpus() if path.parent.name == "lux"]
+    assert len(lux) == LUX_RECORDS
+    assert {record["type"] for _, record in lux} == LUX_CLASSES
+    for path, record in lux:
+        # Named <path segment>-<uuid>.json after the record's own URL.
+        kind, uuid = record["id"].removeprefix(LUX_DATA).split("/")
+        assert path.name == f"{kind}-{uuid}.json"
 
 
 def test_iter_corpus_yields_every_file_once() -> None:

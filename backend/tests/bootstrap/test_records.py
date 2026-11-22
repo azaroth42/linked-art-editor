@@ -169,7 +169,7 @@ def test_every_corpus_file_loads_unless_it_is_a_known_schema_failure() -> None:
     batch = prepare_batch(iter_source(CORPUS_DIR), BASE_URI)
     assert {failure.source for failure in batch.failures} == KNOWN_FAILURES
     assert {failure.code for failure in batch.failures} == {SCHEMA_INVALID}
-    assert len(batch.records) == 244 - len(KNOWN_FAILURES)
+    assert len(batch.records) == 276 - len(KNOWN_FAILURES)
     for record in batch.records:
         lines = expand_to_ntriples(orjson.loads(record.data), 1, record_uri=record.uri)
         assert lines
