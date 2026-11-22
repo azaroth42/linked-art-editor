@@ -1,0 +1,148 @@
+{
+  "@context": "https://linked.art/ns/v1/linked-art.json",
+  "id": "https://ycba-lux.s3.amazonaws.com/v3/activity/33/33a0e9a3-f472-4121-8929-ec3f7dc6c5f2.json",
+  "type": "Activity",
+  "_label": "Whistler \" The Naval Review \" (Yale Center for British Art, 2005-05-19 - 2005-08-15)",
+  "classified_as": [
+    {
+      "id": "http://vocab.getty.edu/aat/300054766",
+      "type": "Type",
+      "_label": "Exhibiting"
+    }
+  ],
+  "identified_by": [
+    {
+      "type": "Name",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300404670",
+          "type": "Type",
+          "_label": "Primary Name"
+        }
+      ],
+      "content": "Whistler \" The Naval Review \" (Yale Center for British Art, 2005-05-19 - 2005-08-15)"
+    },
+    {
+      "type": "Name",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300404669",
+          "type": "Type",
+          "_label": "Display Title"
+        }
+      ],
+      "content": "Whistler \" The Naval Review \""
+    }
+  ],
+  "referred_to_by": [
+    {
+      "type": "LinguisticObject",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300435424",
+          "type": "Type",
+          "_label": "Exhibitions Description",
+          "classified_as": [
+            {
+              "id": "http://vocab.getty.edu/aat/300418049",
+              "type": "Type",
+              "_label": "Brief Text"
+            }
+          ]
+        }
+      ],
+      "content": "\nDuring Queen Victoria’s Jubilee in 1887, James McNeill Whistler attended a naval review off Spithead and recorded the occasion in a series of twelve etchings. A proof set of these delicate, breezy etchings, given to the Yale Center for British Art in 2002 by Robert Whittemore, BA 1943, was the focus of this small exhibition. Also included was the Center’s painting Nocturne in Blue and Silver, which came from the same renowned collection of Whistler’s work, and a group of Whistler’s watercolors from the collection of Paul Mellon. A varied selection of recent acquisitions accompanied the Whistler display. — —  \n\nCredits — —  \n\nThe exhibition was organized by the Center and curated by Scott Wilcox, Curator of Prints and Drawings at the Center. — —  \n --- ---\n\nYale Center for British Art"
+    },
+    {
+      "type": "LinguisticObject",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300435424",
+          "type": "Type",
+          "_label": "Exhibitions Description"
+        }
+      ],
+      "content": "During Queen Victoria’s Jubilee in 1887, James McNeill Whistler attended a naval review off Spithead and recorded the occasion in a series of twelve etchings. A proof set of these delicate, breezy etchings, given to the Yale Center for British Art in 2002 by Robert Whittemore, BA 1943, was the focus of this small exhibition. Also included was the Center’s painting Nocturne in Blue and Silver, which came from the same renowned collection of Whistler’s work, and a group of Whistler’s watercolors from the collection of Paul Mellon. A varied selection of recent acquisitions accompanied the Whistler display. --- ---\n\n \nCredits --- ---\n\nThe exhibition was organized by the Center and curated by Scott Wilcox, Curator of Prints and Drawings at the Center. --- ---\n\nYale Center for British Art"
+    }
+  ],
+  "timespan": {
+    "type": "TimeSpan",
+    "identified_by": [
+      {
+        "type": "Name",
+        "classified_as": [
+          {
+            "id": "http://vocab.getty.edu/aat/300404669",
+            "type": "Type",
+            "_label": "Display Title"
+          }
+        ],
+        "content": "2005-05-19 - 2005-08-15"
+      }
+    ],
+    "begin_of_the_begin": "2005-05-19T00:00:00Z",
+    "end_of_the_begin": "2005-05-19T23:59:59Z",
+    "begin_of_the_end": "2005-08-15T00:00:00Z",
+    "end_of_the_end": "2005-08-15T23:59:59Z"
+  },
+  "took_place_at": [
+    {
+      "id": "https://ycba-lux.s3.amazonaws.com/v3/place/e1/e1558251-7ca6-4fd6-b9ff-3415641d48bb.json",
+      "type": "Place",
+      "_label": "Yale Center for British Art"
+    }
+  ],
+  "carried_out_by": [
+    {
+      "id": "https://ycba-lux.s3.amazonaws.com/v3/group/69/69e6b48e-3f35-42e1-bb96-3f6762668496.json",
+      "type": "Group",
+      "_label": "Yale Center for British Art"
+    }
+  ],
+  "used_specific_object": [
+    {
+      "id": "https://ycba-lux.s3.amazonaws.com/v3/set/6e/6e2b5307-1c2c-41f5-9cd5-4f87efd8cacd.json",
+      "type": "Set",
+      "_label": "YCBA Exhibit set for \"Whistler \" The Naval Review \" (Yale Center for British Art, 2005-05-19 - 2005-08-15)\""
+    }
+  ],
+  "subject_of": [
+    {
+      "type": "LinguisticObject",
+      "_label": "Home page for \"Whistler \" The Naval Review \" (Yale Center for British Art, 2005-05-19 - 2005-08-15)\"",
+      "digitally_carried_by": [
+        {
+          "type": "DigitalObject",
+          "_label": "Online home page for \"Whistler \" The Naval Review \" (Yale Center for British Art, 2005-05-19 - 2005-08-15)\"",
+          "classified_as": [
+            {
+              "id": "http://vocab.getty.edu/aat/300264578",
+              "type": "Type",
+              "_label": "Web Page"
+            }
+          ],
+          "identified_by": [
+            {
+              "type": "Name",
+              "classified_as": [
+                {
+                  "id": "http://vocab.getty.edu/aat/300404670",
+                  "type": "Type",
+                  "_label": "Primary Name"
+                }
+              ],
+              "content": "View the exhibition page on the Yale Center for British Art website"
+            }
+          ],
+          "format": "text/html",
+          "access_point": [
+            {
+              "id": "https://britishart.yale.edu/node/667",
+              "type": "DigitalObject"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

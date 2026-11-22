@@ -1,0 +1,55 @@
+{
+  "@context": "https://linked.art/ns/v1/linked-art.json",
+  "id": "https://ycba-lux.s3.amazonaws.com/v3/set/85/850172b2-1cf0-4976-bb36-115c39f764dc.json",
+  "type": "Set",
+  "_label": "Prints and Drawings Collection, Yale Center for British Art",
+  "classified_as": [
+    {
+      "id": "http://vocab.getty.edu/aat/300025976",
+      "type": "Type",
+      "_label": "Collection"
+    }
+  ],
+  "identified_by": [
+    {
+      "type": "Identifier",
+      "content": "ycba:pd",
+      "assigned_by": [
+        {
+          "type": "AttributeAssignment",
+          "carried_out_by": [
+            {
+              "id": "https://ycba-lux.s3.amazonaws.com/v3/group/69/69e6b48e-3f35-42e1-bb96-3f6762668496.json",
+              "type": "Group",
+              "_label": "Yale Center for British Art"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "Name",
+      "content": "Prints and Drawings Collection, Yale Center for British Art"
+    }
+  ],
+  "used_for": [
+    {
+      "type": "Activity",
+      "_label": "Curating",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300054277",
+          "type": "Type",
+          "_label": "Curating"
+        }
+      ],
+      "carried_out_by": [
+        {
+          "id": "https://ycba-lux.s3.amazonaws.com/v3/group/f0/f095d748-35a9-40d9-9ea9-5b259e2c04cb.json",
+          "type": "Group",
+          "_label": "Prints and Drawings Department, Yale Center for British Art"
+        }
+      ]
+    }
+  ]
+}

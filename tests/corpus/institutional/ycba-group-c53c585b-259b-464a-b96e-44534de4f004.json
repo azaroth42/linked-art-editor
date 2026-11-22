@@ -1,0 +1,68 @@
+{
+  "@context": "https://linked.art/ns/v1/linked-art.json",
+  "id": "https://ycba-lux.s3.amazonaws.com/v3/group/c5/c53c585b-259b-464a-b96e-44534de4f004.json",
+  "type": "Group",
+  "_label": "Dulwich Picture Gallery",
+  "identified_by": [
+    {
+      "type": "Identifier",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300435704",
+          "type": "Type",
+          "_label": "System-Assigned Number"
+        }
+      ],
+      "content": "ycba_actor_12540",
+      "assigned_by": [
+        {
+          "type": "AttributeAssignment",
+          "carried_out_by": [
+            {
+              "id": "https://ycba-lux.s3.amazonaws.com/v3/group/69/69e6b48e-3f35-42e1-bb96-3f6762668496.json",
+              "type": "Group",
+              "_label": "Yale Center for British Art"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "Name",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300404670",
+          "type": "Type",
+          "_label": "Primary Name"
+        }
+      ],
+      "content": "Dulwich Picture Gallery",
+      "language": [
+        {
+          "id": "http://vocab.getty.edu/aat/300388277",
+          "type": "Language",
+          "_label": "English"
+        }
+      ]
+    },
+    {
+      "type": "Name",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300451544",
+          "type": "Type",
+          "_label": "Sort Name"
+        }
+      ],
+      "content": "Dulwich Picture Gallery"
+    },
+    {
+      "type": "Name",
+      "content": "Dulwich Picture Gallery"
+    },
+    {
+      "type": "Name",
+      "content": "Published by Dulwich Picture Gallery"
+    }
+  ]
+}

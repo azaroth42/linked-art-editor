@@ -1,0 +1,597 @@
+{
+  "@context": "https://linked.art/ns/v1/linked-art.json",
+  "id": "https://ycba-lux.s3.amazonaws.com/v3/object/71/71b6123e-ce31-467d-b4a2-692b95eca677.json",
+  "type": "HumanMadeObject",
+  "_label": "Charles Marquis of Rockingham, Earl of Malton",
+  "classified_as": [
+    {
+      "id": "http://vocab.getty.edu/aat/300041338",
+      "type": "Type",
+      "_label": "intaglio print",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300435443",
+          "type": "Type",
+          "_label": "Type of Work"
+        }
+      ]
+    },
+    {
+      "id": "http://vocab.getty.edu/aat/300191086",
+      "type": "Type",
+      "_label": "Visual Works",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300241507",
+          "type": "Type",
+          "_label": "Super Type"
+        }
+      ]
+    },
+    {
+      "id": "http://vocab.getty.edu/aat/300041273",
+      "type": "Type",
+      "_label": "Print",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300435443",
+          "type": "Type",
+          "_label": "Type of Work"
+        }
+      ]
+    }
+  ],
+  "identified_by": [
+    {
+      "type": "Name",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300404670",
+          "type": "Type",
+          "_label": "Primary"
+        }
+      ],
+      "content": "Charles Marquis of Rockingham, Earl of Malton",
+      "language": [
+        {
+          "id": "http://vocab.getty.edu/aat/300388277",
+          "type": "Language",
+          "_label": "English"
+        }
+      ]
+    },
+    {
+      "type": "Identifier",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300312355",
+          "type": "Type",
+          "_label": "Accession Number"
+        }
+      ],
+      "content": "B1977.14.12944",
+      "assigned_by": [
+        {
+          "type": "AttributeAssignment",
+          "carried_out_by": [
+            {
+              "id": "https://ycba-lux.s3.amazonaws.com/v3/group/69/69e6b48e-3f35-42e1-bb96-3f6762668496.json",
+              "type": "Group",
+              "_label": "Yale Center for British Art"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "Identifier",
+      "_label": "Local System Number",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300435704",
+          "type": "Type",
+          "_label": "System-Assigned Number"
+        }
+      ],
+      "content": "38635",
+      "assigned_by": [
+        {
+          "type": "AttributeAssignment",
+          "carried_out_by": [
+            {
+              "id": "https://ycba-lux.s3.amazonaws.com/v3/group/69/69e6b48e-3f35-42e1-bb96-3f6762668496.json",
+              "type": "Group",
+              "_label": "Yale Center for British Art"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "referred_to_by": [
+    {
+      "type": "LinguisticObject",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300435414",
+          "type": "Type",
+          "_label": "Inscription",
+          "classified_as": [
+            {
+              "id": "http://vocab.getty.edu/aat/300418049",
+              "type": "Type",
+              "_label": "Brief Text"
+            }
+          ]
+        }
+      ],
+      "content": "Inscribed on verso in graphite, lower right: \"(IR74/1581)\""
+    },
+    {
+      "type": "LinguisticObject",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300435420",
+          "type": "Type",
+          "_label": "Markings",
+          "classified_as": [
+            {
+              "id": "http://vocab.getty.edu/aat/300418049",
+              "type": "Type",
+              "_label": "Brief Text"
+            }
+          ]
+        }
+      ],
+      "content": "Watermark: oval with design inside; collector's mark: Paul Mellon"
+    },
+    {
+      "type": "LinguisticObject",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300435414",
+          "type": "Type",
+          "_label": "Inscription"
+        }
+      ],
+      "content": "Lettered below image: \"Painted by Sir Joshua Reynolds. | Engraved by E.Fisher. | The Right Noble Charles Marquis of Rockingham, Earl of Malton, Viscount Higham of Higham Ferrers, Baron Rockingham of Rockingham, | Baron of Malton, & of Wath, & Harrowden, Lord Leiut't. & Cust's. Rotulor'm of the West Riding of the County of York, & Cust's. Rot'm. of the North Riding of the said County, & Vice Adm'l. of the Mariti'e. Parts thereof, & F:R:S. | Publish'd as the Act directs Aug't. 15th. 1774 by E.Fisher South Side of Leicester Square LONDON.\""
+    },
+    {
+      "type": "LinguisticObject",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300435430",
+          "type": "Type",
+          "_label": "Dimension Statement",
+          "classified_as": [
+            {
+              "id": "http://vocab.getty.edu/aat/300418049",
+              "type": "Type",
+              "_label": "Brief Text"
+            }
+          ]
+        }
+      ],
+      "content": "Sheet: 23 3/8 × 14 5/8 inches (59.4 × 37.1 cm)"
+    },
+    {
+      "type": "LinguisticObject",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300435430",
+          "type": "Type",
+          "_label": "Dimension Statement"
+        }
+      ],
+      "content": "Image: 22 1/4 × 14 1/2 inches (56.5 × 36.8 cm)"
+    },
+    {
+      "type": "LinguisticObject",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300435429",
+          "type": "Type",
+          "_label": "Material Statement",
+          "classified_as": [
+            {
+              "id": "http://vocab.getty.edu/aat/300418049",
+              "type": "Type",
+              "_label": "Brief Text"
+            }
+          ]
+        }
+      ],
+      "content": "Mezzotint on medium, slightly textured, cream laid paper"
+    },
+    {
+      "type": "LinguisticObject",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300435418",
+          "type": "Type",
+          "_label": "Credit Line",
+          "classified_as": [
+            {
+              "id": "http://vocab.getty.edu/aat/300418049",
+              "type": "Type",
+              "_label": "Brief Text"
+            }
+          ]
+        }
+      ],
+      "content": "Yale Center for British Art, Paul Mellon Collection"
+    },
+    {
+      "type": "LinguisticObject",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300133046",
+          "type": "Type",
+          "_label": "Access Statement",
+          "classified_as": [
+            {
+              "id": "http://vocab.getty.edu/aat/300418049",
+              "type": "Type",
+              "_label": "Brief Text"
+            }
+          ]
+        }
+      ],
+      "content": "<span class='lux_data'><a target='_blank' href='https://aeon.library.yale.edu/aeon.dll?Action=10&Form=20&Value=GenericRequestPD&Site=YCBA&Callnumber=B1977.14.12944&ItemTitle=Charles Marquis of Rockingham, Earl of Malton&ItemAuthor=Edward Fisher&ItemDate=1774&Format=Mezzotint on medium, slightly textured, cream laid paper&Location=bacpd&mfhdID=&EADNumber=https://collections.britishart.yale.edu/catalog/tms:38635'>Accessible by request in the Yale Center for British Art Study Room</a></span>"
+    },
+    {
+      "type": "LinguisticObject",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300025883",
+          "type": "Type",
+          "_label": "Visitors' Statement",
+          "classified_as": [
+            {
+              "id": "http://vocab.getty.edu/aat/300418049",
+              "type": "Type",
+              "_label": "Brief Text"
+            }
+          ]
+        }
+      ],
+      "content": "<a target='_blank' href='https://britishart.yale.edu/hours-and-visitor-guidelines'>Plan Your Visit to the Yale Center for British Art</a>"
+    }
+  ],
+  "dimension": [
+    {
+      "type": "Dimension",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300055644",
+          "type": "Type",
+          "_label": "Height"
+        },
+        {
+          "id": "https://ycba-lux.s3.amazonaws.com/v3/concept/e6/e613be01-2678-4e01-b52e-39c4479f98aa.json",
+          "type": "Type",
+          "_label": "Sheet"
+        }
+      ],
+      "value": 59.4,
+      "unit": {
+        "id": "http://vocab.getty.edu/aat/300379098",
+        "type": "MeasurementUnit",
+        "_label": "centimeters"
+      }
+    },
+    {
+      "type": "Dimension",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300055647",
+          "type": "Type",
+          "_label": "Width"
+        },
+        {
+          "id": "https://ycba-lux.s3.amazonaws.com/v3/concept/e6/e613be01-2678-4e01-b52e-39c4479f98aa.json",
+          "type": "Type",
+          "_label": "Sheet"
+        }
+      ],
+      "value": 37.1,
+      "unit": {
+        "id": "http://vocab.getty.edu/aat/300379098",
+        "type": "MeasurementUnit",
+        "_label": "centimeters"
+      }
+    },
+    {
+      "type": "Dimension",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300055644",
+          "type": "Type",
+          "_label": "Height"
+        },
+        {
+          "id": "https://ycba-lux.s3.amazonaws.com/v3/concept/8c/8c4dc38c-70d3-4f1a-b408-524cc3c94c83.json",
+          "type": "Type",
+          "_label": "Image"
+        }
+      ],
+      "value": 56.5,
+      "unit": {
+        "id": "http://vocab.getty.edu/aat/300379098",
+        "type": "MeasurementUnit",
+        "_label": "centimeters"
+      }
+    },
+    {
+      "type": "Dimension",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300055647",
+          "type": "Type",
+          "_label": "Width"
+        },
+        {
+          "id": "https://ycba-lux.s3.amazonaws.com/v3/concept/8c/8c4dc38c-70d3-4f1a-b408-524cc3c94c83.json",
+          "type": "Type",
+          "_label": "Image"
+        }
+      ],
+      "value": 36.8,
+      "unit": {
+        "id": "http://vocab.getty.edu/aat/300379098",
+        "type": "MeasurementUnit",
+        "_label": "centimeters"
+      }
+    }
+  ],
+  "made_of": [
+    {
+      "id": "http://vocab.getty.edu/aat/300014184",
+      "type": "Material",
+      "_label": "laid paper"
+    }
+  ],
+  "member_of": [
+    {
+      "id": "https://ycba-lux.s3.amazonaws.com/v3/set/85/850172b2-1cf0-4976-bb36-115c39f764dc.json",
+      "type": "Set",
+      "_label": "Prints and Drawings Collection, Yale Center for British Art"
+    }
+  ],
+  "shows": [
+    {
+      "id": "https://ycba-lux.s3.amazonaws.com/v3/visual/d6/d6ef497f-1013-47ed-acb7-a9807279591f.json",
+      "type": "VisualItem",
+      "_label": "\"Charles Marquis of Rockingham, Earl of Malton\" - Visual Content"
+    }
+  ],
+  "current_location": {
+    "id": "https://ycba-lux.s3.amazonaws.com/v3/place/90/902eb306-d7a2-4b44-8692-20ab9d7c6277.json",
+    "type": "Place",
+    "_label": "Yale Center for British Art"
+  },
+  "produced_by": {
+    "type": "Production",
+    "technique": [
+      {
+        "id": "http://vocab.getty.edu/aat/300053233",
+        "type": "Type",
+        "_label": "mezzotint"
+      }
+    ],
+    "timespan": {
+      "type": "TimeSpan",
+      "identified_by": [
+        {
+          "type": "Name",
+          "classified_as": [
+            {
+              "id": "http://vocab.getty.edu/aat/300404669",
+              "type": "Type",
+              "_label": "Display Title"
+            }
+          ],
+          "content": "1774"
+        }
+      ],
+      "begin_of_the_begin": "1774-01-01T00:00:00Z",
+      "end_of_the_begin": "1774-12-31T23:59:59Z",
+      "begin_of_the_end": "1774-01-01T00:00:00Z",
+      "end_of_the_end": "1774-12-31T23:59:59Z"
+    },
+    "during": [
+      {
+        "id": "https://ycba-lux.s3.amazonaws.com/v3/event/a1/a1bb6a07-8f4c-4bdb-af27-4f7ec7964093.json",
+        "type": "Period",
+        "_label": "18th century"
+      }
+    ],
+    "part": [
+      {
+        "type": "Production",
+        "classified_as": [
+          {
+            "id": "http://vocab.getty.edu/aat/300025103",
+            "type": "Type",
+            "_label": "Primary Artist"
+          },
+          {
+            "id": "https://ycba-lux.s3.amazonaws.com/v3/concept/40/4051ecca-40bd-49cb-a3b6-e159ab12a2be.json",
+            "type": "Type",
+            "_label": "Print made by"
+          }
+        ],
+        "carried_out_by": [
+          {
+            "id": "https://ycba-lux.s3.amazonaws.com/v3/person/c3/c316a497-28af-4111-9d2e-e2ceedaefa65.json",
+            "type": "Person",
+            "_label": "Edward Fisher"
+          }
+        ]
+      },
+      {
+        "type": "Production",
+        "classified_as": [
+          {
+            "id": "https://ycba-lux.s3.amazonaws.com/v3/concept/a0/a012ac0c-f482-408e-afbb-94c8d1f36f98.json",
+            "type": "Type",
+            "_label": "after"
+          }
+        ],
+        "influenced_by": [
+          {
+            "id": "https://ycba-lux.s3.amazonaws.com/v3/person/67/67428bb1-23d5-48c4-a849-ea2f01d8f764.json",
+            "type": "Person",
+            "_label": "Sir Joshua Reynolds"
+          }
+        ]
+      },
+      {
+        "type": "Production",
+        "classified_as": [
+          {
+            "id": "https://ycba-lux.s3.amazonaws.com/v3/concept/02/02bb2dde-4819-47e3-9263-41a3e87777ac.json",
+            "type": "Type",
+            "_label": "Published by"
+          }
+        ],
+        "carried_out_by": [
+          {
+            "id": "https://ycba-lux.s3.amazonaws.com/v3/person/c3/c316a497-28af-4111-9d2e-e2ceedaefa65.json",
+            "type": "Person",
+            "_label": "Edward Fisher"
+          }
+        ]
+      }
+    ]
+  },
+  "current_owner": [
+    {
+      "id": "https://ycba-lux.s3.amazonaws.com/v3/group/69/69e6b48e-3f35-42e1-bb96-3f6762668496.json",
+      "type": "Group",
+      "_label": "Yale Center for British Art"
+    }
+  ],
+  "subject_of": [
+    {
+      "type": "LinguisticObject",
+      "_label": "Home page for \"Charles Marquis of Rockingham, Earl of Malton\"",
+      "digitally_carried_by": [
+        {
+          "type": "DigitalObject",
+          "_label": "Online home page for \"Charles Marquis of Rockingham, Earl of Malton\"",
+          "classified_as": [
+            {
+              "id": "http://vocab.getty.edu/aat/300264578",
+              "type": "Type",
+              "_label": "Web Page"
+            }
+          ],
+          "identified_by": [
+            {
+              "type": "Name",
+              "classified_as": [
+                {
+                  "id": "http://vocab.getty.edu/aat/300404670",
+                  "type": "Type",
+                  "_label": "Primary Name"
+                }
+              ],
+              "content": "View this record on the Yale Center for British Art website"
+            }
+          ],
+          "format": "text/html",
+          "access_point": [
+            {
+              "id": "https://collections.britishart.yale.edu/catalog/tms:38635",
+              "type": "DigitalObject"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "LinguisticObject",
+      "_label": "IIIF v2 manifest for \"Charles Marquis of Rockingham, Earl of Malton\"",
+      "digitally_carried_by": [
+        {
+          "type": "DigitalObject",
+          "_label": "IIIF v2 manifest for \"Charles Marquis of Rockingham, Earl of Malton\"",
+          "identified_by": [
+            {
+              "type": "Name",
+              "content": "IIIF v2 manifest for \"Charles Marquis of Rockingham, Earl of Malton\""
+            }
+          ],
+          "conforms_to": [
+            {
+              "id": "http://iiif.io/api/presentation/2/context.json",
+              "type": "InformationObject"
+            }
+          ],
+          "format": "application/ld+json",
+          "access_point": [
+            {
+              "id": "https://manifests.collections.yale.edu/v2/ycba/obj/38635",
+              "type": "DigitalObject"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "LinguisticObject",
+      "_label": "IIIF v3 manifest for \"Charles Marquis of Rockingham, Earl of Malton\"",
+      "digitally_carried_by": [
+        {
+          "type": "DigitalObject",
+          "_label": "IIIF v3 manifest for \"Charles Marquis of Rockingham, Earl of Malton\"",
+          "identified_by": [
+            {
+              "type": "Name",
+              "content": "IIIF v3 manifest for \"Charles Marquis of Rockingham, Earl of Malton\""
+            }
+          ],
+          "conforms_to": [
+            {
+              "id": "http://iiif.io/api/presentation/3/context.json",
+              "type": "InformationObject"
+            }
+          ],
+          "format": "application/ld+json",
+          "access_point": [
+            {
+              "id": "https://manifests.collections.yale.edu/ycba/obj/38635",
+              "type": "DigitalObject"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "representation": [
+    {
+      "type": "VisualItem",
+      "_label": "Primary Image",
+      "digitally_shown_by": [
+        {
+          "type": "DigitalObject",
+          "_label": "Primary Image",
+          "classified_as": [
+            {
+              "id": "http://vocab.getty.edu/aat/300215302",
+              "type": "Type",
+              "_label": "Digital Image"
+            }
+          ],
+          "access_point": [
+            {
+              "id": "https://media.collections.yale.edu/thumbnail/ycba/obj/38635",
+              "type": "DigitalObject"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

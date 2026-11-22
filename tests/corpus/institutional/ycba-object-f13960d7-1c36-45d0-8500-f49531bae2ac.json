@@ -1,0 +1,616 @@
+{
+  "@context": "https://linked.art/ns/v1/linked-art.json",
+  "id": "https://ycba-lux.s3.amazonaws.com/v3/object/f1/f13960d7-1c36-45d0-8500-f49531bae2ac.json",
+  "type": "HumanMadeObject",
+  "_label": "The Exhibition of the Royal Academy of Painting 1771",
+  "classified_as": [
+    {
+      "id": "http://vocab.getty.edu/aat/300041338",
+      "type": "Type",
+      "_label": "intaglio print",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300435443",
+          "type": "Type",
+          "_label": "Type of Work"
+        }
+      ]
+    },
+    {
+      "id": "http://vocab.getty.edu/aat/300191086",
+      "type": "Type",
+      "_label": "Visual Works",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300241507",
+          "type": "Type",
+          "_label": "Super Type"
+        }
+      ]
+    },
+    {
+      "id": "http://vocab.getty.edu/aat/300041273",
+      "type": "Type",
+      "_label": "Print",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300435443",
+          "type": "Type",
+          "_label": "Type of Work"
+        }
+      ]
+    }
+  ],
+  "identified_by": [
+    {
+      "type": "Name",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300404670",
+          "type": "Type",
+          "_label": "Primary"
+        }
+      ],
+      "content": "The Exhibition of the Royal Academy of Painting 1771",
+      "language": [
+        {
+          "id": "http://vocab.getty.edu/aat/300388277",
+          "type": "Language",
+          "_label": "English"
+        }
+      ]
+    },
+    {
+      "type": "Identifier",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300312355",
+          "type": "Type",
+          "_label": "Accession Number"
+        }
+      ],
+      "content": "B1978.43.798",
+      "assigned_by": [
+        {
+          "type": "AttributeAssignment",
+          "carried_out_by": [
+            {
+              "id": "https://ycba-lux.s3.amazonaws.com/v3/group/69/69e6b48e-3f35-42e1-bb96-3f6762668496.json",
+              "type": "Group",
+              "_label": "Yale Center for British Art"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "Identifier",
+      "_label": "Local System Number",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300435704",
+          "type": "Type",
+          "_label": "System-Assigned Number"
+        }
+      ],
+      "content": "45567",
+      "assigned_by": [
+        {
+          "type": "AttributeAssignment",
+          "carried_out_by": [
+            {
+              "id": "https://ycba-lux.s3.amazonaws.com/v3/group/69/69e6b48e-3f35-42e1-bb96-3f6762668496.json",
+              "type": "Group",
+              "_label": "Yale Center for British Art"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "referred_to_by": [
+    {
+      "type": "LinguisticObject",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300435430",
+          "type": "Type",
+          "_label": "Dimension Statement",
+          "classified_as": [
+            {
+              "id": "http://vocab.getty.edu/aat/300418049",
+              "type": "Type",
+              "_label": "Brief Text"
+            }
+          ]
+        }
+      ],
+      "content": "Sheet: 18 1/2 × 22 inches (47 × 55.9 cm)"
+    },
+    {
+      "type": "LinguisticObject",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300435429",
+          "type": "Type",
+          "_label": "Material Statement",
+          "classified_as": [
+            {
+              "id": "http://vocab.getty.edu/aat/300418049",
+              "type": "Type",
+              "_label": "Brief Text"
+            }
+          ]
+        }
+      ],
+      "content": "Mezzotint"
+    },
+    {
+      "type": "LinguisticObject",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300435418",
+          "type": "Type",
+          "_label": "Credit Line",
+          "classified_as": [
+            {
+              "id": "http://vocab.getty.edu/aat/300418049",
+              "type": "Type",
+              "_label": "Brief Text"
+            }
+          ]
+        }
+      ],
+      "content": "Yale Center for British Art, Paul Mellon Collection"
+    },
+    {
+      "type": "LinguisticObject",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300133046",
+          "type": "Type",
+          "_label": "Access Statement",
+          "classified_as": [
+            {
+              "id": "http://vocab.getty.edu/aat/300418049",
+              "type": "Type",
+              "_label": "Brief Text"
+            }
+          ]
+        }
+      ],
+      "content": "<span class='lux_data'><a target='_blank' href='https://aeon.library.yale.edu/aeon.dll?Action=10&Form=20&Value=GenericRequestPD&Site=YCBA&Callnumber=B1978.43.798&ItemTitle=The Exhibition of the Royal Academy of Painting 1771&ItemAuthor=Richard Earlom&ItemDate=1772&Format=Mezzotint&Location=bacpd&mfhdID=&EADNumber=https://collections.britishart.yale.edu/catalog/tms:45567'>Accessible by request in the Yale Center for British Art Study Room</a></span>"
+    },
+    {
+      "type": "LinguisticObject",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300025883",
+          "type": "Type",
+          "_label": "Visitors' Statement",
+          "classified_as": [
+            {
+              "id": "http://vocab.getty.edu/aat/300418049",
+              "type": "Type",
+              "_label": "Brief Text"
+            }
+          ]
+        }
+      ],
+      "content": "<a target='_blank' href='https://britishart.yale.edu/hours-and-visitor-guidelines'>Plan Your Visit to the Yale Center for British Art</a>"
+    },
+    {
+      "type": "LinguisticObject",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300311705",
+          "type": "Type",
+          "_label": "Citation",
+          "classified_as": [
+            {
+              "id": "http://vocab.getty.edu/aat/300418049",
+              "type": "Type",
+              "_label": "Brief Text"
+            }
+          ]
+        }
+      ],
+      "content": "Tom Dunne, James Barry, 1741-1806 : 'the great historical painter', ,  Crawford Art Gallery, Gandon Editions, Kinsale, Ireland, 2005, p. 38, NJ18 .B2425 J35 2005 + (YCBA)  ",
+      "identified_by": [
+        {
+          "type": "Name",
+          "classified_as": [
+            {
+              "id": "http://vocab.getty.edu/aat/300404669",
+              "type": "Type",
+              "_label": "Display Title"
+            }
+          ],
+          "content": "Selected Bibliography"
+        }
+      ]
+    },
+    {
+      "type": "LinguisticObject",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300311705",
+          "type": "Type",
+          "_label": "Citation"
+        }
+      ],
+      "content": "Loyd Grossman, Benjamin West and the struggle to be modern,  Merrell, London:  New York, 2015, p. 37, fig. 16, NJ18.W52 G76 2015  (YCBA)  ",
+      "identified_by": [
+        {
+          "type": "Name",
+          "classified_as": [
+            {
+              "id": "http://vocab.getty.edu/aat/300404669",
+              "type": "Type",
+              "_label": "Display Title"
+            }
+          ],
+          "content": "Selected Bibliography"
+        }
+      ]
+    },
+    {
+      "type": "LinguisticObject",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300311705",
+          "type": "Type",
+          "_label": "Citation"
+        }
+      ],
+      "content": "Justin Lovill, 1776 : A London Chronicle or How to Divert Oneself while Losing an Empire,  The Bunbury Press, London, 2019, p. 141, DA682 .L66 2019 (LC) (YCBA)  ",
+      "identified_by": [
+        {
+          "type": "Name",
+          "classified_as": [
+            {
+              "id": "http://vocab.getty.edu/aat/300404669",
+              "type": "Type",
+              "_label": "Display Title"
+            }
+          ],
+          "content": "Selected Bibliography"
+        }
+      ]
+    },
+    {
+      "type": "LinguisticObject",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300311705",
+          "type": "Type",
+          "_label": "Citation"
+        }
+      ],
+      "content": "J. H. Plumb, The Pursuit of Happiness: A View of Life in Georgian England: An Exhibition Selected from the Paul Mellon Collection, ,  Yale Center for British Art, New Haven, 1977, pp. 47, 101, no. 77, N6766 Y34 1977 (YCBA)  ",
+      "identified_by": [
+        {
+          "type": "Name",
+          "classified_as": [
+            {
+              "id": "http://vocab.getty.edu/aat/300404669",
+              "type": "Type",
+              "_label": "Display Title"
+            }
+          ],
+          "content": "Selected Bibliography"
+        }
+      ]
+    },
+    {
+      "type": "LinguisticObject",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300311705",
+          "type": "Type",
+          "_label": "Citation"
+        }
+      ],
+      "content": "David H. Solkin, Art on the Line : the Royal Academy Exhibitions at Somerset House 1780-1836, ,  Yale University Press, New Haven, CT, 2001, pp. 17, 40-42, fig. 31, N5054 A78 2001B (YCBA)  ",
+      "identified_by": [
+        {
+          "type": "Name",
+          "classified_as": [
+            {
+              "id": "http://vocab.getty.edu/aat/300404669",
+              "type": "Type",
+              "_label": "Display Title"
+            }
+          ],
+          "content": "Selected Bibliography"
+        }
+      ]
+    }
+  ],
+  "dimension": [
+    {
+      "type": "Dimension",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300055647",
+          "type": "Type",
+          "_label": "Width"
+        },
+        {
+          "id": "https://ycba-lux.s3.amazonaws.com/v3/concept/e6/e613be01-2678-4e01-b52e-39c4479f98aa.json",
+          "type": "Type",
+          "_label": "Sheet"
+        }
+      ],
+      "value": 55.9,
+      "unit": {
+        "id": "http://vocab.getty.edu/aat/300379098",
+        "type": "MeasurementUnit",
+        "_label": "centimeters"
+      }
+    },
+    {
+      "type": "Dimension",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300055644",
+          "type": "Type",
+          "_label": "Height"
+        },
+        {
+          "id": "https://ycba-lux.s3.amazonaws.com/v3/concept/e6/e613be01-2678-4e01-b52e-39c4479f98aa.json",
+          "type": "Type",
+          "_label": "Sheet"
+        }
+      ],
+      "value": 47.0,
+      "unit": {
+        "id": "http://vocab.getty.edu/aat/300379098",
+        "type": "MeasurementUnit",
+        "_label": "centimeters"
+      }
+    }
+  ],
+  "member_of": [
+    {
+      "id": "https://ycba-lux.s3.amazonaws.com/v3/set/85/850172b2-1cf0-4976-bb36-115c39f764dc.json",
+      "type": "Set",
+      "_label": "Prints and Drawings Collection, Yale Center for British Art"
+    },
+    {
+      "id": "https://ycba-lux.s3.amazonaws.com/v3/set/0d/0d5a304c-6fec-4d52-a092-28de9a76db5f.json",
+      "type": "Set",
+      "_label": "YCBA Exhibit set for \"First Academies - Benjamin West and the Founding of the RA and PAFA (Pennsylvania Academy of Fine Arts, 2018-03-09 - 2018-06-03)\""
+    },
+    {
+      "id": "https://ycba-lux.s3.amazonaws.com/v3/set/db/dbd8ab28-14ca-4f87-b17a-ba1d717dd915.json",
+      "type": "Set",
+      "_label": "YCBA Exhibit set for \"The Pursuit of Happiness - A View of Life in Georgian England (Yale Center for British Art, 1977-04-19 - 1977-09-18)\""
+    }
+  ],
+  "shows": [
+    {
+      "id": "https://ycba-lux.s3.amazonaws.com/v3/visual/c7/c7d995b4-6bc7-4309-9c27-a25034933b9a.json",
+      "type": "VisualItem",
+      "_label": "\"The Exhibition of the Royal Academy of Painting 1771\" - Visual Content"
+    }
+  ],
+  "equivalent": [
+    {
+      "id": "http://www.wikidata.org/entity/Q110061639",
+      "type": "HumanMadeObject"
+    }
+  ],
+  "current_location": {
+    "id": "https://ycba-lux.s3.amazonaws.com/v3/place/90/902eb306-d7a2-4b44-8692-20ab9d7c6277.json",
+    "type": "Place",
+    "_label": "Yale Center for British Art"
+  },
+  "produced_by": {
+    "type": "Production",
+    "technique": [
+      {
+        "id": "http://vocab.getty.edu/aat/300053233",
+        "type": "Type",
+        "_label": "mezzotint"
+      }
+    ],
+    "timespan": {
+      "type": "TimeSpan",
+      "identified_by": [
+        {
+          "type": "Name",
+          "classified_as": [
+            {
+              "id": "http://vocab.getty.edu/aat/300404669",
+              "type": "Type",
+              "_label": "Display Title"
+            }
+          ],
+          "content": "1772"
+        }
+      ],
+      "begin_of_the_begin": "1772-01-01T00:00:00Z",
+      "end_of_the_begin": "1772-12-31T23:59:59Z",
+      "begin_of_the_end": "1772-01-01T00:00:00Z",
+      "end_of_the_end": "1772-12-31T23:59:59Z"
+    },
+    "during": [
+      {
+        "id": "https://ycba-lux.s3.amazonaws.com/v3/event/a1/a1bb6a07-8f4c-4bdb-af27-4f7ec7964093.json",
+        "type": "Period",
+        "_label": "18th century"
+      }
+    ],
+    "part": [
+      {
+        "type": "Production",
+        "classified_as": [
+          {
+            "id": "http://vocab.getty.edu/aat/300025103",
+            "type": "Type",
+            "_label": "Primary Artist"
+          },
+          {
+            "id": "https://ycba-lux.s3.amazonaws.com/v3/concept/40/4051ecca-40bd-49cb-a3b6-e159ab12a2be.json",
+            "type": "Type",
+            "_label": "Print made by"
+          }
+        ],
+        "carried_out_by": [
+          {
+            "id": "https://ycba-lux.s3.amazonaws.com/v3/person/da/da668789-de0a-4ea4-9320-e7ddac1c5e3e.json",
+            "type": "Person",
+            "_label": "Richard Earlom"
+          }
+        ]
+      },
+      {
+        "type": "Production",
+        "classified_as": [
+          {
+            "id": "https://ycba-lux.s3.amazonaws.com/v3/concept/a0/a012ac0c-f482-408e-afbb-94c8d1f36f98.json",
+            "type": "Type",
+            "_label": "after"
+          }
+        ],
+        "influenced_by": [
+          {
+            "id": "https://ycba-lux.s3.amazonaws.com/v3/person/86/86296a26-500a-4f1d-8d25-f8f26421b9c8.json",
+            "type": "Person",
+            "_label": "Michel Vincent Brandoin"
+          }
+        ]
+      }
+    ]
+  },
+  "current_owner": [
+    {
+      "id": "https://ycba-lux.s3.amazonaws.com/v3/group/69/69e6b48e-3f35-42e1-bb96-3f6762668496.json",
+      "type": "Group",
+      "_label": "Yale Center for British Art"
+    }
+  ],
+  "subject_of": [
+    {
+      "type": "LinguisticObject",
+      "_label": "Home page for \"The Exhibition of the Royal Academy of Painting 1771\"",
+      "digitally_carried_by": [
+        {
+          "type": "DigitalObject",
+          "_label": "Online home page for \"The Exhibition of the Royal Academy of Painting 1771\"",
+          "classified_as": [
+            {
+              "id": "http://vocab.getty.edu/aat/300264578",
+              "type": "Type",
+              "_label": "Web Page"
+            }
+          ],
+          "identified_by": [
+            {
+              "type": "Name",
+              "classified_as": [
+                {
+                  "id": "http://vocab.getty.edu/aat/300404670",
+                  "type": "Type",
+                  "_label": "Primary Name"
+                }
+              ],
+              "content": "View this record on the Yale Center for British Art website"
+            }
+          ],
+          "format": "text/html",
+          "access_point": [
+            {
+              "id": "https://collections.britishart.yale.edu/catalog/tms:45567",
+              "type": "DigitalObject"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "LinguisticObject",
+      "_label": "IIIF v2 manifest for \"The Exhibition of the Royal Academy of Painting 1771\"",
+      "digitally_carried_by": [
+        {
+          "type": "DigitalObject",
+          "_label": "IIIF v2 manifest for \"The Exhibition of the Royal Academy of Painting 1771\"",
+          "identified_by": [
+            {
+              "type": "Name",
+              "content": "IIIF v2 manifest for \"The Exhibition of the Royal Academy of Painting 1771\""
+            }
+          ],
+          "conforms_to": [
+            {
+              "id": "http://iiif.io/api/presentation/2/context.json",
+              "type": "InformationObject"
+            }
+          ],
+          "format": "application/ld+json",
+          "access_point": [
+            {
+              "id": "https://manifests.collections.yale.edu/v2/ycba/obj/45567",
+              "type": "DigitalObject"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "type": "LinguisticObject",
+      "_label": "IIIF v3 manifest for \"The Exhibition of the Royal Academy of Painting 1771\"",
+      "digitally_carried_by": [
+        {
+          "type": "DigitalObject",
+          "_label": "IIIF v3 manifest for \"The Exhibition of the Royal Academy of Painting 1771\"",
+          "identified_by": [
+            {
+              "type": "Name",
+              "content": "IIIF v3 manifest for \"The Exhibition of the Royal Academy of Painting 1771\""
+            }
+          ],
+          "conforms_to": [
+            {
+              "id": "http://iiif.io/api/presentation/3/context.json",
+              "type": "InformationObject"
+            }
+          ],
+          "format": "application/ld+json",
+          "access_point": [
+            {
+              "id": "https://manifests.collections.yale.edu/ycba/obj/45567",
+              "type": "DigitalObject"
+            }
+          ]
+        }
+      ]
+    }
+  ],
+  "representation": [
+    {
+      "type": "VisualItem",
+      "_label": "Primary Image",
+      "digitally_shown_by": [
+        {
+          "type": "DigitalObject",
+          "_label": "Primary Image",
+          "classified_as": [
+            {
+              "id": "http://vocab.getty.edu/aat/300215302",
+              "type": "Type",
+              "_label": "Digital Image"
+            }
+          ],
+          "access_point": [
+            {
+              "id": "https://media.collections.yale.edu/thumbnail/ycba/obj/45567",
+              "type": "DigitalObject"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

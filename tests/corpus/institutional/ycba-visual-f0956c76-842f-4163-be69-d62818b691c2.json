@@ -1,0 +1,104 @@
+{
+  "@context": "https://linked.art/ns/v1/linked-art.json",
+  "id": "https://ycba-lux.s3.amazonaws.com/v3/visual/f0/f0956c76-842f-4163-be69-d62818b691c2.json",
+  "type": "VisualItem",
+  "_label": "\"Elizabeth Keppel Comitis Albemarliae Filia Regiis Nuptiis Adfuit 1761\" - Visual Content",
+  "classified_as": [
+    {
+      "id": "http://vocab.getty.edu/aat/300015637",
+      "type": "Type",
+      "_label": "portrait",
+      "classified_as": [
+        {
+          "id": "http://vocab.getty.edu/aat/300435443",
+          "type": "Type",
+          "_label": "Type of Work"
+        }
+      ]
+    }
+  ],
+  "identified_by": [
+    {
+      "type": "Name",
+      "content": "\"Elizabeth Keppel Comitis Albemarliae Filia Regiis Nuptiis Adfuit 1761\" - Visual Content",
+      "language": [
+        {
+          "id": "http://vocab.getty.edu/aat/300388277",
+          "type": "Language",
+          "_label": "English"
+        }
+      ]
+    }
+  ],
+  "created_by": {
+    "type": "Creation",
+    "part": [
+      {
+        "type": "Creation",
+        "_label": "Creation",
+        "classified_as": [
+          {
+            "id": "http://vocab.getty.edu/aat/300025103",
+            "type": "Type",
+            "_label": "Primary Artist"
+          }
+        ],
+        "carried_out_by": [
+          {
+            "id": "https://ycba-lux.s3.amazonaws.com/v3/person/c3/c316a497-28af-4111-9d2e-e2ceedaefa65.json",
+            "type": "Person",
+            "_label": "Edward Fisher"
+          }
+        ]
+      }
+    ]
+  },
+  "represents": [
+    {
+      "id": "http://vocab.getty.edu/aat/300025874",
+      "type": "Type",
+      "_label": "servant"
+    },
+    {
+      "id": "http://vocab.getty.edu/aat/300015637",
+      "type": "Type",
+      "_label": "portrait"
+    },
+    {
+      "id": "https://ycba-lux.s3.amazonaws.com/v3/person/6a/6ac462a9-d79a-47df-84a2-2f2e42ead0f4.json",
+      "type": "Person",
+      "_label": "Hymen (god of marriage)"
+    },
+    {
+      "id": "https://ycba-lux.s3.amazonaws.com/v3/person/c3/c3f8e9cd-cdd1-4690-83d4-2f3762d8a5bf.json",
+      "type": "Person",
+      "_label": "Keppel, Lady Elizabeth, Marchioness of Tavistock (1739-1768), bridesmaid to Queen Charlotte"
+    }
+  ],
+  "subject_to": [
+    {
+      "type": "Right",
+      "_label": "Copyright of Image",
+      "classified_as": [
+        {
+          "id": "https://creativecommons.org/publicdomain/zero/1.0/",
+          "type": "Type",
+          "_label": "Public Domain"
+        }
+      ],
+      "identified_by": [
+        {
+          "type": "Name",
+          "classified_as": [
+            {
+              "id": "http://vocab.getty.edu/aat/300404669",
+              "type": "Type",
+              "_label": "Display Title"
+            }
+          ],
+          "content": "Public Domain"
+        }
+      ]
+    }
+  ]
+}
