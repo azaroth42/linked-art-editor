@@ -24,7 +24,7 @@ on every line of an HTTP request; `LAE_LOG_LEVEL` sets the level (default `info`
 
 | Path | Purpose |
 | :-- | :-- |
-| `Qleverfile` | qlever-control configuration: index `lae`, `TEXT_INDEX = from_literals`, `ADD_HAS_WORD_TRIPLES = true`, `PERSIST_UPDATES = true`, `SYSTEM = native`, laptop-sized memory. Reads `QLEVER_PORT`, `QLEVER_INPUT_FILES`, `LAE_QLEVER_ACCESS_TOKEN`. |
+| `Qleverfile` | qlever-control configuration: index `lae`, `TEXT_INDEX = from_literals`, `ADD_HAS_WORD_TRIPLES = true`, `PERSIST_UPDATES = true`, `ENABLE_METRICS = true` (Prometheus `/metrics`, token required), `SYSTEM = native`, laptop-sized memory. Reads `QLEVER_PORT`, `QLEVER_INPUT_FILES`, `LAE_QLEVER_ACCESS_TOKEN`. |
 | `postgres/init.sql` | Creates the `vector`, `pg_trgm`, and `btree_gin` extensions (idempotent). |
 | `Procfile` | Process list for `make run` (honcho). |
 | `systemd/` | Unit templates: `lae-api`, `lae-crdt-ws`, `lae-sync-worker`, `lae-scheduler`, `qlever`. |

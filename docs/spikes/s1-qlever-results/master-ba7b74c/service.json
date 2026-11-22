@@ -1,0 +1,163 @@
+{
+  "service_iri": "http://localhost:9806/sparql",
+  "values_5000_default_limit": {
+    "query_bytes": 174208,
+    "service_max_value_rows": "10000 (default)",
+    "result_rows": 5000,
+    "ms": 178.63,
+    "error": null,
+    "warnings": [],
+    "server_time": {
+      "computeResult": "170ms",
+      "total": "173ms"
+    },
+    "optimized_with_sibling_result": [
+      "yes"
+    ],
+    "stub_requests": [
+      {
+        "method": "POST",
+        "content_type": "application/sparql-query",
+        "accept": "application/vnd.qlever.results.v1,application/sparql-results+json;q=0.9",
+        "body_bytes": 184160,
+        "select": [
+          "x",
+          "score"
+        ],
+        "values_pushed_down": true,
+        "values_rows": 5000,
+        "parse_ms": 7.58,
+        "returned_rows": 5000,
+        "total_ms": 10.25
+      }
+    ]
+  },
+  "values_5000_limit_4999": {
+    "query_bytes": 174208,
+    "service_max_value_rows": "4999",
+    "result_rows": 0,
+    "ms": 21.07,
+    "error": null,
+    "warnings": [],
+    "server_time": {
+      "computeResult": "17ms",
+      "total": "17ms"
+    },
+    "optimized_with_sibling_result": [
+      "no"
+    ],
+    "stub_requests": [
+      {
+        "method": "POST",
+        "content_type": "application/sparql-query",
+        "accept": "application/vnd.qlever.results.v1,application/sparql-results+json;q=0.9",
+        "body_bytes": 251,
+        "select": [
+          "x",
+          "score"
+        ],
+        "values_pushed_down": false,
+        "values_rows": 0,
+        "parse_ms": 0.04,
+        "returned_rows": 20,
+        "total_ms": 0.06
+      }
+    ]
+  },
+  "values_20000_default_limit": {
+    "query_bytes": 709208,
+    "service_max_value_rows": "10000 (default)",
+    "result_rows": 0,
+    "ms": 209.27,
+    "error": null,
+    "warnings": [],
+    "server_time": {
+      "computeResult": "197ms",
+      "total": "198ms"
+    },
+    "optimized_with_sibling_result": [
+      "no"
+    ],
+    "stub_requests": [
+      {
+        "method": "POST",
+        "content_type": "application/sparql-query",
+        "accept": "application/vnd.qlever.results.v1,application/sparql-results+json;q=0.9",
+        "body_bytes": 251,
+        "select": [
+          "x",
+          "score"
+        ],
+        "values_pushed_down": false,
+        "values_rows": 0,
+        "parse_ms": 0.04,
+        "returned_rows": 20,
+        "total_ms": 0.06
+      }
+    ]
+  },
+  "values_20000_limit_100000": {
+    "query_bytes": 709208,
+    "service_max_value_rows": "100000",
+    "result_rows": 20000,
+    "ms": 510.2,
+    "error": null,
+    "warnings": [],
+    "server_time": {
+      "computeResult": "484ms",
+      "total": "494ms"
+    },
+    "optimized_with_sibling_result": [
+      "yes"
+    ],
+    "stub_requests": [
+      {
+        "method": "POST",
+        "content_type": "application/sparql-query",
+        "accept": "application/vnd.qlever.results.v1,application/sparql-results+json;q=0.9",
+        "body_bytes": 749160,
+        "select": [
+          "x",
+          "score"
+        ],
+        "values_pushed_down": true,
+        "values_rows": 20000,
+        "parse_ms": 16.03,
+        "returned_rows": 20000,
+        "total_ms": 33.5
+      }
+    ]
+  },
+  "graph_sibling_dim0_lt_250_default_limit": {
+    "query_bytes": 337,
+    "service_max_value_rows": "10000 (default)",
+    "result_rows": 5216,
+    "ms": 129.95,
+    "error": null,
+    "warnings": [],
+    "server_time": {
+      "computeResult": "124ms",
+      "total": "128ms"
+    },
+    "optimized_with_sibling_result": [
+      "yes"
+    ],
+    "stub_requests": [
+      {
+        "method": "POST",
+        "content_type": "application/sparql-query",
+        "accept": "application/vnd.qlever.results.v1,application/sparql-results+json;q=0.9",
+        "body_bytes": 197935,
+        "select": [
+          "x",
+          "score"
+        ],
+        "values_pushed_down": true,
+        "values_rows": 5216,
+        "parse_ms": 2.16,
+        "returned_rows": 5216,
+        "total_ms": 4.82
+      }
+    ]
+  }
+}

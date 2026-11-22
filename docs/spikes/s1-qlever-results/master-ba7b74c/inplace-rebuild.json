@@ -1,0 +1,120 @@
+{
+  "delta_before": {
+    "metrics": {
+      "qlever_index_num_triples": "9999922",
+      "qlever_index_rebuild_in_progress": "0",
+      "qlever_delta_triples": "1014052",
+      "qlever_delta_triples{type=\"deleted\"}": "9000",
+      "qlever_delta_triples{type=\"inserted\"}": "1005052"
+    },
+    "stats": {
+      "num-triples-internal": 2504351,
+      "num-triples-normal": 9999922
+    }
+  },
+  "triples_before": 10997974,
+  "rebuild_s": 2.04,
+  "status": 200,
+  "response": "{\n    \"message\": \"Index successfully rebuilt and swapped in\",\n    \"previous-index-dir\": \"previous.2026-11-22T20:17:16Z\"\n}",
+  "probe_during": {
+    "duration_s": 2.0,
+    "queries": 31,
+    "errors": 0,
+    "latency": {
+      "n": 31,
+      "p50_ms": 8.39,
+      "p95_ms": 18.1,
+      "p99_ms": 18.46,
+      "max_ms": 18.46,
+      "mean_ms": 8.94
+    }
+  },
+  "delta_after": {
+    "metrics": {
+      "qlever_index_num_triples": "10997974",
+      "qlever_index_rebuild_in_progress": "0",
+      "qlever_delta_triples": "0",
+      "qlever_delta_triples{type=\"deleted\"}": "0",
+      "qlever_delta_triples{type=\"inserted\"}": "0"
+    },
+    "stats": {
+      "num-triples-internal": 4507354,
+      "num-triples-normal": 10997974
+    }
+  },
+  "triples_after": 10997974,
+  "text_queries_after": {
+    "contains_word_prefix_zebra*": {
+      "rows": 0,
+      "finds_control": false,
+      "finds_inserted": false,
+      "ms": 1.39
+    },
+    "contains_word_prefix_zebra-cross*": {
+      "rows": 0,
+      "finds_control": false,
+      "finds_inserted": false,
+      "ms": 1.47
+    },
+    "contains_word_xyz": {
+      "rows": 0,
+      "finds_control": false,
+      "finds_inserted": false,
+      "ms": 1.07
+    },
+    "contains_word_control": {
+      "rows": 0,
+      "finds_control": false,
+      "finds_inserted": false,
+      "ms": 1.01
+    },
+    "has_word_zebra-crossing-xyz": {
+      "rows": 0,
+      "finds_control": false,
+      "finds_inserted": false,
+      "ms": 0.8
+    },
+    "has_word_zebra": {
+      "rows": 2,
+      "finds_control": true,
+      "finds_inserted": true,
+      "ms": 2.36
+    },
+    "has_word_xyz": {
+      "rows": 1,
+      "finds_control": false,
+      "finds_inserted": true,
+      "ms": 0.95
+    },
+    "has_word_control": {
+      "rows": 1,
+      "finds_control": true,
+      "finds_inserted": false,
+      "ms": 1.08
+    },
+    "has_word_prefix_zebra*": {
+      "rows": 0,
+      "finds_control": false,
+      "finds_inserted": false,
+      "ms": 0.75
+    },
+    "has_word_var_strstarts_zebra": {
+      "rows": 2,
+      "finds_control": true,
+      "finds_inserted": true,
+      "ms": 1821.1
+    },
+    "filter_strstarts_zebra": {
+      "rows": 2,
+      "finds_control": true,
+      "finds_inserted": true,
+      "ms": 160.32
+    },
+    "filter_regex_word_prefix": {
+      "rows": 2,
+      "finds_control": true,
+      "finds_inserted": true,
+      "ms": 140.28
+    }
+  }
+}

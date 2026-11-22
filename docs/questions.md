@@ -147,3 +147,30 @@ viewer (ADR-0012), these measured gaps become editor work or upstream fixes. Ple
    because Phase 3 MCP tools that edit text ranges inherit it.
 6. **Not verified:** a live browser session over `y-websocket`. The cross-language check ran Yjs
    13.6.33 under Node against `pycrdt` state offline (`docs/spikes/S3-projection.md` §4.4).
+
+## Step 0.6
+
+Spike S1 (`docs/spikes/S1-qlever.md`) is a **NO-GO for text freshness** and a GO for updates,
+persistence, `SERVICE`, and rebuilds. Decision F9 needs a human to acknowledge the NO-GO.
+
+1. **NO-GO: text search does not see literals inserted by SPARQL Update.** Measured on the pinned
+   Homebrew QLever 0.6.0 (`6c5861a`): after `INSERT DATA` of `rdfs:label "zebra-crossing-xyz"`,
+   neither prefix search (`ql:contains-word "zebra*"`) nor whole-word search (`ql:has-word
+   "zebra"`) finds the new literal until the index is rebuilt; the control literal in the base
+   index is found by both. A source build of `lux/qlever-dev` master (`ba7b74c`) finds it with
+   `ql:has-word` (upstream #3794, after 0.6.0) but still not with `ql:contains-word` prefixes.
+   **Fallback applied, as `docs/implementation_phases.md` names it:** Phase 1 Step 1.13 unions the
+   QLever autocomplete results with the `entity_labels` overlay (`updated_at` after the index
+   watermark, `default_label ILIKE q || '%'`), so newly published entities appear until the next
+   rebuild. Please acknowledge.
+2. **Which QLever binary to pin (follows Step 0.3 question 3).** Everything else in S1 behaves the
+   same on both binaries, so the Homebrew 0.6.0 pin can stay. A binary at or after upstream
+   `d417fa76` would make whole-word `ql:has-word` fresh (the overlay would still be needed for
+   prefixes); it builds natively on this Mac in about 3 minutes with one compiler flag (spike
+   report section 8). Decide whether to keep 0.6.0 until a newer Homebrew release, or pin a source
+   build.
+3. **QLever's built-in rebuild cannot be used while text search is.** `cmd=rebuild-index` (and
+   `--rebuild-index-strategy automatic`) folds the delta into a new index in 2 s at 11M triples,
+   but drops the text index: `ql:contains-word` returns nothing afterwards, on both binaries, and
+   QLever logs a warning saying so. Phase 2 Step 2.18 therefore keeps the external blue/green build
+   with `qlever-index` (ADR-0002). No decision needed unless you want to revisit ADR-0002.

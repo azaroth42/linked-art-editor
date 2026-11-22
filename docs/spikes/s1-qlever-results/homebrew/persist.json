@@ -1,0 +1,96 @@
+{
+  "text_subject_triples": 2,
+  "text_subject_label": [
+    [
+      "\"zebra-crossing-xyz\""
+    ]
+  ],
+  "deleted_subject_12345_triples": 0,
+  "edited_labels": 1000,
+  "insert_100_subject_triples": 0,
+  "total_triples": 9997924,
+  "delta": {
+    "metrics": {
+      "qlever_index_rebuild_in_progress": "0",
+      "qlever_delta_triples": "14002"
+    },
+    "stats": {
+      "num-triples-internal": 2504351,
+      "num-triples-normal": 9999922
+    }
+  },
+  "text_queries": {
+    "contains_word_prefix_zebra*": {
+      "rows": 1,
+      "finds_control": true,
+      "finds_inserted": false,
+      "ms": 4.62
+    },
+    "contains_word_prefix_zebra-cross*": {
+      "rows": 1,
+      "finds_control": true,
+      "finds_inserted": false,
+      "ms": 2.21
+    },
+    "contains_word_xyz": {
+      "rows": 0,
+      "finds_control": false,
+      "finds_inserted": false,
+      "ms": 1.07
+    },
+    "contains_word_control": {
+      "rows": 1,
+      "finds_control": true,
+      "finds_inserted": false,
+      "ms": 1.4
+    },
+    "has_word_zebra-crossing-xyz": {
+      "rows": 0,
+      "finds_control": false,
+      "finds_inserted": false,
+      "ms": 0.83
+    },
+    "has_word_zebra": {
+      "rows": 1,
+      "finds_control": true,
+      "finds_inserted": false,
+      "ms": 1.21
+    },
+    "has_word_xyz": {
+      "rows": 0,
+      "finds_control": false,
+      "finds_inserted": false,
+      "ms": 1.13
+    },
+    "has_word_control": {
+      "rows": 1,
+      "finds_control": true,
+      "finds_inserted": false,
+      "ms": 1.18
+    },
+    "has_word_prefix_zebra*": {
+      "rows": 0,
+      "finds_control": false,
+      "finds_inserted": false,
+      "ms": 0.77
+    },
+    "has_word_var_strstarts_zebra": {
+      "rows": 1,
+      "finds_control": true,
+      "finds_inserted": false,
+      "ms": 123.17
+    },
+    "filter_strstarts_zebra": {
+      "rows": 2,
+      "finds_control": true,
+      "finds_inserted": true,
+      "ms": 136.47
+    },
+    "filter_regex_word_prefix": {
+      "rows": 2,
+      "finds_control": true,
+      "finds_inserted": true,
+      "ms": 134.63
+    }
+  }
+}

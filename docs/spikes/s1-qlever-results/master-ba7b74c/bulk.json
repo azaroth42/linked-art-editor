@@ -1,0 +1,68 @@
+{
+  "delta_before": {
+    "metrics": {
+      "qlever_index_num_triples": "9999922",
+      "qlever_index_rebuild_in_progress": "0",
+      "qlever_delta_triples": "14052",
+      "qlever_delta_triples{type=\"deleted\"}": "9000",
+      "qlever_delta_triples{type=\"inserted\"}": "5052"
+    },
+    "stats": {
+      "num-triples-internal": 2504351,
+      "num-triples-normal": 9999922
+    }
+  },
+  "probe_before": {
+    "duration_s": 10.0,
+    "queries": 160,
+    "errors": 0,
+    "latency": {
+      "n": 160,
+      "p50_ms": 6.06,
+      "p95_ms": 16.01,
+      "p99_ms": 16.47,
+      "max_ms": 17.2,
+      "mean_ms": 6.65
+    }
+  },
+  "bulk_insert": {
+    "triples": 1000000,
+    "batch": 10000,
+    "total_s": 75.14,
+    "triples_per_s": 13308,
+    "per_batch": {
+      "n": 100,
+      "p50_ms": 723.69,
+      "p95_ms": 1330.19,
+      "p99_ms": 1481.69,
+      "max_ms": 1491.78,
+      "mean_ms": 749.16
+    }
+  },
+  "delta_after": {
+    "metrics": {
+      "qlever_index_num_triples": "9999922",
+      "qlever_index_rebuild_in_progress": "0",
+      "qlever_delta_triples": "1014052",
+      "qlever_delta_triples{type=\"deleted\"}": "9000",
+      "qlever_delta_triples{type=\"inserted\"}": "1005052"
+    },
+    "stats": {
+      "num-triples-internal": 2504351,
+      "num-triples-normal": 9999922
+    }
+  },
+  "probe_after": {
+    "duration_s": 10.1,
+    "queries": 137,
+    "errors": 0,
+    "latency": {
+      "n": 137,
+      "p50_ms": 22.79,
+      "p95_ms": 27.94,
+      "p99_ms": 31.79,
+      "max_ms": 33.51,
+      "mean_ms": 17.11
+    }
+  }
+}

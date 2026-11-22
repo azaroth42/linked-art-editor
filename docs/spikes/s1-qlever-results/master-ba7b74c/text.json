@@ -1,0 +1,190 @@
+{
+  "before_insert": {
+    "contains_word_prefix_zebra*": {
+      "rows": 1,
+      "finds_control": true,
+      "finds_inserted": false,
+      "ms": 6.06
+    },
+    "contains_word_prefix_zebra-cross*": {
+      "rows": 1,
+      "finds_control": true,
+      "finds_inserted": false,
+      "ms": 2.28
+    },
+    "contains_word_xyz": {
+      "rows": 0,
+      "finds_control": false,
+      "finds_inserted": false,
+      "ms": 1.4
+    },
+    "contains_word_control": {
+      "rows": 1,
+      "finds_control": true,
+      "finds_inserted": false,
+      "ms": 1.69
+    },
+    "has_word_zebra-crossing-xyz": {
+      "rows": 0,
+      "finds_control": false,
+      "finds_inserted": false,
+      "ms": 1.23
+    },
+    "has_word_zebra": {
+      "rows": 1,
+      "finds_control": true,
+      "finds_inserted": false,
+      "ms": 1.54
+    },
+    "has_word_xyz": {
+      "rows": 0,
+      "finds_control": false,
+      "finds_inserted": false,
+      "ms": 1.5
+    },
+    "has_word_control": {
+      "rows": 1,
+      "finds_control": true,
+      "finds_inserted": false,
+      "ms": 1.19
+    },
+    "has_word_prefix_zebra*": {
+      "rows": 0,
+      "finds_control": false,
+      "finds_inserted": false,
+      "ms": 0.75
+    },
+    "has_word_var_strstarts_zebra": {
+      "rows": 1,
+      "finds_control": true,
+      "finds_inserted": false,
+      "ms": 84.96
+    },
+    "filter_strstarts_zebra": {
+      "rows": 1,
+      "finds_control": true,
+      "finds_inserted": false,
+      "ms": 91.59
+    },
+    "filter_regex_word_prefix": {
+      "rows": 1,
+      "finds_control": true,
+      "finds_inserted": false,
+      "ms": 89.08
+    }
+  },
+  "insert": {
+    "triples": [
+      "<http://localhost:8000/id/s1/text-fresh> <http://www.w3.org/1999/02/22-rdf-syntax-ns#type> <http://www.cidoc-crm.org/cidoc-crm/E22_Human-Made_Object> .",
+      "<http://localhost:8000/id/s1/text-fresh> <http://www.w3.org/2000/01/rdf-schema#label> \"zebra-crossing-xyz\" ."
+    ],
+    "ms": 3.74,
+    "response": {
+      "operations": [
+        {
+          "status": "OK",
+          "delta-triples": {
+            "after": {
+              "deleted": 9000,
+              "inserted": 5002,
+              "total": 14002
+            },
+            "before": {
+              "deleted": 9000,
+              "inserted": 5000,
+              "total": 14000
+            },
+            "difference": {
+              "deleted": 0,
+              "inserted": 2,
+              "total": 2
+            },
+            "operation": {
+              "deleted": 0,
+              "inserted": 2,
+              "total": 2
+            }
+          },
+          "time_total_ms": 0,
+          "warnings": [
+            "SPARQL 1.1 Update for QLever is experimental."
+          ]
+        }
+      ]
+    }
+  },
+  "after_insert": {
+    "contains_word_prefix_zebra*": {
+      "rows": 1,
+      "finds_control": true,
+      "finds_inserted": false,
+      "ms": 3.36
+    },
+    "contains_word_prefix_zebra-cross*": {
+      "rows": 1,
+      "finds_control": true,
+      "finds_inserted": false,
+      "ms": 2.15
+    },
+    "contains_word_xyz": {
+      "rows": 0,
+      "finds_control": false,
+      "finds_inserted": false,
+      "ms": 1.01
+    },
+    "contains_word_control": {
+      "rows": 1,
+      "finds_control": true,
+      "finds_inserted": false,
+      "ms": 1.42
+    },
+    "has_word_zebra-crossing-xyz": {
+      "rows": 0,
+      "finds_control": false,
+      "finds_inserted": false,
+      "ms": 0.79
+    },
+    "has_word_zebra": {
+      "rows": 2,
+      "finds_control": true,
+      "finds_inserted": true,
+      "ms": 1.48
+    },
+    "has_word_xyz": {
+      "rows": 1,
+      "finds_control": false,
+      "finds_inserted": true,
+      "ms": 1.52
+    },
+    "has_word_control": {
+      "rows": 1,
+      "finds_control": true,
+      "finds_inserted": false,
+      "ms": 1.15
+    },
+    "has_word_prefix_zebra*": {
+      "rows": 0,
+      "finds_control": false,
+      "finds_inserted": false,
+      "ms": 0.79
+    },
+    "has_word_var_strstarts_zebra": {
+      "rows": 2,
+      "finds_control": true,
+      "finds_inserted": true,
+      "ms": 83.82
+    },
+    "filter_strstarts_zebra": {
+      "rows": 2,
+      "finds_control": true,
+      "finds_inserted": true,
+      "ms": 92.66
+    },
+    "filter_regex_word_prefix": {
+      "rows": 2,
+      "finds_control": true,
+      "finds_inserted": true,
+      "ms": 81.84
+    }
+  }
+}

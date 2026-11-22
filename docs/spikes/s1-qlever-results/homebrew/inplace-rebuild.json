@@ -1,0 +1,114 @@
+{
+  "delta_before": {
+    "metrics": {
+      "qlever_index_rebuild_in_progress": "0",
+      "qlever_delta_triples": "1014052"
+    },
+    "stats": {
+      "num-triples-internal": 2504351,
+      "num-triples-normal": 9999922
+    }
+  },
+  "triples_before": 10997974,
+  "rebuild_s": 2.0,
+  "status": 200,
+  "response": "{\n    \"message\": \"Index successfully rebuilt and swapped in\",\n    \"previous-index-dir\": \"previous.2026-11-22T20:14:49Z\"\n}",
+  "probe_during": {
+    "duration_s": 2.1,
+    "queries": 31,
+    "errors": 0,
+    "latency": {
+      "n": 31,
+      "p50_ms": 9.65,
+      "p95_ms": 15.38,
+      "p99_ms": 48.72,
+      "max_ms": 48.72,
+      "mean_ms": 10.29
+    }
+  },
+  "delta_after": {
+    "metrics": {
+      "qlever_index_rebuild_in_progress": "0",
+      "qlever_delta_triples": "0"
+    },
+    "stats": {
+      "num-triples-internal": 2504351,
+      "num-triples-normal": 10997974
+    }
+  },
+  "triples_after": 10997974,
+  "text_queries_after": {
+    "contains_word_prefix_zebra*": {
+      "rows": 0,
+      "finds_control": false,
+      "finds_inserted": false,
+      "ms": 1.39
+    },
+    "contains_word_prefix_zebra-cross*": {
+      "rows": 0,
+      "finds_control": false,
+      "finds_inserted": false,
+      "ms": 1.38
+    },
+    "contains_word_xyz": {
+      "rows": 0,
+      "finds_control": false,
+      "finds_inserted": false,
+      "ms": 1.02
+    },
+    "contains_word_control": {
+      "rows": 0,
+      "finds_control": false,
+      "finds_inserted": false,
+      "ms": 0.97
+    },
+    "has_word_zebra-crossing-xyz": {
+      "rows": 0,
+      "finds_control": false,
+      "finds_inserted": false,
+      "ms": 0.77
+    },
+    "has_word_zebra": {
+      "rows": 1,
+      "finds_control": true,
+      "finds_inserted": false,
+      "ms": 5.47
+    },
+    "has_word_xyz": {
+      "rows": 0,
+      "finds_control": false,
+      "finds_inserted": false,
+      "ms": 1.22
+    },
+    "has_word_control": {
+      "rows": 1,
+      "finds_control": true,
+      "finds_inserted": false,
+      "ms": 1.16
+    },
+    "has_word_prefix_zebra*": {
+      "rows": 0,
+      "finds_control": false,
+      "finds_inserted": false,
+      "ms": 0.72
+    },
+    "has_word_var_strstarts_zebra": {
+      "rows": 1,
+      "finds_control": true,
+      "finds_inserted": false,
+      "ms": 312.51
+    },
+    "filter_strstarts_zebra": {
+      "rows": 2,
+      "finds_control": true,
+      "finds_inserted": true,
+      "ms": 429.47
+    },
+    "filter_regex_word_prefix": {
+      "rows": 2,
+      "finds_control": true,
+      "finds_inserted": true,
+      "ms": 413.63
+    }
+  }
+}

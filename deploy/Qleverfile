@@ -55,6 +55,9 @@ CACHE_MAX_SIZE_SINGLE_ENTRY = 1G
 NUM_THREADS        = 4
 TIMEOUT            = 60s
 PERSIST_UPDATES    = true
+# Prometheus /metrics on the server port (access token required): `qlever_delta_triples` is the
+# rebuild trigger (Phase 2 Steps 2.17-2.18, Spike S1 in docs/spikes/S1-qlever.md).
+ENABLE_METRICS     = true
 
 [runtime]
 SYSTEM = native

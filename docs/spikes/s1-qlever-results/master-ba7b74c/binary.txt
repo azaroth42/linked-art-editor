@@ -1,0 +1,4 @@
+qlever-index: /tmp/lae-i6/build/qlever-index (qlever-index 0.0.0-unknown)
+qlever-server: /tmp/lae-i6/build/qlever-server (qlever-server 0.0.0-unknown)
+date: 2026-11-22T20:17:15Z
+machine: Apple M5 Max, 18 cores, 128 GiB
