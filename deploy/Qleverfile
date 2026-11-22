@@ -1,0 +1,15 @@
+# Qleverfile for the Linked Art Editor, used with qlever-control (`qlever`).
+#
+# Step 0.1 placeholder holding only the fixed settings (decision A15). Step 0.3 completes it
+# from lux/qlever-middletier/files/Qleverfile (input files, memory, threads, runtime) and
+# starts the server with --persist-updates.
+
+[data]
+NAME = lae
+
+[index]
+TEXT_INDEX           = from_literals
+ADD_HAS_WORD_TRIPLES = true
+
+[server]
+PORT = 7010

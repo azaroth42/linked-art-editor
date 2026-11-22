@@ -1,0 +1,37 @@
+# Install once with `uvx pre-commit install` after `make setup`.
+# All hooks are local and use the tool versions locked in backend/uv.lock and
+# frontend/pnpm-lock.yaml, so pre-commit and CI never disagree about versions.
+repos:
+  - repo: local
+    hooks:
+      - id: ruff
+        name: ruff (backend)
+        entry: uv run --project backend ruff check --fix --force-exclude
+        language: system
+        types_or: [python, pyi]
+        files: ^backend/
+      - id: ruff-format
+        name: ruff-format (backend)
+        entry: uv run --project backend ruff format --force-exclude
+        language: system
+        types_or: [python, pyi]
+        files: ^backend/
+      - id: mypy
+        name: mypy (backend)
+        entry: uv run --directory backend mypy src
+        language: system
+        types_or: [python, pyi]
+        files: ^backend/
+        pass_filenames: false
+      - id: eslint
+        name: eslint (frontend)
+        entry: corepack pnpm --dir frontend lint
+        language: system
+        files: ^frontend/.*\.(ts|tsx|js|mjs)$
+        pass_filenames: false
+      - id: prettier
+        name: prettier (frontend)
+        entry: corepack pnpm --dir frontend format
+        language: system
+        files: ^frontend/
+        pass_filenames: false
