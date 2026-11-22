@@ -220,3 +220,28 @@ Spike S6 (`docs/spikes/S6-bootstrap.md`) is a **GO**: 1M records bootstrap in 10
    not its permissions; roles are additive, so a vocabulary admin who also edits records needs
    Editor too (ADR-0020). No decision needed unless you want the role to include editing.
    **Resolved (orchestrator under the owner's delegation, 2026-11-22; reversible):** kept as `manage_vocabularies` only.
+
+## Step 1.3
+
+1. **Embedded descriptions that carry their own `id` are not indexed beyond the link.** The guide
+   and decision A12 reduce every object whose `id` is neither the record URI nor one of its
+   internal node IRIs to `{"id": uri}` before expansion, and Step 1.3 does exactly that, including
+   anything nested inside such an object. In the golden corpus 205 embedded objects have an `id`
+   of their own and more than `type` / `_label`: 183 are `Type` references that carry their
+   meta-type in `classified_as` (the Linked Art pattern
+   `{"id": aat:300435424, "type": "Type", "classified_as": [{"id": aat:300418049}]}`), 18 carry
+   `notation`, 2 `equivalent`, 1 `identified_by`, and 1 is a `Name` with its own URI and its
+   `content` (`object-3.json`, `https://linked.art/example/Name/0`). None of those nested
+   statements reach QLever from the referencing record: the meta-type of a classification must
+   come from the target's own record or sidecar graph (or `entity_labels.metatype_uris`), and the
+   `Name` in `object-3.json` is not searchable through that object. This is the ownership rule
+   working as specified, not a defect, but it is a visible consequence. If embedded nodes with a
+   foreign-looking `id` should be indexed as part of the record, the place to change it is import
+   (re-key them to internal node IRIs), not expansion. Please confirm the rule stands as is.
+2. **Expansion rejects what pyld would silently change.** Not a question; for the record. pyld
+   drops a triple whose IRI contains a forbidden character, resolves a relative `id` or an
+   undefined `type` against `http://example.org/base/`, and writes `INF` for an overflowing
+   number. `expand_to_ntriples` raises `InvalidIRIError` / `InvalidLiteralError` in each case, and
+   for an `xsd:dateTime` that is not a full date-time (`"1642"`, `"1642-01-01"`), so a publish
+   (Step 1.10) must be ready to report these as validation failures. Signed BCE years are
+   accepted. No corpus record is rejected.
