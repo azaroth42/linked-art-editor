@@ -221,3 +221,15 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Claude Code agent worktrees and local settings (never commit)
+.claude/
+
+# Node / frontend
+node_modules/
+*.tsbuildinfo
+.vite/
+playwright-report/
+test-results/
+blob-report/
+playwright/.cache/
