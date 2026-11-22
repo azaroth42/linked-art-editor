@@ -6,7 +6,7 @@ Declarative configuration, versioned with the code and validated in CI.
 | :-- | :-- | :-- |
 | `ui/` | UI Profiles: one `<Class>.yaml` per Linked Art record class (spec §6.1) | `ui/_schema.json` |
 | `vocab/` | Value Set definitions and slot bindings (spec §7) | `vocab/_schema.json` |
-| `shapes/` | SHACL shapes (Turtle), from Phase 1 | — |
+| `shapes/` | SHACL shapes (Turtle), one file per record class; the `lae:` namespace, `lae:code`, and authoring rules are in [`shapes/README.md`](shapes/README.md) | — |
 | `context/` | Pinned Linked Art `@context`, `v<N>.json` | — |
 | `schema/` | Linked Art JSON Schema, vendored from `linked-art/json-validator` | — |
 

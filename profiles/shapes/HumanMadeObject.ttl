@@ -1,0 +1,233 @@
+# SHACL shapes for HumanMadeObject records.
+#
+# Written for Spike S4 (Phase 0, Step 0.9: docs/spikes/S4-shacl.md); Phase 1 Step 1.9 loads every
+# profiles/shapes/*.ttl into one shapes graph. Each constraint follows the Linked Art model
+# documentation (linked.art/docs/model/object/ and model/base/), cited per shape.
+#
+# Conventions (see profiles/shapes/README.md):
+# - Every shape that has a target carries exactly one lae:code ("LAE-SHACL-NNN"), the diagnostic
+#   code and i18n key. The anonymous members of sh:or lists have no target and never appear as
+#   sh:sourceShape in a report, so they carry no code.
+# - sh:Violation blocks publishing; sh:Warning is publishable with acknowledgement (spec §5).
+# - Shapes use SHACL Core and SHACL-SPARQL only, so pyshacl runs them with advanced=False.
+# - The data graph is one record's expansion plus an rdf:type triple per referenced entity
+#   (Step 1.9), so referenced objects are HumanMadeObjects too. Value-class constraints are
+#   vacuous for such references. The "must have a Name" constraint exempts them explicitly: a node
+#   with no property other than rdf:type and rdfs:label is a reference, not a description.
+# - Cross-node conditions are SHACL-SPARQL rather than sh:or over sh:closed or qualified shapes:
+#   pyshacl builds and discards a full result for every failing sh:or member, which Spike S4
+#   measured as the most expensive construct (docs/spikes/S4-shacl.md, "Shape formulation").
+
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix sh:   <http://www.w3.org/ns/shacl#> .
+@prefix crm:  <http://www.cidoc-crm.org/cidoc-crm/> .
+@prefix aat:  <http://vocab.getty.edu/aat/> .
+@prefix lae:  <urn:lae:ns:> .
+@prefix laes: <urn:lae:shape:> .
+
+# --------------------------------------------------------------------------------------------
+# Annotation vocabulary and SPARQL prefix declarations
+# --------------------------------------------------------------------------------------------
+
+lae:code
+    a owl:AnnotationProperty ;
+    rdfs:label "LAE diagnostic code"@en ;
+    rdfs:comment "Structured diagnostic code (LAE-<AREA>-<NNN>) reported for every result of this shape; also the i18n key under the errors namespace."@en .
+
+laes:
+    a owl:Ontology ;
+    rdfs:label "Linked Art Editor SHACL shapes"@en ;
+    sh:declare [ sh:prefix "rdf" ; sh:namespace "http://www.w3.org/1999/02/22-rdf-syntax-ns#"^^xsd:anyURI ] ;
+    sh:declare [ sh:prefix "rdfs" ; sh:namespace "http://www.w3.org/2000/01/rdf-schema#"^^xsd:anyURI ] ;
+    sh:declare [ sh:prefix "crm" ; sh:namespace "http://www.cidoc-crm.org/cidoc-crm/"^^xsd:anyURI ] ;
+    sh:declare [ sh:prefix "aat" ; sh:namespace "http://vocab.getty.edu/aat/"^^xsd:anyURI ] .
+
+# --------------------------------------------------------------------------------------------
+# Names (model/base "Names"; model/object)
+# --------------------------------------------------------------------------------------------
+
+# 1. "It is strongly RECOMMENDED that every entity that should be rendered to an end user also
+#    have at least one specific name" (Name in identified_by). Warning, not Violation: 66 of the
+#    99 corpus objects are documentation snippets without a Name.
+laes:HumanMadeObject-name
+    a sh:NodeShape ;
+    lae:code "LAE-SHACL-001" ;
+    sh:targetClass crm:E22_Human-Made_Object ;
+    sh:severity sh:Warning ;
+    sh:sparql [
+        a sh:SPARQLConstraint ;
+        sh:message "An object should have at least one Name in identified_by."@en ;
+        sh:prefixes laes: ;
+        sh:select """
+            SELECT $this
+            WHERE {
+                FILTER NOT EXISTS {
+                    $this crm:P1_is_identified_by ?name .
+                    ?name a crm:E33_E41_Linguistic_Appellation .
+                }
+                FILTER EXISTS {
+                    $this ?property ?value .
+                    FILTER (?property NOT IN (rdf:type, rdfs:label))
+                }
+            }
+            """ ;
+    ] .
+
+# 2. "If there is more than one name given, then there should be one that is classified_as the
+#    primary name" (aat:300404670). Checked whenever the object has a Name at all.
+laes:HumanMadeObject-primary-name
+    a sh:NodeShape ;
+    lae:code "LAE-SHACL-002" ;
+    sh:targetClass crm:E22_Human-Made_Object ;
+    sh:severity sh:Warning ;
+    sh:sparql [
+        a sh:SPARQLConstraint ;
+        sh:message "One of the object's Names should be classified as Primary Name (aat:300404670)."@en ;
+        sh:prefixes laes: ;
+        sh:select """
+            SELECT $this
+            WHERE {
+                FILTER EXISTS {
+                    $this crm:P1_is_identified_by ?name .
+                    ?name a crm:E33_E41_Linguistic_Appellation .
+                }
+                FILTER NOT EXISTS {
+                    $this crm:P1_is_identified_by ?primary .
+                    ?primary a crm:E33_E41_Linguistic_Appellation ;
+                        crm:P2_has_type aat:300404670 .
+                }
+            }
+            """ ;
+    ] .
+
+# 3. "There SHOULD be exactly one primary name given per language." Two Primary Names that share
+#    a language, or that both have none, are reported. SHACL-SPARQL (cross-node comparison).
+laes:HumanMadeObject-primary-name-per-language
+    a sh:NodeShape ;
+    lae:code "LAE-SHACL-003" ;
+    sh:targetClass crm:E22_Human-Made_Object ;
+    sh:severity sh:Warning ;
+    sh:sparql [
+        a sh:SPARQLConstraint ;
+        sh:message "The object has more than one Primary Name in the same language ({?language})."@en ;
+        sh:prefixes laes: ;
+        sh:select """
+            SELECT DISTINCT $this ?language
+            WHERE {
+                $this crm:P1_is_identified_by ?first, ?second .
+                FILTER (?first != ?second)
+                ?first a crm:E33_E41_Linguistic_Appellation ; crm:P2_has_type aat:300404670 .
+                ?second a crm:E33_E41_Linguistic_Appellation ; crm:P2_has_type aat:300404670 .
+                OPTIONAL {
+                    ?first crm:P72_has_language ?language .
+                    ?second crm:P72_has_language ?language .
+                }
+                FILTER (
+                    BOUND(?language)
+                    || (NOT EXISTS { ?first crm:P72_has_language ?l1 }
+                        && NOT EXISTS { ?second crm:P72_has_language ?l2 })
+                )
+            }
+            """ ;
+    ] .
+
+# --------------------------------------------------------------------------------------------
+# Production (model/object/production; model/base "Events and Activities")
+# --------------------------------------------------------------------------------------------
+
+# 4. The beginning of an object's existence is a single Production, linked with produced_by.
+laes:HumanMadeObject-produced_by
+    a sh:PropertyShape ;
+    lae:code "LAE-SHACL-004" ;
+    sh:targetClass crm:E22_Human-Made_Object ;
+    sh:path crm:P108i_was_produced_by ;
+    sh:maxCount 1 ;
+    sh:class crm:E12_Production ;
+    sh:message "produced_by must be a single Production."@en .
+
+# 5. The actors who carried out the Production, or any part of it (the partitioning pattern for
+#    multiple artists), are a Person or a Group ("Unidentified or Unknown Artist" uses a Group).
+laes:HumanMadeObject-production-actor
+    a sh:PropertyShape ;
+    lae:code "LAE-SHACL-005" ;
+    sh:targetClass crm:E22_Human-Made_Object ;
+    sh:path (
+        crm:P108i_was_produced_by
+        [ sh:zeroOrMorePath crm:P9_consists_of ]
+        crm:P14_carried_out_by
+    ) ;
+    sh:or ( [ sh:class crm:E21_Person ] [ sh:class crm:E74_Group ] ) ;
+    sh:message "The Production (or a part of it) must be carried_out_by a Person or a Group."@en .
+
+# --------------------------------------------------------------------------------------------
+# Physical characteristics (model/object/physical)
+# --------------------------------------------------------------------------------------------
+
+# 6. Materials are recorded with made_of and "have their own Material class".
+laes:HumanMadeObject-made_of
+    a sh:PropertyShape ;
+    lae:code "LAE-SHACL-006" ;
+    sh:targetClass crm:E22_Human-Made_Object ;
+    sh:path crm:P45_consists_of ;
+    sh:class crm:E57_Material ;
+    sh:message "made_of must refer to a Material."@en .
+
+# 7. A dimension has its numeric value in `value` (exactly one).
+laes:Dimension-value
+    a sh:PropertyShape ;
+    lae:code "LAE-SHACL-007" ;
+    sh:targetObjectsOf crm:P43_has_dimension ;
+    sh:path crm:P90_has_value ;
+    sh:minCount 1 ;
+    sh:maxCount 1 ;
+    sh:or ( [ sh:datatype xsd:integer ] [ sh:datatype xsd:decimal ] [ sh:datatype xsd:double ] ) ;
+    sh:message "A Dimension must have exactly one numeric value."@en .
+
+# 8. "The unit used ... should also be given from a controlled vocabulary": one MeasurementUnit.
+laes:Dimension-unit
+    a sh:PropertyShape ;
+    lae:code "LAE-SHACL-008" ;
+    sh:targetObjectsOf crm:P43_has_dimension ;
+    sh:severity sh:Warning ;
+    sh:path crm:P91_has_unit ;
+    sh:minCount 1 ;
+    sh:maxCount 1 ;
+    sh:class crm:E58_Measurement_Unit ;
+    sh:message "A Dimension should have one unit that is a MeasurementUnit."@en .
+
+# --------------------------------------------------------------------------------------------
+# Time-spans (model/base "Time Span Details")
+#
+# Both shapes are correct for valid xsd:dateTime values, but pyshacl 0.40.2 aborts validation
+# with a TypeError in sh:lessThanOrEquals when a bound is ill-typed or a BCE year, and rdflib
+# cannot represent BCE datetimes at all. docs/spikes/S4-shacl.md recommends moving both checks to
+# the Python rule engine (LAE-RULE-001, Phase 1 Step 1.9).
+# --------------------------------------------------------------------------------------------
+
+# 9. "The datestamps must be fully qualified ... This is the xsd:dateTime profile of ISO8601."
+laes:TimeSpan-datetime
+    a sh:PropertyShape ;
+    lae:code "LAE-SHACL-009" ;
+    sh:targetObjectsOf crm:P4_has_time-span ;
+    sh:path [
+        sh:alternativePath (
+            crm:P82a_begin_of_the_begin
+            crm:P81a_end_of_the_begin
+            crm:P81b_begin_of_the_end
+            crm:P82b_end_of_the_end
+        )
+    ] ;
+    sh:datatype xsd:dateTime ;
+    sh:message "TimeSpan bounds must be valid xsd:dateTime values."@en .
+
+# 10. The span runs from begin_of_the_begin to end_of_the_end, so the first cannot be later.
+laes:TimeSpan-order
+    a sh:PropertyShape ;
+    lae:code "LAE-SHACL-010" ;
+    sh:targetObjectsOf crm:P4_has_time-span ;
+    sh:path crm:P82a_begin_of_the_begin ;
+    sh:lessThanOrEquals crm:P82b_end_of_the_end ;
+    sh:message "begin_of_the_begin must not be later than end_of_the_end."@en .
