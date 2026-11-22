@@ -61,6 +61,7 @@ the step's follow-up issue.
    `LAE-RULE-001`, comparing ISO 8601 values with signed years. Please confirm that BCE dates must
    be supported, so that Step 1.9 also accepts signed years in the `date-time` format check
    (for example with a custom format checker) rather than inheriting the RFC 3339 limit.
+   **Resolved (orchestrator under the owner's delegation, 2026-11-22; reversible):** BCE dates must be supported (antiquities). Step 1.9 accepts signed years in `date-time` with a custom format checker, compares `TimeSpan` bounds in the Python rule `LAE-RULE-001`, and keeps `xsd:dateTime` datatype and ordering checks out of SHACL. The schema's RFC 3339 limit is listed for upstream in `docs/upstream/README.md`.
 
 ## Step 0.10
 
@@ -163,14 +164,17 @@ persistence, `SERVICE`, and rebuilds. Decision F9 needs a human to acknowledge t
    QLever autocomplete results with the `entity_labels` overlay (`updated_at` after the index
    watermark, `default_label ILIKE q || '%'`), so newly published entities appear until the next
    rebuild. Please acknowledge.
+   **Resolved (orchestrator under the owner's delegation, 2026-11-22; reversible):** NO-GO acknowledged; the `entity_labels` overlay is mandatory in Step 1.13 (guide updated).
 2. **Which QLever binary to pin (follows Step 0.3 question 3).** Everything else in S1 behaves the
    same on both binaries, so the Homebrew 0.6.0 pin can stay. A binary at or after upstream
    `d417fa76` would make whole-word `ql:has-word` fresh (the overlay would still be needed for
    prefixes); it builds natively on this Mac in about 3 minutes with one compiler flag (spike
    report section 8). Decide whether to keep 0.6.0 until a newer Homebrew release, or pin a source
    build.
+   **Resolved (orchestrator under the owner's delegation, 2026-11-22; reversible):** keep the Homebrew QLever 0.6.0 pin (`6c5861a`) for development and CI because it is reproducible; the overlay is needed for prefix search on either binary. Revisit when Homebrew ships a release at or after `d417fa76`, or if index-build time matters before then (master builds about 2–3× faster). CI jobs that need QLever install it the same way (Homebrew on a macOS runner) unless a native Linux package of the same version is available.
 3. **QLever's built-in rebuild cannot be used while text search is.** `cmd=rebuild-index` (and
    `--rebuild-index-strategy automatic`) folds the delta into a new index in 2 s at 11M triples,
    but drops the text index: `ql:contains-word` returns nothing afterwards, on both binaries, and
    QLever logs a warning saying so. Phase 2 Step 2.18 therefore keeps the external blue/green build
    with `qlever-index` (ADR-0002). No decision needed unless you want to revisit ADR-0002.
+   **Resolved (orchestrator under the owner's delegation, 2026-11-22; reversible):** noted in Phase 2 Step 2.18; ADR-0002 stands.
