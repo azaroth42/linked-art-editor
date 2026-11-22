@@ -1,0 +1,144 @@
+{
+  "description": "Cases for profiles/shapes/HumanMadeObject.ttl (Spike S4). Each case applies 'set' operations (JSON Pointer path, value) to a copy of 'base'; null removes the key. 'expect' lists the [lae:code, severity] pairs the case must produce, one per result.",
+  "base": {
+    "@context": "https://linked.art/ns/v1/linked-art.json",
+    "id": "https://example.org/object/1",
+    "type": "HumanMadeObject",
+    "_label": "Test Painting",
+    "identified_by": [
+      {
+        "type": "Name",
+        "content": "Test Painting",
+        "classified_as": [
+          {"id": "http://vocab.getty.edu/aat/300404670", "type": "Type", "_label": "Primary Name"}
+        ],
+        "language": [
+          {"id": "http://vocab.getty.edu/aat/300388277", "type": "Language", "_label": "English"}
+        ]
+      },
+      {
+        "type": "Name",
+        "content": "Tableau d'essai",
+        "classified_as": [
+          {"id": "http://vocab.getty.edu/aat/300404670", "type": "Type", "_label": "Primary Name"}
+        ],
+        "language": [
+          {"id": "http://vocab.getty.edu/aat/300388306", "type": "Language", "_label": "French"}
+        ]
+      },
+      {"type": "Identifier", "content": "1990.1"}
+    ],
+    "made_of": [
+      {"id": "http://vocab.getty.edu/aat/300015050", "type": "Material", "_label": "oil paint"}
+    ],
+    "dimension": [
+      {
+        "type": "Dimension",
+        "value": 50.5,
+        "unit": {"id": "http://vocab.getty.edu/aat/300379098", "type": "MeasurementUnit", "_label": "centimeters"},
+        "classified_as": [
+          {"id": "http://vocab.getty.edu/aat/300055644", "type": "Type", "_label": "height"}
+        ]
+      }
+    ],
+    "produced_by": {
+      "type": "Production",
+      "timespan": {
+        "type": "TimeSpan",
+        "begin_of_the_begin": "1642-01-01T00:00:00Z",
+        "end_of_the_end": "1642-12-31T23:59:59Z"
+      },
+      "part": [
+        {
+          "type": "Production",
+          "carried_out_by": [
+            {"id": "https://example.org/person/1", "type": "Person", "_label": "Artist"}
+          ]
+        }
+      ]
+    },
+    "part_of": [
+      {"id": "https://example.org/object/0", "type": "HumanMadeObject", "_label": "Parent object"}
+    ]
+  },
+  "cases": [
+    {
+      "name": "valid",
+      "set": [],
+      "expect": []
+    },
+    {
+      "name": "no-name",
+      "set": [["/identified_by", [{"type": "Identifier", "content": "1990.1"}]]],
+      "expect": [["LAE-SHACL-001", "Warning"]]
+    },
+    {
+      "name": "no-primary-name",
+      "set": [
+        ["/identified_by/0/classified_as", null],
+        ["/identified_by/1/classified_as", null]
+      ],
+      "expect": [["LAE-SHACL-002", "Warning"]]
+    },
+    {
+      "name": "two-primary-names-same-language",
+      "set": [
+        [
+          "/identified_by/1/language",
+          [{"id": "http://vocab.getty.edu/aat/300388277", "type": "Language", "_label": "English"}]
+        ]
+      ],
+      "expect": [["LAE-SHACL-003", "Warning"]]
+    },
+    {
+      "name": "two-primary-names-no-language",
+      "set": [["/identified_by/0/language", null], ["/identified_by/1/language", null]],
+      "expect": [["LAE-SHACL-003", "Warning"]]
+    },
+    {
+      "name": "produced_by-not-a-production",
+      "set": [["/produced_by/type", "Activity"]],
+      "expect": [["LAE-SHACL-004", "Violation"]]
+    },
+    {
+      "name": "production-part-carried-out-by-a-place",
+      "set": [
+        [
+          "/produced_by/part/0/carried_out_by",
+          [{"id": "https://example.org/place/1", "type": "Place", "_label": "Somewhere"}]
+        ]
+      ],
+      "expect": [["LAE-SHACL-005", "Violation"]]
+    },
+    {
+      "name": "made_of-not-a-material",
+      "set": [
+        [
+          "/made_of",
+          [{"id": "http://vocab.getty.edu/aat/300033618", "type": "Type", "_label": "paintings"}]
+        ]
+      ],
+      "expect": [["LAE-SHACL-006", "Violation"]]
+    },
+    {
+      "name": "dimension-value-not-numeric",
+      "set": [["/dimension/0/value", "50.5 cm"]],
+      "expect": [["LAE-SHACL-007", "Violation"]]
+    },
+    {
+      "name": "dimension-without-unit",
+      "set": [["/dimension/0/unit", null]],
+      "expect": [["LAE-SHACL-008", "Warning"]]
+    },
+    {
+      "name": "timespan-bound-not-a-datetime",
+      "set": [["/produced_by/timespan/end_of_the_begin", "1642"]],
+      "expect": [["LAE-SHACL-009", "Violation"]]
+    },
+    {
+      "name": "timespan-begins-after-it-ends",
+      "set": [["/produced_by/timespan/begin_of_the_begin", "1643-01-01T00:00:00Z"]],
+      "expect": [["LAE-SHACL-010", "Violation"]]
+    }
+  ]
+}
