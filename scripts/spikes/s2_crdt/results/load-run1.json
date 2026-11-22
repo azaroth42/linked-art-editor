@@ -1,0 +1,938 @@
+{
+  "config": {
+    "url": "ws://127.0.0.1:9507/ws",
+    "http": "http://127.0.0.1:9507",
+    "rooms": 10,
+    "clients_per_room": 3,
+    "duration": 300.0,
+    "edit_every": 1.0,
+    "awareness_every": 2.0,
+    "churn_every": 30.0,
+    "churn_clients": 5,
+    "offline": 5.0,
+    "settle": 5.0,
+    "sample_every": 5.0,
+    "room_prefix": "s2-room-",
+    "seed": 7,
+    "out": "/tmp/lae-i7/s2-load-final.json"
+  },
+  "server_pid": 34501,
+  "gc_before": {
+    "collected": 0,
+    "rss_bytes": 58572800
+  },
+  "churn_plan": [
+    [
+      30.0,
+      "c16",
+      true
+    ],
+    [
+      30.0,
+      "c19",
+      false
+    ],
+    [
+      30.0,
+      "c22",
+      true
+    ],
+    [
+      30.0,
+      "c25",
+      false
+    ],
+    [
+      30.0,
+      "c28",
+      true
+    ],
+    [
+      60.0,
+      "c02",
+      true
+    ],
+    [
+      60.0,
+      "c05",
+      false
+    ],
+    [
+      60.0,
+      "c08",
+      true
+    ],
+    [
+      60.0,
+      "c11",
+      false
+    ],
+    [
+      60.0,
+      "c14",
+      true
+    ],
+    [
+      90.0,
+      "c15",
+      true
+    ],
+    [
+      90.0,
+      "c18",
+      false
+    ],
+    [
+      90.0,
+      "c21",
+      true
+    ],
+    [
+      90.0,
+      "c24",
+      false
+    ],
+    [
+      90.0,
+      "c27",
+      true
+    ],
+    [
+      120.0,
+      "c01",
+      true
+    ],
+    [
+      120.0,
+      "c04",
+      false
+    ],
+    [
+      120.0,
+      "c07",
+      true
+    ],
+    [
+      120.0,
+      "c10",
+      false
+    ],
+    [
+      120.0,
+      "c13",
+      true
+    ],
+    [
+      150.0,
+      "c17",
+      true
+    ],
+    [
+      150.0,
+      "c20",
+      false
+    ],
+    [
+      150.0,
+      "c23",
+      true
+    ],
+    [
+      150.0,
+      "c26",
+      false
+    ],
+    [
+      150.0,
+      "c29",
+      true
+    ],
+    [
+      180.0,
+      "c00",
+      true
+    ],
+    [
+      180.0,
+      "c03",
+      false
+    ],
+    [
+      180.0,
+      "c06",
+      true
+    ],
+    [
+      180.0,
+      "c09",
+      false
+    ],
+    [
+      180.0,
+      "c12",
+      true
+    ],
+    [
+      210.0,
+      "c16",
+      true
+    ],
+    [
+      210.0,
+      "c19",
+      false
+    ],
+    [
+      210.0,
+      "c22",
+      true
+    ],
+    [
+      210.0,
+      "c25",
+      false
+    ],
+    [
+      210.0,
+      "c28",
+      true
+    ],
+    [
+      240.0,
+      "c02",
+      true
+    ],
+    [
+      240.0,
+      "c05",
+      false
+    ],
+    [
+      240.0,
+      "c08",
+      true
+    ],
+    [
+      240.0,
+      "c11",
+      false
+    ],
+    [
+      240.0,
+      "c14",
+      true
+    ],
+    [
+      270.0,
+      "c15",
+      true
+    ],
+    [
+      270.0,
+      "c18",
+      false
+    ],
+    [
+      270.0,
+      "c21",
+      true
+    ],
+    [
+      270.0,
+      "c24",
+      false
+    ],
+    [
+      270.0,
+      "c27",
+      true
+    ]
+  ],
+  "rss": {
+    "baseline_mb": 55.88,
+    "after_connect_mb": 59.66,
+    "peak_during_run_mb": 67.2,
+    "end_connected_mb": 67.2,
+    "after_all_left_mb": 67.3,
+    "after_all_left_gc_mb": 67.3,
+    "after_evict_all_gc_mb": 67.3,
+    "per_room_end_connected_mb": 1.133,
+    "per_room_after_connect_mb": 0.378,
+    "timeline": [
+      {
+        "t_s": 0.0,
+        "rss_mb": 59.66,
+        "cpu_s": 0.17,
+        "clients": 30,
+        "rooms": 10
+      },
+      {
+        "t_s": 5.0,
+        "rss_mb": 60.05,
+        "cpu_s": 0.21,
+        "clients": 30,
+        "rooms": 10
+      },
+      {
+        "t_s": 10.0,
+        "rss_mb": 60.23,
+        "cpu_s": 0.24,
+        "clients": 30,
+        "rooms": 10
+      },
+      {
+        "t_s": 15.0,
+        "rss_mb": 60.31,
+        "cpu_s": 0.27,
+        "clients": 30,
+        "rooms": 10
+      },
+      {
+        "t_s": 20.0,
+        "rss_mb": 60.42,
+        "cpu_s": 0.31,
+        "clients": 30,
+        "rooms": 10
+      },
+      {
+        "t_s": 25.0,
+        "rss_mb": 60.47,
+        "cpu_s": 0.34,
+        "clients": 30,
+        "rooms": 10
+      },
+      {
+        "t_s": 30.0,
+        "rss_mb": 60.55,
+        "cpu_s": 0.43,
+        "clients": 25,
+        "rooms": 10
+      },
+      {
+        "t_s": 35.0,
+        "rss_mb": 60.92,
+        "cpu_s": 0.47,
+        "clients": 30,
+        "rooms": 10
+      },
+      {
+        "t_s": 40.0,
+        "rss_mb": 60.98,
+        "cpu_s": 0.5,
+        "clients": 30,
+        "rooms": 10
+      },
+      {
+        "t_s": 45.0,
+        "rss_mb": 61.06,
+        "cpu_s": 0.53,
+        "clients": 30,
+        "rooms": 10
+      },
+      {
+        "t_s": 50.0,
+        "rss_mb": 61.11,
+        "cpu_s": 0.56,
+        "clients": 30,
+        "rooms": 10
+      },
+      {
+        "t_s": 55.0,
+        "rss_mb": 61.19,
+        "cpu_s": 0.59,
+        "clients": 30,
+        "rooms": 10
+      },
+      {
+        "t_s": 60.0,
+        "rss_mb": 61.23,
+        "cpu_s": 0.62,
+        "clients": 25,
+        "rooms": 10
+      },
+      {
+        "t_s": 65.0,
+        "rss_mb": 61.67,
+        "cpu_s": 0.65,
+        "clients": 30,
+        "rooms": 10
+      },
+      {
+        "t_s": 70.0,
+        "rss_mb": 61.72,
+        "cpu_s": 0.68,
+        "clients": 30,
+        "rooms": 10
+      },
+      {
+        "t_s": 75.0,
+        "rss_mb": 61.78,
+        "cpu_s": 0.71,
+        "clients": 30,
+        "rooms": 10
+      },
+      {
+        "t_s": 80.0,
+        "rss_mb": 61.84,
+        "cpu_s": 0.75,
+        "clients": 30,
+        "rooms": 10
+      },
+      {
+        "t_s": 85.0,
+        "rss_mb": 61.89,
+        "cpu_s": 0.78,
+        "clients": 30,
+        "rooms": 10
+      },
+      {
+        "t_s": 90.0,
+        "rss_mb": 61.95,
+        "cpu_s": 0.81,
+        "clients": 25,
+        "rooms": 10
+      },
+      {
+        "t_s": 95.0,
+        "rss_mb": 62.27,
+        "cpu_s": 0.84,
+        "clients": 30,
+        "rooms": 10
+      },
+      {
+        "t_s": 100.0,
+        "rss_mb": 62.31,
+        "cpu_s": 0.87,
+        "clients": 30,
+        "rooms": 10
+      },
+      {
+        "t_s": 105.0,
+        "rss_mb": 62.42,
+        "cpu_s": 0.9,
+        "clients": 30,
+        "rooms": 10
+      },
+      {
+        "t_s": 110.1,
+        "rss_mb": 62.48,
+        "cpu_s": 0.94,
+        "clients": 30,
+        "rooms": 10
+      },
+      {
+        "t_s": 115.1,
+        "rss_mb": 62.55,
+        "cpu_s": 0.98,
+        "clients": 30,
+        "rooms": 10
+      },
+      {
+        "t_s": 120.1,
+        "rss_mb": 62.59,
+        "cpu_s": 1.03,
+        "clients": 25,
+        "rooms": 10
+      },
+      {
+        "t_s": 125.1,
+        "rss_mb": 62.92,
+        "cpu_s": 1.06,
+        "clients": 30,
+        "rooms": 10
+      },
+      {
+        "t_s": 130.1,
+        "rss_mb": 63.34,
+        "cpu_s": 1.1,
+        "clients": 30,
+        "rooms": 10
+      },
+      {
+        "t_s": 135.1,
+        "rss_mb": 63.47,
+        "cpu_s": 1.14,
+        "clients": 30,
+        "rooms": 10
+      },
+      {
+        "t_s": 140.1,
+        "rss_mb": 63.52,
+        "cpu_s": 1.19,
+        "clients": 30,
+        "rooms": 10
+      },
+      {
+        "t_s": 145.1,
+        "rss_mb": 63.56,
+        "cpu_s": 1.23,
+        "clients": 30,
+        "rooms": 10
+      },
+      {
+        "t_s": 150.1,
+        "rss_mb": 63.62,
+        "cpu_s": 1.26,
+        "clients": 25,
+        "rooms": 10
+      },
+      {
+        "t_s": 155.1,
+        "rss_mb": 63.89,
+        "cpu_s": 1.3,
+        "clients": 30,
+        "rooms": 10
+      },
+      {
+        "t_s": 160.1,
+        "rss_mb": 63.94,
+        "cpu_s": 1.33,
+        "clients": 30,
+        "rooms": 10
+      },
+      {
+        "t_s": 165.1,
+        "rss_mb": 64.02,
+        "cpu_s": 1.36,
+        "clients": 30,
+        "rooms": 10
+      },
+      {
+        "t_s": 170.1,
+        "rss_mb": 64.09,
+        "cpu_s": 1.4,
+        "clients": 30,
+        "rooms": 10
+      },
+      {
+        "t_s": 175.1,
+        "rss_mb": 64.14,
+        "cpu_s": 1.43,
+        "clients": 30,
+        "rooms": 10
+      },
+      {
+        "t_s": 180.1,
+        "rss_mb": 64.19,
+        "cpu_s": 1.46,
+        "clients": 25,
+        "rooms": 10
+      },
+      {
+        "t_s": 185.1,
+        "rss_mb": 64.47,
+        "cpu_s": 1.49,
+        "clients": 30,
+        "rooms": 10
+      },
+      {
+        "t_s": 190.1,
+        "rss_mb": 64.52,
+        "cpu_s": 1.52,
+        "clients": 30,
+        "rooms": 10
+      },
+      {
+        "t_s": 195.1,
+        "rss_mb": 64.61,
+        "cpu_s": 1.55,
+        "clients": 30,
+        "rooms": 10
+      },
+      {
+        "t_s": 200.1,
+        "rss_mb": 64.66,
+        "cpu_s": 1.59,
+        "clients": 30,
+        "rooms": 10
+      },
+      {
+        "t_s": 205.1,
+        "rss_mb": 64.7,
+        "cpu_s": 1.64,
+        "clients": 30,
+        "rooms": 10
+      },
+      {
+        "t_s": 210.1,
+        "rss_mb": 64.77,
+        "cpu_s": 1.69,
+        "clients": 25,
+        "rooms": 10
+      },
+      {
+        "t_s": 215.1,
+        "rss_mb": 65.08,
+        "cpu_s": 1.74,
+        "clients": 30,
+        "rooms": 10
+      },
+      {
+        "t_s": 220.1,
+        "rss_mb": 65.14,
+        "cpu_s": 1.8,
+        "clients": 30,
+        "rooms": 10
+      },
+      {
+        "t_s": 225.1,
+        "rss_mb": 65.25,
+        "cpu_s": 1.85,
+        "clients": 30,
+        "rooms": 10
+      },
+      {
+        "t_s": 230.1,
+        "rss_mb": 65.31,
+        "cpu_s": 1.9,
+        "clients": 30,
+        "rooms": 10
+      },
+      {
+        "t_s": 235.1,
+        "rss_mb": 65.36,
+        "cpu_s": 1.96,
+        "clients": 30,
+        "rooms": 10
+      },
+      {
+        "t_s": 240.1,
+        "rss_mb": 65.41,
+        "cpu_s": 2.03,
+        "clients": 25,
+        "rooms": 10
+      },
+      {
+        "t_s": 245.1,
+        "rss_mb": 65.69,
+        "cpu_s": 2.09,
+        "clients": 30,
+        "rooms": 10
+      },
+      {
+        "t_s": 250.1,
+        "rss_mb": 65.75,
+        "cpu_s": 2.15,
+        "clients": 30,
+        "rooms": 10
+      },
+      {
+        "t_s": 255.1,
+        "rss_mb": 65.81,
+        "cpu_s": 2.21,
+        "clients": 30,
+        "rooms": 10
+      },
+      {
+        "t_s": 260.1,
+        "rss_mb": 66.52,
+        "cpu_s": 2.25,
+        "clients": 30,
+        "rooms": 10
+      },
+      {
+        "t_s": 265.1,
+        "rss_mb": 66.56,
+        "cpu_s": 2.29,
+        "clients": 30,
+        "rooms": 10
+      },
+      {
+        "t_s": 270.1,
+        "rss_mb": 66.61,
+        "cpu_s": 2.33,
+        "clients": 25,
+        "rooms": 10
+      },
+      {
+        "t_s": 275.1,
+        "rss_mb": 66.94,
+        "cpu_s": 2.36,
+        "clients": 30,
+        "rooms": 10
+      },
+      {
+        "t_s": 280.1,
+        "rss_mb": 66.98,
+        "cpu_s": 2.4,
+        "clients": 30,
+        "rooms": 10
+      },
+      {
+        "t_s": 285.2,
+        "rss_mb": 67.05,
+        "cpu_s": 2.43,
+        "clients": 30,
+        "rooms": 10
+      },
+      {
+        "t_s": 290.2,
+        "rss_mb": 67.11,
+        "cpu_s": 2.47,
+        "clients": 30,
+        "rooms": 10
+      },
+      {
+        "t_s": 295.2,
+        "rss_mb": 67.16,
+        "cpu_s": 2.51,
+        "clients": 30,
+        "rooms": 10
+      },
+      {
+        "t_s": 300.2,
+        "rss_mb": 67.2,
+        "cpu_s": 2.54,
+        "clients": 30,
+        "rooms": 10
+      }
+    ]
+  },
+  "server": {
+    "cpu_s_during_run": 2.38,
+    "loop_lag_ms": {
+      "n": 5929,
+      "p50": 1.7504169838502976,
+      "p99": 2.8454580053221408,
+      "max": 10.717165993992236,
+      "mean": 1.4478801698419181
+    },
+    "connects": 75,
+    "disconnects": 75,
+    "handled_exceptions": 0,
+    "log_errors": 0,
+    "log_warnings": 0,
+    "error_samples": [],
+    "clients_after_all_left": 0,
+    "rooms_after_all_left": 10,
+    "evicted": 10,
+    "rooms_after_evict": 0,
+    "persist": {
+      "enabled": false,
+      "updates": 0,
+      "bytes": 0,
+      "ms": {
+        "n": 0,
+        "p50": null,
+        "p95": null,
+        "p99": null,
+        "max": null
+      }
+    }
+  },
+  "latency_ms": {
+    "map_live": {
+      "n": 17100,
+      "p50": 1.86,
+      "p95": 4.6,
+      "p99": 8.83,
+      "max": 20.65
+    },
+    "text_live": {
+      "n": 17100,
+      "p50": 2.12,
+      "p95": 5.47,
+      "p99": 10.73,
+      "max": 28.06
+    },
+    "all_doc_updates_live": {
+      "n": 34200,
+      "p50": 2.0,
+      "p95": 5.09,
+      "p99": 9.58,
+      "max": 28.06
+    },
+    "awareness_live": {
+      "n": 8718,
+      "p50": 0.82,
+      "p95": 3.84,
+      "p99": 5.88,
+      "max": 15.25
+    },
+    "doc_updates_catchup_total_age": {
+      "n": 1080,
+      "p50": 2138.15,
+      "p95": 4959.29,
+      "p99": 4963.84,
+      "max": 4970.7
+    },
+    "doc_updates_catchup_after_reconnect": {
+      "n": 1080,
+      "p50": 1.28,
+      "p95": 4.02,
+      "p99": 4.32,
+      "max": 4.44
+    }
+  },
+  "awareness_delivery": {
+    "expected": 8610,
+    "delivered": 8610,
+    "ratio": 1.0,
+    "missing_sample": []
+  },
+  "presence": {
+    "graceful_leave_removal_ms": {
+      "n": 54,
+      "p50": 0.53,
+      "p95": 1.48,
+      "p99": 1.61,
+      "max": 1.65
+    },
+    "graceful_leave_removal_origins": {
+      "remote": 54
+    },
+    "abrupt_leave_removals_within_offline_window": 0
+  },
+  "reconnect": {
+    "count": 45,
+    "open_ms": {
+      "n": 45,
+      "p50": 1.63,
+      "p95": 4.44,
+      "p99": 4.76,
+      "max": 4.76
+    },
+    "synced_ms": {
+      "n": 45,
+      "p50": 2.84,
+      "p95": 7.05,
+      "p99": 8.2,
+      "max": 8.2
+    },
+    "sync_step2_bytes": {
+      "n": 45,
+      "p50": 2086.0,
+      "p95": 3166.0,
+      "p99": 3166.0,
+      "max": 3166.0
+    },
+    "disconnects_graceful": 27,
+    "disconnects_abrupt": 18
+  },
+  "initial_connect": {
+    "synced_ms": {
+      "n": 30,
+      "p50": 7.85,
+      "p95": 9.18,
+      "p99": 9.42,
+      "max": 9.42
+    }
+  },
+  "rooms": {
+    "s2-room-00": {
+      "state_vectors_equal": true,
+      "digests_equal": true,
+      "tokens_written": 900,
+      "all_tokens_present_once": true,
+      "last_map_values_present": true,
+      "notes_len": 23076,
+      "client_update_bytes": 56271,
+      "server_update_bytes": 56271
+    },
+    "s2-room-01": {
+      "state_vectors_equal": true,
+      "digests_equal": true,
+      "tokens_written": 900,
+      "all_tokens_present_once": true,
+      "last_map_values_present": true,
+      "notes_len": 23076,
+      "client_update_bytes": 56271,
+      "server_update_bytes": 56271
+    },
+    "s2-room-02": {
+      "state_vectors_equal": true,
+      "digests_equal": true,
+      "tokens_written": 900,
+      "all_tokens_present_once": true,
+      "last_map_values_present": true,
+      "notes_len": 23076,
+      "client_update_bytes": 56271,
+      "server_update_bytes": 56271
+    },
+    "s2-room-03": {
+      "state_vectors_equal": true,
+      "digests_equal": true,
+      "tokens_written": 900,
+      "all_tokens_present_once": true,
+      "last_map_values_present": true,
+      "notes_len": 23076,
+      "client_update_bytes": 56271,
+      "server_update_bytes": 56271
+    },
+    "s2-room-04": {
+      "state_vectors_equal": true,
+      "digests_equal": true,
+      "tokens_written": 900,
+      "all_tokens_present_once": true,
+      "last_map_values_present": true,
+      "notes_len": 23076,
+      "client_update_bytes": 56271,
+      "server_update_bytes": 56271
+    },
+    "s2-room-05": {
+      "state_vectors_equal": true,
+      "digests_equal": true,
+      "tokens_written": 900,
+      "all_tokens_present_once": true,
+      "last_map_values_present": true,
+      "notes_len": 23076,
+      "client_update_bytes": 56281,
+      "server_update_bytes": 56281
+    },
+    "s2-room-06": {
+      "state_vectors_equal": true,
+      "digests_equal": true,
+      "tokens_written": 900,
+      "all_tokens_present_once": true,
+      "last_map_values_present": true,
+      "notes_len": 23076,
+      "client_update_bytes": 56281,
+      "server_update_bytes": 56281
+    },
+    "s2-room-07": {
+      "state_vectors_equal": true,
+      "digests_equal": true,
+      "tokens_written": 900,
+      "all_tokens_present_once": true,
+      "last_map_values_present": true,
+      "notes_len": 23076,
+      "client_update_bytes": 56281,
+      "server_update_bytes": 56281
+    },
+    "s2-room-08": {
+      "state_vectors_equal": true,
+      "digests_equal": true,
+      "tokens_written": 900,
+      "all_tokens_present_once": true,
+      "last_map_values_present": true,
+      "notes_len": 23076,
+      "client_update_bytes": 56281,
+      "server_update_bytes": 56281
+    },
+    "s2-room-09": {
+      "state_vectors_equal": true,
+      "digests_equal": true,
+      "tokens_written": 900,
+      "all_tokens_present_once": true,
+      "last_map_values_present": true,
+      "notes_len": 23076,
+      "client_update_bytes": 56281,
+      "server_update_bytes": 56281
+    }
+  },
+  "all_rooms_converged": true,
+  "client_loop_lag_ms": {
+    "n": 5918,
+    "p50": 2.04,
+    "p95": 2.11,
+    "p99": 3.67,
+    "max": 15.27
+  },
+  "client_errors": [],
+  "client_error_count": 0,
+  "messages": {
+    "sent": 22095,
+    "received": 65862,
+    "bytes_received": 5229803
+  }
+}

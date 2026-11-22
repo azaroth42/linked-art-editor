@@ -1,0 +1,132 @@
+{
+  "room": "s2-browser-1795377835558",
+  "checks": {
+    "initial sync python->browser": {
+      "ok": true,
+      "detail": {
+        "py": {
+          "online": true,
+          "seq": 3,
+          "t": 1795377835748.337,
+          "by": "py"
+        }
+      }
+    },
+    "awareness browser->python": {
+      "ok": true,
+      "detail": {
+        "after_join_ms": 62
+      }
+    },
+    "awareness python->browser (idle peer, no re-announce)": {
+      "ok": true,
+      "detail": {
+        "after_join_ms": 14600
+      }
+    },
+    "awareness live python->browser": {
+      "ok": true,
+      "detail": {
+        "n": 10,
+        "p50": 0.27,
+        "p95": 0.4,
+        "max": 0.4
+      }
+    },
+    "live edits browser->python": {
+      "ok": true
+    },
+    "reconnect: offline edits exchanged both ways": {
+      "ok": true
+    },
+    "state vectors equal (browser, python, server)": {
+      "ok": true,
+      "detail": {
+        "browser": {
+          "2707748546": 1341,
+          "5028419704482468": 1191
+        }
+      }
+    },
+    "Y.Map content equal (browser, python, server)": {
+      "ok": true
+    },
+    "Y.Text content equal (browser, python, server)": {
+      "ok": true,
+      "detail": {
+        "length": 2439,
+        "tokens": 93
+      }
+    },
+    "no token lost or duplicated": {
+      "ok": true
+    },
+    "graceful leave removes presence in browser": {
+      "ok": true,
+      "detail": {
+        "ms": 0
+      }
+    },
+    "abrupt leave eventually removes presence (timeout)": {
+      "ok": true,
+      "detail": {
+        "ms": 31293
+      }
+    },
+    "no browser console errors": {
+      "ok": true,
+      "detail": []
+    },
+    "rejoined peer sees browser after browser re-announces": {
+      "ok": true
+    },
+    "tab close eventually removes presence at python (timeout)": {
+      "ok": true,
+      "detail": {
+        "ms": 32463
+      }
+    }
+  },
+  "timings_ms": {
+    "browser_join_to_synced": 70,
+    "browser_sees_idle_peer_after_join": 14600,
+    "browser_reconnect_to_synced": 12,
+    "python_extra_wait_for_browser_offline_edits": 0,
+    "graceful_leave_seen_by_browser": 0,
+    "abrupt_leave_ghost_presence": 31293,
+    "tab_close_ghost_presence_at_python": 32463
+  },
+  "awareness_python_to_browser_ms": {
+    "n": 10,
+    "p50": 0.27,
+    "p95": 0.4,
+    "max": 0.4
+  },
+  "latency_python_to_browser_ms": {
+    "n": 40,
+    "p50": -0.07,
+    "p95": 0.36,
+    "max": 0.87
+  },
+  "latency_browser_to_python_ms": {
+    "n": 80,
+    "p50": 0.94,
+    "p95": 1.36,
+    "p99": 1.56,
+    "max": 1.59
+  },
+  "python_reads_browser_value_types": {
+    "by": "str",
+    "seq": "float",
+    "t": "float",
+    "online": "bool"
+  },
+  "browser_console_errors": [],
+  "versions": {
+    "yjs": "13.6.33",
+    "y-websocket": "3.1.0",
+    "playwright": "1.65.1",
+    "chromium": "159.0.8154.6"
+  },
+  "all_ok": true
+}
