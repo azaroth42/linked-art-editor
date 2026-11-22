@@ -1,0 +1,560 @@
+{
+  "description": "Two clients each add the first value of a property that has none: at the root, inside a single-valued node, inside an array entry, and into an array that was empty in the source. Every insert is kept, the reference both of them add exists once, and the entries (all with _order 0) are ordered by entry key.",
+  "rules": [
+    "R6",
+    "R7",
+    "R13",
+    "R14",
+    "R18"
+  ],
+  "record_uri": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f",
+  "clients": {
+    "a": 101,
+    "b": 202
+  },
+  "initial": {
+    "@context": "https://linked.art/ns/v1/linked-art.json",
+    "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f",
+    "type": "HumanMadeObject",
+    "identified_by": [
+      {
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002",
+        "type": "Name",
+        "content": "title"
+      }
+    ],
+    "produced_by": {
+      "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000001",
+      "type": "Production"
+    },
+    "member_of": []
+  },
+  "initial_update": "AQ3a8JnRwfmjDwAoAQZyZWNvcmQIQGNvbnRleHQBdyhodHRwczovL2xpbmtlZC5hcnQvbnMvdjEvbGlua2VkLWFydC5qc29uKAEGcmVjb3JkAmlkAXc7aHR0cHM6Ly9leGFtcGxlLm9yZy9pZC8wMTkyZjBjMS03YjFlLTdjM2EtOWQyZS01YTFiMmMzZDRlNWYoAQZyZWNvcmQEdHlwZQF3D0h1bWFuTWFkZU9iamVjdCcBBnJlY29yZHlbImlkZW50aWZpZWRfYnkiLCJodHRwczovL2V4YW1wbGUub3JnL2lkLzAxOTJmMGMxLTdiMWUtN2MzYS05ZDJlLTVhMWIyYzNkNGU1Zi9ub2RlLzAxOTJmMGMxLTdiMWUtNzAwMC04MDAwLTAwMDAwMDAwMDAwMiJdASgA2vCZ0cH5ow8DAmlkAXdlaHR0cHM6Ly9leGFtcGxlLm9yZy9pZC8wMTkyZjBjMS03YjFlLTdjM2EtOWQyZS01YTFiMmMzZDRlNWYvbm9kZS8wMTkyZjBjMS03YjFlLTcwMDAtODAwMC0wMDAwMDAwMDAwMDIoANrwmdHB+aMPAwR0eXBlAXcETmFtZScA2vCZ0cH5ow8DB2NvbnRlbnQCBADa8JnRwfmjDwYFdGl0bGUoANrwmdHB+aMPAwZfb3JkZXIBfAAAAAAnAQZyZWNvcmQLcHJvZHVjZWRfYnkBKADa8JnRwfmjDw0CaWQBd2VodHRwczovL2V4YW1wbGUub3JnL2lkLzAxOTJmMGMxLTdiMWUtN2MzYS05ZDJlLTVhMWIyYzNkNGU1Zi9ub2RlLzAxOTJmMGMxLTdiMWUtNzAwMC04MDAwLTAwMDAwMDAwMDAwMSgA2vCZ0cH5ow8NBHR5cGUBdwpQcm9kdWN0aW9uKAEGcmVjb3JkCW1lbWJlcl9vZgF2AQVfanNvbncCW10A",
+  "initial_state": {
+    "map": {
+      "@context": {
+        "plain": "https://linked.art/ns/v1/linked-art.json"
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]": {
+        "map": {
+          "_order": {
+            "plain": 0.0
+          },
+          "content": {
+            "text": "title"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "id": {
+        "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f"
+      },
+      "member_of": {
+        "plain": {
+          "_json": "[]"
+        }
+      },
+      "produced_by": {
+        "map": {
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000001"
+          },
+          "type": {
+            "plain": "Production"
+          }
+        }
+      },
+      "type": {
+        "plain": "HumanMadeObject"
+      }
+    }
+  },
+  "steps": [
+    {
+      "client": "a",
+      "op": "add_node",
+      "args": {
+        "path": "referred_to_by[LinguisticObject]",
+        "node": {
+          "content": "from a"
+        },
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000000b"
+        ]
+      },
+      "returns": "[\"referred_to_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000000b\"]"
+    },
+    {
+      "client": "b",
+      "op": "add_node",
+      "args": {
+        "path": "referred_to_by[LinguisticObject]",
+        "node": {
+          "content": "from b"
+        },
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000000a"
+        ]
+      },
+      "returns": "[\"referred_to_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000000a\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_reference",
+      "args": {
+        "path": "produced_by.carried_out_by",
+        "uri": "https://example.org/id/person-1",
+        "type": "Person"
+      },
+      "returns": "[\"carried_out_by\",\"https://example.org/id/person-1\"]"
+    },
+    {
+      "client": "b",
+      "op": "add_reference",
+      "args": {
+        "path": "produced_by.carried_out_by",
+        "uri": "https://example.org/id/person-2",
+        "type": "Person"
+      },
+      "returns": "[\"carried_out_by\",\"https://example.org/id/person-2\"]"
+    },
+    {
+      "client": "b",
+      "op": "add_reference",
+      "args": {
+        "path": "produced_by.carried_out_by",
+        "uri": "https://example.org/id/person-1",
+        "type": "Person"
+      },
+      "returns": "[\"carried_out_by\",\"https://example.org/id/person-1\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_reference",
+      "args": {
+        "path": "member_of",
+        "uri": "https://example.org/id/set-2",
+        "type": "Set"
+      },
+      "returns": "[\"member_of\",\"https://example.org/id/set-2\"]"
+    },
+    {
+      "client": "b",
+      "op": "add_reference",
+      "args": {
+        "path": "member_of",
+        "uri": "https://example.org/id/set-1",
+        "type": "Set"
+      },
+      "returns": "[\"member_of\",\"https://example.org/id/set-1\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_node",
+      "args": {
+        "path": "part[Name]",
+        "node": {
+          "content": "a"
+        },
+        "base": [
+          {
+            "path": "identified_by",
+            "key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]"
+          }
+        ],
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000000c"
+        ]
+      },
+      "returns": "[\"part\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000000c\"]"
+    },
+    {
+      "client": "b",
+      "op": "add_node",
+      "args": {
+        "path": "part[Name]",
+        "node": {
+          "content": "b"
+        },
+        "base": [
+          {
+            "path": "identified_by",
+            "key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]"
+          }
+        ],
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000000d"
+        ]
+      },
+      "returns": "[\"part\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000000d\"]"
+    },
+    {
+      "client": "a",
+      "op": "project",
+      "args": {},
+      "returns": {
+        "produced_by": {
+          "type": "Production",
+          "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000001",
+          "carried_out_by": [
+            {
+              "type": "Person",
+              "id": "https://example.org/id/person-1"
+            }
+          ]
+        },
+        "@context": "https://linked.art/ns/v1/linked-art.json",
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f",
+        "type": "HumanMadeObject",
+        "identified_by": [
+          {
+            "type": "Name",
+            "content": "title",
+            "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002",
+            "part": [
+              {
+                "type": "Name",
+                "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000000c",
+                "content": "a"
+              }
+            ]
+          }
+        ],
+        "member_of": [
+          {
+            "id": "https://example.org/id/set-2",
+            "type": "Set"
+          }
+        ],
+        "referred_to_by": [
+          {
+            "content": "from a",
+            "type": "LinguisticObject",
+            "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000000b"
+          }
+        ]
+      }
+    },
+    {
+      "client": "b",
+      "op": "project",
+      "args": {},
+      "returns": {
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f",
+        "@context": "https://linked.art/ns/v1/linked-art.json",
+        "type": "HumanMadeObject",
+        "produced_by": {
+          "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000001",
+          "type": "Production",
+          "carried_out_by": [
+            {
+              "type": "Person",
+              "id": "https://example.org/id/person-2"
+            },
+            {
+              "id": "https://example.org/id/person-1",
+              "type": "Person"
+            }
+          ]
+        },
+        "member_of": [
+          {
+            "id": "https://example.org/id/set-1",
+            "type": "Set"
+          }
+        ],
+        "identified_by": [
+          {
+            "type": "Name",
+            "content": "title",
+            "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002",
+            "part": [
+              {
+                "type": "Name",
+                "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000000d",
+                "content": "b"
+              }
+            ]
+          }
+        ],
+        "referred_to_by": [
+          {
+            "type": "LinguisticObject",
+            "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000000a",
+            "content": "from b"
+          }
+        ]
+      }
+    },
+    {
+      "sync": [
+        "a",
+        "b"
+      ]
+    },
+    {
+      "client": "a",
+      "op": "get_path",
+      "args": {
+        "path": "referred_to_by.content"
+      },
+      "returns": [
+        "from b",
+        "from a"
+      ]
+    },
+    {
+      "client": "b",
+      "op": "list_entries",
+      "args": {
+        "path": "produced_by.carried_out_by"
+      },
+      "returns": [
+        "[\"carried_out_by\",\"https://example.org/id/person-2\"]",
+        "[\"carried_out_by\",\"https://example.org/id/person-1\"]"
+      ]
+    },
+    {
+      "client": "b",
+      "op": "list_entries",
+      "args": {
+        "path": "member_of"
+      },
+      "returns": [
+        "[\"member_of\",\"https://example.org/id/set-1\"]",
+        "[\"member_of\",\"https://example.org/id/set-2\"]"
+      ]
+    },
+    {
+      "client": "a",
+      "op": "get_path",
+      "args": {
+        "path": "identified_by.part.content"
+      },
+      "returns": [
+        "a",
+        "b"
+      ]
+    }
+  ],
+  "expected": {
+    "produced_by": {
+      "type": "Production",
+      "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000001",
+      "carried_out_by": [
+        {
+          "type": "Person",
+          "id": "https://example.org/id/person-2"
+        },
+        {
+          "type": "Person",
+          "id": "https://example.org/id/person-1"
+        }
+      ]
+    },
+    "@context": "https://linked.art/ns/v1/linked-art.json",
+    "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f",
+    "type": "HumanMadeObject",
+    "member_of": [
+      {
+        "type": "Set",
+        "id": "https://example.org/id/set-1"
+      },
+      {
+        "id": "https://example.org/id/set-2",
+        "type": "Set"
+      }
+    ],
+    "identified_by": [
+      {
+        "type": "Name",
+        "content": "title",
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002",
+        "part": [
+          {
+            "type": "Name",
+            "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000000c",
+            "content": "a"
+          },
+          {
+            "type": "Name",
+            "content": "b",
+            "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000000d"
+          }
+        ]
+      }
+    ],
+    "referred_to_by": [
+      {
+        "type": "LinguisticObject",
+        "content": "from b",
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000000a"
+      },
+      {
+        "content": "from a",
+        "type": "LinguisticObject",
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000000b"
+      }
+    ]
+  },
+  "expected_state": {
+    "map": {
+      "@context": {
+        "plain": "https://linked.art/ns/v1/linked-art.json"
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]": {
+        "map": {
+          "[\"part\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000000c\"]": {
+            "map": {
+              "_order": {
+                "plain": 0.0
+              },
+              "content": {
+                "text": "a"
+              },
+              "id": {
+                "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000000c"
+              },
+              "type": {
+                "plain": "Name"
+              }
+            }
+          },
+          "[\"part\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000000d\"]": {
+            "map": {
+              "_order": {
+                "plain": 0.0
+              },
+              "content": {
+                "text": "b"
+              },
+              "id": {
+                "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000000d"
+              },
+              "type": {
+                "plain": "Name"
+              }
+            }
+          },
+          "_order": {
+            "plain": 0.0
+          },
+          "content": {
+            "text": "title"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"member_of\",\"https://example.org/id/set-1\"]": {
+        "map": {
+          "_order": {
+            "plain": 0.0
+          },
+          "id": {
+            "plain": "https://example.org/id/set-1"
+          },
+          "type": {
+            "plain": "Set"
+          }
+        }
+      },
+      "[\"member_of\",\"https://example.org/id/set-2\"]": {
+        "map": {
+          "_order": {
+            "plain": 0.0
+          },
+          "id": {
+            "plain": "https://example.org/id/set-2"
+          },
+          "type": {
+            "plain": "Set"
+          }
+        }
+      },
+      "[\"referred_to_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000000a\"]": {
+        "map": {
+          "_order": {
+            "plain": 0.0
+          },
+          "content": {
+            "text": "from b"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000000a"
+          },
+          "type": {
+            "plain": "LinguisticObject"
+          }
+        }
+      },
+      "[\"referred_to_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000000b\"]": {
+        "map": {
+          "_order": {
+            "plain": 0.0
+          },
+          "content": {
+            "text": "from a"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000000b"
+          },
+          "type": {
+            "plain": "LinguisticObject"
+          }
+        }
+      },
+      "id": {
+        "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f"
+      },
+      "produced_by": {
+        "map": {
+          "[\"carried_out_by\",\"https://example.org/id/person-1\"]": {
+            "map": {
+              "_order": {
+                "plain": 1.0
+              },
+              "id": {
+                "plain": "https://example.org/id/person-1"
+              },
+              "type": {
+                "plain": "Person"
+              }
+            }
+          },
+          "[\"carried_out_by\",\"https://example.org/id/person-2\"]": {
+            "map": {
+              "_order": {
+                "plain": 0.0
+              },
+              "id": {
+                "plain": "https://example.org/id/person-2"
+              },
+              "type": {
+                "plain": "Person"
+              }
+            }
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000001"
+          },
+          "type": {
+            "plain": "Production"
+          }
+        }
+      },
+      "type": {
+        "plain": "HumanMadeObject"
+      }
+    }
+  }
+}

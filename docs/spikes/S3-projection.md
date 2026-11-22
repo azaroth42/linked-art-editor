@@ -27,6 +27,9 @@ non-ASCII characters verbatim: `JSON.stringify(parts)` in JavaScript,
 `json.dumps(parts, ensure_ascii=False, separators=(",", ":"))` in Python. The two produce the
 same text for every well-formed Unicode string (checked, section 4.4).
 
+Rules R20–R25, and a refinement of R7, were added by Step 1.4 for the path operations; they
+follow R19.
+
 **R1. Root.** The `Doc` has exactly one root type: a `Map` named `record`. The root JSON object is
 an object map (R5) whatever its keys. `hydrate(jsonld, record_uri)` takes the record URI
 explicitly; the spike defaults it to the root `id` and fails with `LAE-PROJ-004` if there is none.
@@ -303,6 +306,90 @@ alike. Projection never adds, moves or removes it. (Removing labels that are res
 UTF-8 bytes (`len(s[:i].encode("utf-8"))`), Yjs counts UTF-16 code units. `pycrdt` does not
 reject an offset that falls inside a character; the text silently lands elsewhere
 (`test_pycrdt_text_offsets_are_utf8_bytes`), so the conversion is not optional.
+
+### Rules added by Step 1.4 (path operations)
+
+The spike specified the document and the entry primitives; Step 1.4 had to fix how the path
+operations of `lae.projection.ops` behave, because the TypeScript mirror (Step 1.17) must leave
+the same document behind. These rules are part of the specification. The shared cases are
+`backend/tests/projection/fixtures/*.json` (format: `backend/tests/projection/fixture_runner.py`).
+
+**R7, refined.** An insert is a no-op when *any* entry of the property already holds the item:
+the entry under the base item key if it is that item, otherwise the first entry in R13 order that
+is (a ` #n` duplicate left by an import, after the base entry was removed). The key of that entry
+is returned. As first written, R7 looked only under the base item key, so adding a reference that
+survived only as `<id> #2` created a second copy, against "operations never create duplicates".
+
+**R20. Write paths.** Paths follow `profiles/README.md`. A write follows a single chain of
+nodes: each segment before the last must address at most one value, and that value must be an
+object map. More than one, or a value that is not an object map, is rejected with
+`LAE-PROJ-007`. Every operation takes an optional `base` object map from which the path starts
+(default: the root), which is how one entry of an array is edited: the entry is found by its
+entry key (`get_entry`, `list_entries`) and passed as `base`; keys are never written into paths.
+Entries are named by their **entry key** (the map key of R6); `add_node` and `add_reference`
+return it. `get_path` follows the README's reading rules on the live document (entries in R13
+order, entries before a single value as in R11) and continues into opaque values as plain JSON,
+so it always equals evaluating the path on the projection.
+
+**R21. Missing intermediate nodes.** Operations that write (`set_scalar`, `set_object`,
+`add_node`, `add_reference`) create the nodes missing from the chain; operations that read or
+remove never create anything. A missing node for segment `k[C]` is created as follows:
+
+- `k` is one of `timespan`, `produced_by`, `created_by`, `destroyed_by`, `born`, `died`,
+  `formed_by`, `dissolved_by`, `duration`, `paid_amount` (`rules.SINGLE_VALUED_CLASSES`): a
+  single-valued node `{id, type}` under the property key, with `type` = `C` if the segment has a
+  filter, else the class the model gives (`TimeSpan`, `Production`, `Creation`, `Destruction`,
+  `Birth`, `Death`, `Formation`, `Dissolution`, `Dimension`, `MonetaryAmount`). If the property
+  already holds anything (a value the segment's filter did not match, or entries) the write is
+  rejected with `LAE-PROJ-007`: a path never overwrites a value it does not address.
+- any other `k`: the segment must have a filter (`LAE-PROJ-007` otherwise), and the node
+  `{id, type: C}` is appended as an entry of `k` by R12/R14 (so `LAE-PROJ-006` if `k` holds a
+  single value).
+
+Two clients that create the same single-valued intermediate concurrently converge on one whole
+node (R14); two that create an array intermediate both keep theirs, after which the path
+addresses two nodes and further writes through it need a `base`.
+
+**R22. Class filter on the last segment.** For `add_node`, `add_reference` and `set_object` the
+object takes the filter as its `type` when it has none, and is rejected (`LAE-PROJ-007`) when it
+has a different one. `add_node` needs a node (R3: a `type`, and a string `id` if any).
+`set_scalar` and `splice_text` reject a filter on the last segment. For `move_entry` and
+`remove_entry` the filter is ignored: positions are among all entries of the property.
+
+**R23. `set_scalar`.** The value is a string, number, boolean or `null`. If the key is
+`content`, the value is a string and the parent's `type` is one of the three R8.2 types, the
+target is a `Text`: an existing `Text` is edited with the single splice
+`(index, delete, insert)` where `index` is the length of the longest common prefix of the old
+and new strings and the longest common suffix of the remainders is kept, all counted in code
+points (R19), delete first, then insert at the same position; equal strings write nothing; if
+there is no `Text` yet, one is created. Every other value is stored as `plain(v)` under the
+property key and is always written, also when equal to the stored value. Rejected with
+`LAE-PROJ-007`: a property that has entries, and a property that holds an object map (use
+`set_object` or `remove_value`). `splice_text(path, index, delete, insert)` is the same splice
+given explicitly; a range outside the text is `LAE-PROJ-008`.
+
+**R24. Single-valued objects.** `set_object(path, obj)` stores a node or reference under the
+property key, replacing whatever single value was there (R5, R14); `remove_value(path)` deletes
+the property key (with a filter on the last segment: only if the value is an object of that
+class). Both reject a property that has entries (`LAE-PROJ-007`).
+
+**R25. Order of effects.** Every operation is one transaction, and is checked completely before
+it writes or mints: a rejected operation changes nothing and mints nothing, and so does a
+no-op (R7; `move_entry` to the position the entry already has; `remove_entry` of an absent key,
+which returns false). Internal node IRIs are minted in this order: the nodes of the object
+being added, each nested node before the node that contains it and siblings in the object's key
+order; then the missing intermediate nodes, outermost first. `move_entry(path, key, before_key)`
+places the entry just before `before_key`, or last when it is null; an unknown key is
+`LAE-PROJ-008`. `add_node` and `add_reference` take the same optional `before_key`.
+
+Two codes join R10: `LAE-PROJ-007` (a path that cannot be written, or a value that does not fit
+its target) and `LAE-PROJ-008` (an entry key or text range that does not exist).
+
+Checked against Yjs 13.6.33 by hand (Node 26, not in CI): with the fixtures' client ids, two
+concurrent writes of one key, a write against a removal, two concurrent single-valued nodes and
+the concurrent `Text` splices of `text-code-points.json` resolve in Yjs exactly as the fixtures
+record for `pycrdt`, and Yjs reads every fixture's `initial_update` to the recorded
+`initial_state`.
 
 ## 2. Decisions on the cases the draft rules left open
 

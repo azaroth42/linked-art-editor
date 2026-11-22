@@ -77,7 +77,7 @@ Evaluate a path against a record as follows:
 3. If the segment has a class filter, drop every value that is not an object whose `type` equals the class.
 4. The values left after the last segment are what the path addresses, in document order, concatenated across parents.
 
-In the Y.Doc (decisions B2, B3) arrays of nodes and arrays of references are `Map`s keyed by internal node IRI or target URI, and each entry carries `_order`. Evaluation visits the entries sorted by `_order`, then key, which is the order the projected JSON-LD array has.
+In the Y.Doc (decisions B2, B3; ADR-0018) the items of an array are entries in the `Map` of the object that has the property, under the entry key `JSON.stringify([property, item key])`, where the item key is the internal node IRI or target URI; each entry carries `_order`. Evaluation visits the entries sorted by `_order`, then entry key, which is the order the projected JSON-LD array has.
 
 Examples against the linked.art Mona Lisa example (`docs/example/object/0.json`):
 
@@ -93,8 +93,8 @@ Examples against the linked.art Mona Lisa example (`docs/example/object/0.json`)
 
 ### Writing
 
-- A write goes through a single chain of nodes: every segment before the last must address at most one node. A path such as `identified_by[Name].content` is ambiguous for writing on a record with two Names. One entry of a multi-valued collection is identified by its key (internal node IRI or target URI), passed next to the path and never encoded in it, as in `remove_entry(doc, path, key)`.
-- A missing intermediate node is created with `type` set to the segment's class filter if it has one, otherwise to the class the Linked Art model gives the property's range (`produced_by` → `Production`, `timespan` → `TimeSpan`). A profile path that would need to create an intermediate with no such class (for example `part`) carries a filter: `produced_by.part[Production]`.
+- A write goes through a single chain of nodes: every segment before the last must address at most one node. A path such as `identified_by[Name].content` is ambiguous for writing on a record with two Names. One entry of a multi-valued collection is identified by its entry key, passed next to the path and never encoded in it, as in `remove_entry(doc, path, key)`; to write inside one entry, pass its map as the operation's `base` and a path relative to it. The exact behaviour of every operation is rules R20–R25 of `docs/spikes/S3-projection.md`.
+- A missing intermediate node is created with `type` set to the segment's class filter if it has one, otherwise to the class the Linked Art model gives the property's range (`produced_by` → `Production`, `timespan` → `TimeSpan`; the full list is `lae.projection.rules.SINGLE_VALUED_CLASSES`). Those properties are created single-valued; any other missing intermediate is created as an array entry. A profile path that would need to create an intermediate with no such class (for example `part`) carries a filter: `produced_by.part[Production]`.
 - A new entry added through a filtered last segment takes the filter as its `type`: adding to `identified_by[Identifier]` creates `{"type": "Identifier", ...}`.
 
 ## UI Profiles

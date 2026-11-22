@@ -1,0 +1,2200 @@
+{
+  "description": "Inserting again and again just before the last entry halves the gap below 1.0. The 53rd insert takes 1 - 2^-53, the last double below 1; the 54th finds no double strictly between, so the property is renumbered to 0, 1, ..., 54 and the insert takes 53.5.",
+  "rules": [
+    "R12"
+  ],
+  "record_uri": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f",
+  "clients": {
+    "a": 101
+  },
+  "initial": {
+    "@context": "https://linked.art/ns/v1/linked-art.json",
+    "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f",
+    "type": "HumanMadeObject",
+    "identified_by": [
+      {
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000001",
+        "type": "Name",
+        "content": "first"
+      },
+      {
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002",
+        "type": "Name",
+        "content": "last"
+      }
+    ]
+  },
+  "initial_update": "AQ/U9oDRk9O+CAAoAQZyZWNvcmQIQGNvbnRleHQBdyhodHRwczovL2xpbmtlZC5hcnQvbnMvdjEvbGlua2VkLWFydC5qc29uKAEGcmVjb3JkAmlkAXc7aHR0cHM6Ly9leGFtcGxlLm9yZy9pZC8wMTkyZjBjMS03YjFlLTdjM2EtOWQyZS01YTFiMmMzZDRlNWYoAQZyZWNvcmQEdHlwZQF3D0h1bWFuTWFkZU9iamVjdCcBBnJlY29yZHlbImlkZW50aWZpZWRfYnkiLCJodHRwczovL2V4YW1wbGUub3JnL2lkLzAxOTJmMGMxLTdiMWUtN2MzYS05ZDJlLTVhMWIyYzNkNGU1Zi9ub2RlLzAxOTJmMGMxLTdiMWUtNzAwMC04MDAwLTAwMDAwMDAwMDAwMSJdASgA1PaA0ZPTvggDAmlkAXdlaHR0cHM6Ly9leGFtcGxlLm9yZy9pZC8wMTkyZjBjMS03YjFlLTdjM2EtOWQyZS01YTFiMmMzZDRlNWYvbm9kZS8wMTkyZjBjMS03YjFlLTcwMDAtODAwMC0wMDAwMDAwMDAwMDEoANT2gNGT074IAwR0eXBlAXcETmFtZScA1PaA0ZPTvggDB2NvbnRlbnQCBADU9oDRk9O+CAYFZmlyc3QoANT2gNGT074IAwZfb3JkZXIBfAAAAAAnAQZyZWNvcmR5WyJpZGVudGlmaWVkX2J5IiwiaHR0cHM6Ly9leGFtcGxlLm9yZy9pZC8wMTkyZjBjMS03YjFlLTdjM2EtOWQyZS01YTFiMmMzZDRlNWYvbm9kZS8wMTkyZjBjMS03YjFlLTcwMDAtODAwMC0wMDAwMDAwMDAwMDIiXQEoANT2gNGT074IDQJpZAF3ZWh0dHBzOi8vZXhhbXBsZS5vcmcvaWQvMDE5MmYwYzEtN2IxZS03YzNhLTlkMmUtNWExYjJjM2Q0ZTVmL25vZGUvMDE5MmYwYzEtN2IxZS03MDAwLTgwMDAtMDAwMDAwMDAwMDAyKADU9oDRk9O+CA0EdHlwZQF3BE5hbWUnANT2gNGT074IDQdjb250ZW50AgQA1PaA0ZPTvggQBGxhc3QoANT2gNGT074IDQZfb3JkZXIBfD+AAAAA",
+  "initial_state": {
+    "map": {
+      "@context": {
+        "plain": "https://linked.art/ns/v1/linked-art.json"
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000001\"]": {
+        "map": {
+          "_order": {
+            "plain": 0.0
+          },
+          "content": {
+            "text": "first"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000001"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]": {
+        "map": {
+          "_order": {
+            "plain": 1.0
+          },
+          "content": {
+            "text": "last"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "id": {
+        "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f"
+      },
+      "type": {
+        "plain": "HumanMadeObject"
+      }
+    }
+  },
+  "steps": [
+    {
+      "client": "a",
+      "op": "add_node",
+      "args": {
+        "path": "identified_by",
+        "node": {
+          "type": "Name",
+          "content": "insert 1"
+        },
+        "before_key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]",
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000065"
+        ]
+      },
+      "returns": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000065\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_node",
+      "args": {
+        "path": "identified_by",
+        "node": {
+          "type": "Name",
+          "content": "insert 2"
+        },
+        "before_key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]",
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000066"
+        ]
+      },
+      "returns": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000066\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_node",
+      "args": {
+        "path": "identified_by",
+        "node": {
+          "type": "Name",
+          "content": "insert 3"
+        },
+        "before_key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]",
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000067"
+        ]
+      },
+      "returns": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000067\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_node",
+      "args": {
+        "path": "identified_by",
+        "node": {
+          "type": "Name",
+          "content": "insert 4"
+        },
+        "before_key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]",
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000068"
+        ]
+      },
+      "returns": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000068\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_node",
+      "args": {
+        "path": "identified_by",
+        "node": {
+          "type": "Name",
+          "content": "insert 5"
+        },
+        "before_key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]",
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000069"
+        ]
+      },
+      "returns": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000069\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_node",
+      "args": {
+        "path": "identified_by",
+        "node": {
+          "type": "Name",
+          "content": "insert 6"
+        },
+        "before_key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]",
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000006a"
+        ]
+      },
+      "returns": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000006a\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_node",
+      "args": {
+        "path": "identified_by",
+        "node": {
+          "type": "Name",
+          "content": "insert 7"
+        },
+        "before_key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]",
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000006b"
+        ]
+      },
+      "returns": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000006b\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_node",
+      "args": {
+        "path": "identified_by",
+        "node": {
+          "type": "Name",
+          "content": "insert 8"
+        },
+        "before_key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]",
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000006c"
+        ]
+      },
+      "returns": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000006c\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_node",
+      "args": {
+        "path": "identified_by",
+        "node": {
+          "type": "Name",
+          "content": "insert 9"
+        },
+        "before_key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]",
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000006d"
+        ]
+      },
+      "returns": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000006d\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_node",
+      "args": {
+        "path": "identified_by",
+        "node": {
+          "type": "Name",
+          "content": "insert 10"
+        },
+        "before_key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]",
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000006e"
+        ]
+      },
+      "returns": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000006e\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_node",
+      "args": {
+        "path": "identified_by",
+        "node": {
+          "type": "Name",
+          "content": "insert 11"
+        },
+        "before_key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]",
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000006f"
+        ]
+      },
+      "returns": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000006f\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_node",
+      "args": {
+        "path": "identified_by",
+        "node": {
+          "type": "Name",
+          "content": "insert 12"
+        },
+        "before_key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]",
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000070"
+        ]
+      },
+      "returns": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000070\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_node",
+      "args": {
+        "path": "identified_by",
+        "node": {
+          "type": "Name",
+          "content": "insert 13"
+        },
+        "before_key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]",
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000071"
+        ]
+      },
+      "returns": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000071\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_node",
+      "args": {
+        "path": "identified_by",
+        "node": {
+          "type": "Name",
+          "content": "insert 14"
+        },
+        "before_key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]",
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000072"
+        ]
+      },
+      "returns": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000072\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_node",
+      "args": {
+        "path": "identified_by",
+        "node": {
+          "type": "Name",
+          "content": "insert 15"
+        },
+        "before_key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]",
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000073"
+        ]
+      },
+      "returns": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000073\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_node",
+      "args": {
+        "path": "identified_by",
+        "node": {
+          "type": "Name",
+          "content": "insert 16"
+        },
+        "before_key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]",
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000074"
+        ]
+      },
+      "returns": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000074\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_node",
+      "args": {
+        "path": "identified_by",
+        "node": {
+          "type": "Name",
+          "content": "insert 17"
+        },
+        "before_key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]",
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000075"
+        ]
+      },
+      "returns": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000075\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_node",
+      "args": {
+        "path": "identified_by",
+        "node": {
+          "type": "Name",
+          "content": "insert 18"
+        },
+        "before_key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]",
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000076"
+        ]
+      },
+      "returns": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000076\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_node",
+      "args": {
+        "path": "identified_by",
+        "node": {
+          "type": "Name",
+          "content": "insert 19"
+        },
+        "before_key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]",
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000077"
+        ]
+      },
+      "returns": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000077\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_node",
+      "args": {
+        "path": "identified_by",
+        "node": {
+          "type": "Name",
+          "content": "insert 20"
+        },
+        "before_key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]",
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000078"
+        ]
+      },
+      "returns": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000078\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_node",
+      "args": {
+        "path": "identified_by",
+        "node": {
+          "type": "Name",
+          "content": "insert 21"
+        },
+        "before_key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]",
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000079"
+        ]
+      },
+      "returns": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000079\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_node",
+      "args": {
+        "path": "identified_by",
+        "node": {
+          "type": "Name",
+          "content": "insert 22"
+        },
+        "before_key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]",
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000007a"
+        ]
+      },
+      "returns": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000007a\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_node",
+      "args": {
+        "path": "identified_by",
+        "node": {
+          "type": "Name",
+          "content": "insert 23"
+        },
+        "before_key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]",
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000007b"
+        ]
+      },
+      "returns": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000007b\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_node",
+      "args": {
+        "path": "identified_by",
+        "node": {
+          "type": "Name",
+          "content": "insert 24"
+        },
+        "before_key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]",
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000007c"
+        ]
+      },
+      "returns": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000007c\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_node",
+      "args": {
+        "path": "identified_by",
+        "node": {
+          "type": "Name",
+          "content": "insert 25"
+        },
+        "before_key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]",
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000007d"
+        ]
+      },
+      "returns": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000007d\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_node",
+      "args": {
+        "path": "identified_by",
+        "node": {
+          "type": "Name",
+          "content": "insert 26"
+        },
+        "before_key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]",
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000007e"
+        ]
+      },
+      "returns": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000007e\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_node",
+      "args": {
+        "path": "identified_by",
+        "node": {
+          "type": "Name",
+          "content": "insert 27"
+        },
+        "before_key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]",
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000007f"
+        ]
+      },
+      "returns": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000007f\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_node",
+      "args": {
+        "path": "identified_by",
+        "node": {
+          "type": "Name",
+          "content": "insert 28"
+        },
+        "before_key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]",
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000080"
+        ]
+      },
+      "returns": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000080\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_node",
+      "args": {
+        "path": "identified_by",
+        "node": {
+          "type": "Name",
+          "content": "insert 29"
+        },
+        "before_key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]",
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000081"
+        ]
+      },
+      "returns": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000081\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_node",
+      "args": {
+        "path": "identified_by",
+        "node": {
+          "type": "Name",
+          "content": "insert 30"
+        },
+        "before_key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]",
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000082"
+        ]
+      },
+      "returns": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000082\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_node",
+      "args": {
+        "path": "identified_by",
+        "node": {
+          "type": "Name",
+          "content": "insert 31"
+        },
+        "before_key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]",
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000083"
+        ]
+      },
+      "returns": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000083\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_node",
+      "args": {
+        "path": "identified_by",
+        "node": {
+          "type": "Name",
+          "content": "insert 32"
+        },
+        "before_key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]",
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000084"
+        ]
+      },
+      "returns": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000084\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_node",
+      "args": {
+        "path": "identified_by",
+        "node": {
+          "type": "Name",
+          "content": "insert 33"
+        },
+        "before_key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]",
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000085"
+        ]
+      },
+      "returns": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000085\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_node",
+      "args": {
+        "path": "identified_by",
+        "node": {
+          "type": "Name",
+          "content": "insert 34"
+        },
+        "before_key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]",
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000086"
+        ]
+      },
+      "returns": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000086\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_node",
+      "args": {
+        "path": "identified_by",
+        "node": {
+          "type": "Name",
+          "content": "insert 35"
+        },
+        "before_key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]",
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000087"
+        ]
+      },
+      "returns": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000087\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_node",
+      "args": {
+        "path": "identified_by",
+        "node": {
+          "type": "Name",
+          "content": "insert 36"
+        },
+        "before_key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]",
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000088"
+        ]
+      },
+      "returns": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000088\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_node",
+      "args": {
+        "path": "identified_by",
+        "node": {
+          "type": "Name",
+          "content": "insert 37"
+        },
+        "before_key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]",
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000089"
+        ]
+      },
+      "returns": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000089\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_node",
+      "args": {
+        "path": "identified_by",
+        "node": {
+          "type": "Name",
+          "content": "insert 38"
+        },
+        "before_key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]",
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000008a"
+        ]
+      },
+      "returns": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000008a\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_node",
+      "args": {
+        "path": "identified_by",
+        "node": {
+          "type": "Name",
+          "content": "insert 39"
+        },
+        "before_key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]",
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000008b"
+        ]
+      },
+      "returns": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000008b\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_node",
+      "args": {
+        "path": "identified_by",
+        "node": {
+          "type": "Name",
+          "content": "insert 40"
+        },
+        "before_key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]",
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000008c"
+        ]
+      },
+      "returns": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000008c\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_node",
+      "args": {
+        "path": "identified_by",
+        "node": {
+          "type": "Name",
+          "content": "insert 41"
+        },
+        "before_key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]",
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000008d"
+        ]
+      },
+      "returns": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000008d\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_node",
+      "args": {
+        "path": "identified_by",
+        "node": {
+          "type": "Name",
+          "content": "insert 42"
+        },
+        "before_key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]",
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000008e"
+        ]
+      },
+      "returns": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000008e\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_node",
+      "args": {
+        "path": "identified_by",
+        "node": {
+          "type": "Name",
+          "content": "insert 43"
+        },
+        "before_key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]",
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000008f"
+        ]
+      },
+      "returns": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000008f\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_node",
+      "args": {
+        "path": "identified_by",
+        "node": {
+          "type": "Name",
+          "content": "insert 44"
+        },
+        "before_key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]",
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000090"
+        ]
+      },
+      "returns": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000090\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_node",
+      "args": {
+        "path": "identified_by",
+        "node": {
+          "type": "Name",
+          "content": "insert 45"
+        },
+        "before_key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]",
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000091"
+        ]
+      },
+      "returns": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000091\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_node",
+      "args": {
+        "path": "identified_by",
+        "node": {
+          "type": "Name",
+          "content": "insert 46"
+        },
+        "before_key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]",
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000092"
+        ]
+      },
+      "returns": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000092\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_node",
+      "args": {
+        "path": "identified_by",
+        "node": {
+          "type": "Name",
+          "content": "insert 47"
+        },
+        "before_key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]",
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000093"
+        ]
+      },
+      "returns": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000093\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_node",
+      "args": {
+        "path": "identified_by",
+        "node": {
+          "type": "Name",
+          "content": "insert 48"
+        },
+        "before_key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]",
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000094"
+        ]
+      },
+      "returns": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000094\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_node",
+      "args": {
+        "path": "identified_by",
+        "node": {
+          "type": "Name",
+          "content": "insert 49"
+        },
+        "before_key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]",
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000095"
+        ]
+      },
+      "returns": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000095\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_node",
+      "args": {
+        "path": "identified_by",
+        "node": {
+          "type": "Name",
+          "content": "insert 50"
+        },
+        "before_key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]",
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000096"
+        ]
+      },
+      "returns": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000096\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_node",
+      "args": {
+        "path": "identified_by",
+        "node": {
+          "type": "Name",
+          "content": "insert 51"
+        },
+        "before_key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]",
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000097"
+        ]
+      },
+      "returns": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000097\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_node",
+      "args": {
+        "path": "identified_by",
+        "node": {
+          "type": "Name",
+          "content": "insert 52"
+        },
+        "before_key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]",
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000098"
+        ]
+      },
+      "returns": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000098\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_node",
+      "args": {
+        "path": "identified_by",
+        "node": {
+          "type": "Name",
+          "content": "insert 53"
+        },
+        "before_key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]",
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000099"
+        ]
+      },
+      "returns": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000099\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_node",
+      "args": {
+        "path": "identified_by",
+        "node": {
+          "type": "Name",
+          "content": "insert 54"
+        },
+        "before_key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]",
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000009a"
+        ]
+      },
+      "returns": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000009a\"]"
+    },
+    {
+      "client": "a",
+      "op": "get_path",
+      "args": {
+        "path": "identified_by[Name].content"
+      },
+      "returns": [
+        "first",
+        "insert 1",
+        "insert 2",
+        "insert 3",
+        "insert 4",
+        "insert 5",
+        "insert 6",
+        "insert 7",
+        "insert 8",
+        "insert 9",
+        "insert 10",
+        "insert 11",
+        "insert 12",
+        "insert 13",
+        "insert 14",
+        "insert 15",
+        "insert 16",
+        "insert 17",
+        "insert 18",
+        "insert 19",
+        "insert 20",
+        "insert 21",
+        "insert 22",
+        "insert 23",
+        "insert 24",
+        "insert 25",
+        "insert 26",
+        "insert 27",
+        "insert 28",
+        "insert 29",
+        "insert 30",
+        "insert 31",
+        "insert 32",
+        "insert 33",
+        "insert 34",
+        "insert 35",
+        "insert 36",
+        "insert 37",
+        "insert 38",
+        "insert 39",
+        "insert 40",
+        "insert 41",
+        "insert 42",
+        "insert 43",
+        "insert 44",
+        "insert 45",
+        "insert 46",
+        "insert 47",
+        "insert 48",
+        "insert 49",
+        "insert 50",
+        "insert 51",
+        "insert 52",
+        "insert 53",
+        "insert 54",
+        "last"
+      ]
+    }
+  ],
+  "expected": {
+    "@context": "https://linked.art/ns/v1/linked-art.json",
+    "type": "HumanMadeObject",
+    "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f",
+    "identified_by": [
+      {
+        "content": "first",
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000001",
+        "type": "Name"
+      },
+      {
+        "type": "Name",
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000065",
+        "content": "insert 1"
+      },
+      {
+        "content": "insert 2",
+        "type": "Name",
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000066"
+      },
+      {
+        "type": "Name",
+        "content": "insert 3",
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000067"
+      },
+      {
+        "type": "Name",
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000068",
+        "content": "insert 4"
+      },
+      {
+        "type": "Name",
+        "content": "insert 5",
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000069"
+      },
+      {
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000006a",
+        "type": "Name",
+        "content": "insert 6"
+      },
+      {
+        "content": "insert 7",
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000006b",
+        "type": "Name"
+      },
+      {
+        "type": "Name",
+        "content": "insert 8",
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000006c"
+      },
+      {
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000006d",
+        "type": "Name",
+        "content": "insert 9"
+      },
+      {
+        "content": "insert 10",
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000006e",
+        "type": "Name"
+      },
+      {
+        "type": "Name",
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000006f",
+        "content": "insert 11"
+      },
+      {
+        "type": "Name",
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000070",
+        "content": "insert 12"
+      },
+      {
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000071",
+        "type": "Name",
+        "content": "insert 13"
+      },
+      {
+        "content": "insert 14",
+        "type": "Name",
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000072"
+      },
+      {
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000073",
+        "type": "Name",
+        "content": "insert 15"
+      },
+      {
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000074",
+        "type": "Name",
+        "content": "insert 16"
+      },
+      {
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000075",
+        "content": "insert 17",
+        "type": "Name"
+      },
+      {
+        "type": "Name",
+        "content": "insert 18",
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000076"
+      },
+      {
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000077",
+        "content": "insert 19",
+        "type": "Name"
+      },
+      {
+        "type": "Name",
+        "content": "insert 20",
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000078"
+      },
+      {
+        "content": "insert 21",
+        "type": "Name",
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000079"
+      },
+      {
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000007a",
+        "type": "Name",
+        "content": "insert 22"
+      },
+      {
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000007b",
+        "content": "insert 23",
+        "type": "Name"
+      },
+      {
+        "content": "insert 24",
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000007c",
+        "type": "Name"
+      },
+      {
+        "content": "insert 25",
+        "type": "Name",
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000007d"
+      },
+      {
+        "type": "Name",
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000007e",
+        "content": "insert 26"
+      },
+      {
+        "content": "insert 27",
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000007f",
+        "type": "Name"
+      },
+      {
+        "content": "insert 28",
+        "type": "Name",
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000080"
+      },
+      {
+        "type": "Name",
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000081",
+        "content": "insert 29"
+      },
+      {
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000082",
+        "type": "Name",
+        "content": "insert 30"
+      },
+      {
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000083",
+        "content": "insert 31",
+        "type": "Name"
+      },
+      {
+        "type": "Name",
+        "content": "insert 32",
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000084"
+      },
+      {
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000085",
+        "type": "Name",
+        "content": "insert 33"
+      },
+      {
+        "content": "insert 34",
+        "type": "Name",
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000086"
+      },
+      {
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000087",
+        "type": "Name",
+        "content": "insert 35"
+      },
+      {
+        "content": "insert 36",
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000088",
+        "type": "Name"
+      },
+      {
+        "type": "Name",
+        "content": "insert 37",
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000089"
+      },
+      {
+        "content": "insert 38",
+        "type": "Name",
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000008a"
+      },
+      {
+        "type": "Name",
+        "content": "insert 39",
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000008b"
+      },
+      {
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000008c",
+        "content": "insert 40",
+        "type": "Name"
+      },
+      {
+        "content": "insert 41",
+        "type": "Name",
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000008d"
+      },
+      {
+        "content": "insert 42",
+        "type": "Name",
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000008e"
+      },
+      {
+        "content": "insert 43",
+        "type": "Name",
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000008f"
+      },
+      {
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000090",
+        "type": "Name",
+        "content": "insert 44"
+      },
+      {
+        "content": "insert 45",
+        "type": "Name",
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000091"
+      },
+      {
+        "content": "insert 46",
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000092",
+        "type": "Name"
+      },
+      {
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000093",
+        "content": "insert 47",
+        "type": "Name"
+      },
+      {
+        "type": "Name",
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000094",
+        "content": "insert 48"
+      },
+      {
+        "type": "Name",
+        "content": "insert 49",
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000095"
+      },
+      {
+        "type": "Name",
+        "content": "insert 50",
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000096"
+      },
+      {
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000097",
+        "type": "Name",
+        "content": "insert 51"
+      },
+      {
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000098",
+        "type": "Name",
+        "content": "insert 52"
+      },
+      {
+        "content": "insert 53",
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000099",
+        "type": "Name"
+      },
+      {
+        "type": "Name",
+        "content": "insert 54",
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000009a"
+      },
+      {
+        "type": "Name",
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002",
+        "content": "last"
+      }
+    ]
+  },
+  "expected_state": {
+    "map": {
+      "@context": {
+        "plain": "https://linked.art/ns/v1/linked-art.json"
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000001\"]": {
+        "map": {
+          "_order": {
+            "plain": 0.0
+          },
+          "content": {
+            "text": "first"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000001"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]": {
+        "map": {
+          "_order": {
+            "plain": 54.0
+          },
+          "content": {
+            "text": "last"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000065\"]": {
+        "map": {
+          "_order": {
+            "plain": 1.0
+          },
+          "content": {
+            "text": "insert 1"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000065"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000066\"]": {
+        "map": {
+          "_order": {
+            "plain": 2.0
+          },
+          "content": {
+            "text": "insert 2"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000066"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000067\"]": {
+        "map": {
+          "_order": {
+            "plain": 3.0
+          },
+          "content": {
+            "text": "insert 3"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000067"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000068\"]": {
+        "map": {
+          "_order": {
+            "plain": 4.0
+          },
+          "content": {
+            "text": "insert 4"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000068"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000069\"]": {
+        "map": {
+          "_order": {
+            "plain": 5.0
+          },
+          "content": {
+            "text": "insert 5"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000069"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000006a\"]": {
+        "map": {
+          "_order": {
+            "plain": 6.0
+          },
+          "content": {
+            "text": "insert 6"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000006a"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000006b\"]": {
+        "map": {
+          "_order": {
+            "plain": 7.0
+          },
+          "content": {
+            "text": "insert 7"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000006b"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000006c\"]": {
+        "map": {
+          "_order": {
+            "plain": 8.0
+          },
+          "content": {
+            "text": "insert 8"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000006c"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000006d\"]": {
+        "map": {
+          "_order": {
+            "plain": 9.0
+          },
+          "content": {
+            "text": "insert 9"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000006d"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000006e\"]": {
+        "map": {
+          "_order": {
+            "plain": 10.0
+          },
+          "content": {
+            "text": "insert 10"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000006e"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000006f\"]": {
+        "map": {
+          "_order": {
+            "plain": 11.0
+          },
+          "content": {
+            "text": "insert 11"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000006f"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000070\"]": {
+        "map": {
+          "_order": {
+            "plain": 12.0
+          },
+          "content": {
+            "text": "insert 12"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000070"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000071\"]": {
+        "map": {
+          "_order": {
+            "plain": 13.0
+          },
+          "content": {
+            "text": "insert 13"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000071"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000072\"]": {
+        "map": {
+          "_order": {
+            "plain": 14.0
+          },
+          "content": {
+            "text": "insert 14"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000072"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000073\"]": {
+        "map": {
+          "_order": {
+            "plain": 15.0
+          },
+          "content": {
+            "text": "insert 15"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000073"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000074\"]": {
+        "map": {
+          "_order": {
+            "plain": 16.0
+          },
+          "content": {
+            "text": "insert 16"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000074"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000075\"]": {
+        "map": {
+          "_order": {
+            "plain": 17.0
+          },
+          "content": {
+            "text": "insert 17"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000075"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000076\"]": {
+        "map": {
+          "_order": {
+            "plain": 18.0
+          },
+          "content": {
+            "text": "insert 18"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000076"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000077\"]": {
+        "map": {
+          "_order": {
+            "plain": 19.0
+          },
+          "content": {
+            "text": "insert 19"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000077"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000078\"]": {
+        "map": {
+          "_order": {
+            "plain": 20.0
+          },
+          "content": {
+            "text": "insert 20"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000078"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000079\"]": {
+        "map": {
+          "_order": {
+            "plain": 21.0
+          },
+          "content": {
+            "text": "insert 21"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000079"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000007a\"]": {
+        "map": {
+          "_order": {
+            "plain": 22.0
+          },
+          "content": {
+            "text": "insert 22"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000007a"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000007b\"]": {
+        "map": {
+          "_order": {
+            "plain": 23.0
+          },
+          "content": {
+            "text": "insert 23"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000007b"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000007c\"]": {
+        "map": {
+          "_order": {
+            "plain": 24.0
+          },
+          "content": {
+            "text": "insert 24"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000007c"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000007d\"]": {
+        "map": {
+          "_order": {
+            "plain": 25.0
+          },
+          "content": {
+            "text": "insert 25"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000007d"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000007e\"]": {
+        "map": {
+          "_order": {
+            "plain": 26.0
+          },
+          "content": {
+            "text": "insert 26"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000007e"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000007f\"]": {
+        "map": {
+          "_order": {
+            "plain": 27.0
+          },
+          "content": {
+            "text": "insert 27"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000007f"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000080\"]": {
+        "map": {
+          "_order": {
+            "plain": 28.0
+          },
+          "content": {
+            "text": "insert 28"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000080"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000081\"]": {
+        "map": {
+          "_order": {
+            "plain": 29.0
+          },
+          "content": {
+            "text": "insert 29"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000081"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000082\"]": {
+        "map": {
+          "_order": {
+            "plain": 30.0
+          },
+          "content": {
+            "text": "insert 30"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000082"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000083\"]": {
+        "map": {
+          "_order": {
+            "plain": 31.0
+          },
+          "content": {
+            "text": "insert 31"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000083"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000084\"]": {
+        "map": {
+          "_order": {
+            "plain": 32.0
+          },
+          "content": {
+            "text": "insert 32"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000084"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000085\"]": {
+        "map": {
+          "_order": {
+            "plain": 33.0
+          },
+          "content": {
+            "text": "insert 33"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000085"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000086\"]": {
+        "map": {
+          "_order": {
+            "plain": 34.0
+          },
+          "content": {
+            "text": "insert 34"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000086"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000087\"]": {
+        "map": {
+          "_order": {
+            "plain": 35.0
+          },
+          "content": {
+            "text": "insert 35"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000087"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000088\"]": {
+        "map": {
+          "_order": {
+            "plain": 36.0
+          },
+          "content": {
+            "text": "insert 36"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000088"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000089\"]": {
+        "map": {
+          "_order": {
+            "plain": 37.0
+          },
+          "content": {
+            "text": "insert 37"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000089"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000008a\"]": {
+        "map": {
+          "_order": {
+            "plain": 38.0
+          },
+          "content": {
+            "text": "insert 38"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000008a"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000008b\"]": {
+        "map": {
+          "_order": {
+            "plain": 39.0
+          },
+          "content": {
+            "text": "insert 39"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000008b"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000008c\"]": {
+        "map": {
+          "_order": {
+            "plain": 40.0
+          },
+          "content": {
+            "text": "insert 40"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000008c"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000008d\"]": {
+        "map": {
+          "_order": {
+            "plain": 41.0
+          },
+          "content": {
+            "text": "insert 41"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000008d"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000008e\"]": {
+        "map": {
+          "_order": {
+            "plain": 42.0
+          },
+          "content": {
+            "text": "insert 42"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000008e"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000008f\"]": {
+        "map": {
+          "_order": {
+            "plain": 43.0
+          },
+          "content": {
+            "text": "insert 43"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000008f"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000090\"]": {
+        "map": {
+          "_order": {
+            "plain": 44.0
+          },
+          "content": {
+            "text": "insert 44"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000090"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000091\"]": {
+        "map": {
+          "_order": {
+            "plain": 45.0
+          },
+          "content": {
+            "text": "insert 45"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000091"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000092\"]": {
+        "map": {
+          "_order": {
+            "plain": 46.0
+          },
+          "content": {
+            "text": "insert 46"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000092"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000093\"]": {
+        "map": {
+          "_order": {
+            "plain": 47.0
+          },
+          "content": {
+            "text": "insert 47"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000093"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000094\"]": {
+        "map": {
+          "_order": {
+            "plain": 48.0
+          },
+          "content": {
+            "text": "insert 48"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000094"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000095\"]": {
+        "map": {
+          "_order": {
+            "plain": 49.0
+          },
+          "content": {
+            "text": "insert 49"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000095"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000096\"]": {
+        "map": {
+          "_order": {
+            "plain": 50.0
+          },
+          "content": {
+            "text": "insert 50"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000096"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000097\"]": {
+        "map": {
+          "_order": {
+            "plain": 51.0
+          },
+          "content": {
+            "text": "insert 51"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000097"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000098\"]": {
+        "map": {
+          "_order": {
+            "plain": 52.0
+          },
+          "content": {
+            "text": "insert 52"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000098"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000099\"]": {
+        "map": {
+          "_order": {
+            "plain": 53.0
+          },
+          "content": {
+            "text": "insert 53"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000099"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000009a\"]": {
+        "map": {
+          "_order": {
+            "plain": 53.5
+          },
+          "content": {
+            "text": "insert 54"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-00000000009a"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "id": {
+        "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f"
+      },
+      "type": {
+        "plain": "HumanMadeObject"
+      }
+    }
+  }
+}

@@ -1,0 +1,398 @@
+{
+  "description": "Scalars are plain values under the property key and each is a last-writer-wins register: of two concurrent writes the one from the client with the higher client id remains, whole. Integers and non-integral numbers are Y numbers. A scalar never replaces a node, a reference or an array.",
+  "rules": [
+    "R8",
+    "R9",
+    "R14",
+    "R18",
+    "R24"
+  ],
+  "record_uri": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f",
+  "clients": {
+    "a": 101,
+    "b": 202
+  },
+  "initial": {
+    "@context": "https://linked.art/ns/v1/linked-art.json",
+    "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f",
+    "type": "HumanMadeObject",
+    "dimension": [
+      {
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000001",
+        "type": "Dimension",
+        "value": 10,
+        "unit": {
+          "id": "http://vocab.getty.edu/aat/300379098",
+          "type": "MeasurementUnit"
+        }
+      }
+    ]
+  },
+  "initial_update": "AQvA3IbQ9N3mBgAoAQZyZWNvcmQIQGNvbnRleHQBdyhodHRwczovL2xpbmtlZC5hcnQvbnMvdjEvbGlua2VkLWFydC5qc29uKAEGcmVjb3JkAmlkAXc7aHR0cHM6Ly9leGFtcGxlLm9yZy9pZC8wMTkyZjBjMS03YjFlLTdjM2EtOWQyZS01YTFiMmMzZDRlNWYoAQZyZWNvcmQEdHlwZQF3D0h1bWFuTWFkZU9iamVjdCcBBnJlY29yZHVbImRpbWVuc2lvbiIsImh0dHBzOi8vZXhhbXBsZS5vcmcvaWQvMDE5MmYwYzEtN2IxZS03YzNhLTlkMmUtNWExYjJjM2Q0ZTVmL25vZGUvMDE5MmYwYzEtN2IxZS03MDAwLTgwMDAtMDAwMDAwMDAwMDAxIl0BKADA3IbQ9N3mBgMCaWQBd2VodHRwczovL2V4YW1wbGUub3JnL2lkLzAxOTJmMGMxLTdiMWUtN2MzYS05ZDJlLTVhMWIyYzNkNGU1Zi9ub2RlLzAxOTJmMGMxLTdiMWUtNzAwMC04MDAwLTAwMDAwMDAwMDAwMSgAwNyG0PTd5gYDBHR5cGUBdwlEaW1lbnNpb24oAMDchtD03eYGAwV2YWx1ZQF8QSAAACcAwNyG0PTd5gYDBHVuaXQBKADA3IbQ9N3mBgcCaWQBdyRodHRwOi8vdm9jYWIuZ2V0dHkuZWR1L2FhdC8zMDAzNzkwOTgoAMDchtD03eYGBwR0eXBlAXcPTWVhc3VyZW1lbnRVbml0KADA3IbQ9N3mBgMGX29yZGVyAXwAAAAAAA==",
+  "initial_state": {
+    "map": {
+      "@context": {
+        "plain": "https://linked.art/ns/v1/linked-art.json"
+      },
+      "[\"dimension\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000001\"]": {
+        "map": {
+          "_order": {
+            "plain": 0.0
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000001"
+          },
+          "type": {
+            "plain": "Dimension"
+          },
+          "unit": {
+            "map": {
+              "id": {
+                "plain": "http://vocab.getty.edu/aat/300379098"
+              },
+              "type": {
+                "plain": "MeasurementUnit"
+              }
+            }
+          },
+          "value": {
+            "plain": 10.0
+          }
+        }
+      },
+      "id": {
+        "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f"
+      },
+      "type": {
+        "plain": "HumanMadeObject"
+      }
+    }
+  },
+  "steps": [
+    {
+      "client": "a",
+      "op": "set_scalar",
+      "args": {
+        "path": "dimension[Dimension].value",
+        "value": 12.5
+      },
+      "returns": null
+    },
+    {
+      "client": "a",
+      "op": "set_scalar",
+      "args": {
+        "path": "value",
+        "value": 77,
+        "base": [
+          {
+            "path": "dimension",
+            "key": "[\"dimension\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000001\"]"
+          }
+        ]
+      },
+      "returns": null
+    },
+    {
+      "client": "a",
+      "op": "set_scalar",
+      "args": {
+        "path": "lower_value_limit",
+        "value": -3,
+        "base": [
+          {
+            "path": "dimension",
+            "key": "[\"dimension\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000001\"]"
+          }
+        ]
+      },
+      "returns": null
+    },
+    {
+      "client": "a",
+      "op": "set_scalar",
+      "args": {
+        "path": "upper_value_limit",
+        "value": 0.1,
+        "base": [
+          {
+            "path": "dimension",
+            "key": "[\"dimension\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000001\"]"
+          }
+        ]
+      },
+      "returns": null
+    },
+    {
+      "client": "a",
+      "op": "set_scalar",
+      "args": {
+        "path": "x_flag",
+        "value": true
+      },
+      "returns": null
+    },
+    {
+      "client": "a",
+      "op": "set_scalar",
+      "args": {
+        "path": "x_none",
+        "value": null
+      },
+      "returns": null
+    },
+    {
+      "client": "a",
+      "op": "set_scalar",
+      "args": {
+        "path": "x_text",
+        "value": "𝒳 \"quoted\" [not a key]"
+      },
+      "returns": null
+    },
+    {
+      "client": "a",
+      "op": "set_scalar",
+      "args": {
+        "path": "content",
+        "value": "a plain string: the root is no Name"
+      },
+      "returns": null
+    },
+    {
+      "client": "a",
+      "op": "set_scalar",
+      "args": {
+        "path": "dimension",
+        "value": "an array"
+      },
+      "error": "LAE-PROJ-007"
+    },
+    {
+      "client": "a",
+      "op": "set_scalar",
+      "args": {
+        "path": "dimension[Dimension].unit",
+        "value": "a reference"
+      },
+      "error": "LAE-PROJ-007"
+    },
+    {
+      "client": "a",
+      "op": "set_scalar",
+      "args": {
+        "path": "dimension[Dimension]",
+        "value": "a class filter"
+      },
+      "error": "LAE-PROJ-007"
+    },
+    {
+      "sync": [
+        "a",
+        "b"
+      ]
+    },
+    {
+      "client": "a",
+      "op": "set_scalar",
+      "args": {
+        "path": "dimension.value",
+        "value": 20
+      },
+      "returns": null
+    },
+    {
+      "client": "b",
+      "op": "set_scalar",
+      "args": {
+        "path": "dimension.value",
+        "value": 30
+      },
+      "returns": null
+    },
+    {
+      "client": "a",
+      "op": "set_scalar",
+      "args": {
+        "path": "x_text",
+        "value": "from a"
+      },
+      "returns": null
+    },
+    {
+      "client": "b",
+      "op": "remove_value",
+      "args": {
+        "path": "x_text"
+      },
+      "returns": true
+    },
+    {
+      "client": "b",
+      "op": "set_object",
+      "args": {
+        "path": "timespan",
+        "obj": {
+          "type": "TimeSpan",
+          "begin_of_the_begin": "1500-01-01T00:00:00Z"
+        },
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000014"
+        ]
+      },
+      "returns": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000014"
+    },
+    {
+      "client": "a",
+      "op": "set_object",
+      "args": {
+        "path": "timespan",
+        "obj": {
+          "type": "TimeSpan",
+          "end_of_the_end": "1599-12-31T23:59:59Z"
+        },
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000015"
+        ]
+      },
+      "returns": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000015"
+    },
+    {
+      "sync": [
+        "a",
+        "b"
+      ]
+    },
+    {
+      "client": "a",
+      "op": "get_path",
+      "args": {
+        "path": "dimension.value"
+      },
+      "returns": [
+        30
+      ]
+    },
+    {
+      "client": "a",
+      "op": "get_path",
+      "args": {
+        "path": "timespan"
+      },
+      "returns": [
+        {
+          "begin_of_the_begin": "1500-01-01T00:00:00Z",
+          "type": "TimeSpan",
+          "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000014"
+        }
+      ]
+    },
+    {
+      "client": "a",
+      "op": "get_path",
+      "args": {
+        "path": "x_text"
+      },
+      "returns": [
+        "from a"
+      ]
+    }
+  ],
+  "expected": {
+    "type": "HumanMadeObject",
+    "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f",
+    "x_none": null,
+    "content": "a plain string: the root is no Name",
+    "timespan": {
+      "begin_of_the_begin": "1500-01-01T00:00:00Z",
+      "type": "TimeSpan",
+      "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000014"
+    },
+    "@context": "https://linked.art/ns/v1/linked-art.json",
+    "x_flag": true,
+    "x_text": "from a",
+    "dimension": [
+      {
+        "upper_value_limit": 0.1,
+        "lower_value_limit": -3,
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000001",
+        "unit": {
+          "type": "MeasurementUnit",
+          "id": "http://vocab.getty.edu/aat/300379098"
+        },
+        "value": 30,
+        "type": "Dimension"
+      }
+    ]
+  },
+  "expected_state": {
+    "map": {
+      "@context": {
+        "plain": "https://linked.art/ns/v1/linked-art.json"
+      },
+      "[\"dimension\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000001\"]": {
+        "map": {
+          "_order": {
+            "plain": 0.0
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000001"
+          },
+          "lower_value_limit": {
+            "plain": -3.0
+          },
+          "type": {
+            "plain": "Dimension"
+          },
+          "unit": {
+            "map": {
+              "id": {
+                "plain": "http://vocab.getty.edu/aat/300379098"
+              },
+              "type": {
+                "plain": "MeasurementUnit"
+              }
+            }
+          },
+          "upper_value_limit": {
+            "plain": 0.1
+          },
+          "value": {
+            "plain": 30.0
+          }
+        }
+      },
+      "content": {
+        "plain": "a plain string: the root is no Name"
+      },
+      "id": {
+        "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f"
+      },
+      "timespan": {
+        "map": {
+          "begin_of_the_begin": {
+            "plain": "1500-01-01T00:00:00Z"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000014"
+          },
+          "type": {
+            "plain": "TimeSpan"
+          }
+        }
+      },
+      "type": {
+        "plain": "HumanMadeObject"
+      },
+      "x_flag": {
+        "plain": true
+      },
+      "x_none": {
+        "plain": null
+      },
+      "x_text": {
+        "plain": "from a"
+      }
+    }
+  }
+}
