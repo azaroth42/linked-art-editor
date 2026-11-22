@@ -1,5 +1,6 @@
-// ESLint flat config. Step 0.2 adds `i18next/no-literal-string` as an error for .tsx files.
+// ESLint flat config.
 import js from "@eslint/js";
+import i18next from "eslint-plugin-i18next";
 import jsxA11y from "eslint-plugin-jsx-a11y";
 import globals from "globals";
 import tseslint from "typescript-eslint";
@@ -13,5 +14,40 @@ export default tseslint.config(
       ecmaVersion: 2023,
       globals: globals.browser,
     },
+  },
+  {
+    // No user-facing literal strings in components (conventions §5): JSX text, string children,
+    // and string attributes are errors unless the attribute is in the allow-list below.
+    files: ["**/*.tsx"],
+    plugins: { i18next },
+    rules: {
+      "i18next/no-literal-string": [
+        "error",
+        {
+          mode: "jsx-only",
+          "jsx-attributes": { exclude: ["data-testid", "className", "href", "src", "type"] },
+        },
+      ],
+      // Gaps in the plugin: it treats `<a>` as an SVG tag and skips all its attributes, and it
+      // never checks these announced ARIA attributes on HTML elements.
+      "no-restricted-syntax": [
+        "error",
+        {
+          selector:
+            'JSXOpeningElement[name.name="a"] > JSXAttribute[name.name=/^(title|aria-label)$/] > Literal',
+          message: "disallow literal string: user-facing text must come from t().",
+        },
+        {
+          selector:
+            "JSXAttribute[name.name=/^aria-(description|roledescription|valuetext|placeholder)$/] > Literal",
+          message: "disallow literal string: user-facing text must come from t().",
+        },
+      ],
+    },
+  },
+  {
+    // Playwright tests and tool configs run in Node, not the browser.
+    files: ["e2e/**/*.ts", "*.config.{ts,js}"],
+    languageOptions: { globals: globals.node },
   },
 );
