@@ -293,3 +293,17 @@ Spike S6 (`docs/spikes/S6-bootstrap.md`) is a **GO**: 1M records bootstrap in 10
    implementations" rests on the shared fixtures plus a manual Yjs 13.6.33 check of the
    library-dependent outcomes (last-writer-wins by client id, write against removal, concurrent
    `Text` splices). Step 1.17 must run every fixture unchanged.
+
+## Step 1.6
+
+1. **`?version=1` of a bulk-loaded record stops resolving after its first edit.** Decision A9
+   says bulk-loaded records have no revision row until first edited, and Step 1.10 computes the
+   first edit's old triples from the previous `records.data` without saying that it keeps that
+   JSON-LD. `/id/{uuid}?version=1` serves `records.data` while version 1 is current; once version
+   2 is published, version 1's JSON-LD exists nowhere and the permalink answers 404
+   `LAE-REC-004`, although spec §6.6 and §12 call versioned permalinks immutable. Step 1.11 also
+   expects to "re-expand the previous JSON-LD from `record_revisions.jsonld_zstd`" for such
+   records, which needs the same row. Suggested for Step 1.10 (critical): on the first publish
+   of a record whose current version has no revision row, insert that version's row (zstd
+   JSON-LD of the previous `records.data` and its N-Triples) in the same transaction.
+   `lae.api.records.load_version` already serves such a row.

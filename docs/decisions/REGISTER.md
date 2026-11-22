@@ -28,6 +28,7 @@ Decisions made during the November 2026 design review are also written up as ADR
 | A18 | Drafts are never indexed in QLever and are not searchable; new unpublished stubs have no `entity_labels` row until published. | locked | spec §4.1; ADR-0010 |
 | A19 | Vector search lives in Postgres `pgvector` (`halfvec`, HNSW `m=16, ef_construction=128`), transactional with `entity_labels`; no third vector store. | locked | spec §3.1, §6.3; Phase 3 Step 3.1 |
 | A20 | The `/sparql/vector` SPARQL `SERVICE` contract is the LUX `sparql_service` `vec:` vocabulary ported to pgvector; interactive autocomplete uses application-layer RRF. Final confirmation in Phase 3 Step 3.3. | open → leading option | spec §14 Open Question 1; ADR-0016 (Proposed) |
+| A21 | `/id/{uuid}`: `?format=jsonld\|ttl\|html` overrides `Accept` (default HTML); weak per-representation `ETag` `W/"<records.etag or snapshot hash>-<format>"` with `Vary: Accept, Accept-Language`; status (410/301) is checked before `?version=N`; version N is its revision row, else `records.data` if N is current, else 404. `records.etag` = BLAKE2b-128 of the canonical JSON. `POST /api/records` accepts the top-level Linked Art classes only and stores a `template` in `records.data` for the room to hydrate. | fixed | Phase 1 Step 1.6; ADR-0023 |
 
 ## B. Editing, CRDT, publishing
 

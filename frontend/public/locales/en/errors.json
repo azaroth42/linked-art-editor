@@ -8,5 +8,11 @@
   "LAE-AUTH-007": "Sign-in failed ({error}). Please try again.",
   "LAE-AUTH-008": "The sign-in service cannot be reached. Please try again later.",
   "LAE-AUTH-009": "This account has been deactivated.",
-  "LAE-AUTH-010": "No such access token."
+  "LAE-AUTH-010": "No such access token.",
+  "LAE-REC-001": "No such record.",
+  "LAE-REC-002": "This record has been deleted.",
+  "LAE-REC-003": "This record has been merged into {merged_into}.",
+  "LAE-REC-004": "Version {version} of this record does not exist.",
+  "LAE-REC-005": "A record cannot be of type {type}.",
+  "LAE-REC-006": "The template cannot be used as a draft ({reason})."
 }
