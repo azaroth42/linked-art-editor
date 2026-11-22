@@ -88,6 +88,14 @@ The QLever source the project builds from. It is upstream master, not the older 
 | Reference | `src/index/IndexBuilderMain.cpp` (`text-index` options), `e2e/`, `examples/` | Index build flags and end-to-end query examples. |
 | Reference | `README.md`, `misc/` | Qleverfile format and server flags. Do not vendor code from here; QLever is consumed as a binary. |
 
+## lux/dataset — `/Users/rs2668/Development/lux/dataset/jsonl/`
+
+The full LUX export: gzipped JSONL files (`export_full_*.jsonl.gz`), one merged Linked Art record per line, with LUX URIs.
+
+| Use | Path | Notes |
+| :-- | :-- | :-- |
+| Data | `export_full_*.jsonl.gz` | Primary source for the 1M (Step 1.22) and 10M (Step 2.20) scale runs and blue/green rebuild timing, replacing synthetic records where possible. Stream with `gzip`; never load whole files into memory. Verify each file with `gzip -t` first. Sample corpus additions deterministically (fixed seed) and record provenance in `tests/corpus/SOURCE.md`. |
+
 ## llm/chai-engine — `/Users/rs2668/Development/llm/chai-engine`
 
 LLM workflow engine built on LiteLLM. Synchronous and in-memory; no job persistence, queues, or key management.

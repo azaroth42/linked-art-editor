@@ -345,7 +345,7 @@ curl -i localhost:8000/api/vocab/bundle | grep -i etag
 ## Step 2.20 — Full-volume load and performance gate
 
 **Do:**
-1. Run the Phase 1 bulk bootstrap at 10M records (synthetic plus real) on a staging host; record timings in `docs/perf/phase-2-load.md`.
+1. Run the Phase 1 bulk bootstrap at 10M records on a staging host (or the development Mac if no staging host exists, and say so), using the real LUX dump at `/Users/rs2668/Development/lux/dataset/jsonl/*.jsonl.gz` as the primary source, topped up with the S6 generator only if the dump has fewer than 10M records; record timings in `docs/perf/phase-2-load.md`.
 2. Run `scripts/perf/autocomplete_bench.py` (100 concurrent clients, 1,000 queries) and `scripts/perf/search_bench.py` against the loaded index; record p50/p95.
 3. Trigger one full blue/green rebuild at this volume and record duration and peak disk.
 
