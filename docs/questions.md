@@ -198,3 +198,23 @@ Spike S6 (`docs/spikes/S6-bootstrap.md`) is a **GO**: 1M records bootstrap in 10
    (with a corpus-wide equality test against unpatched pyld and the pyld version pinned exactly),
    whether it should be offered upstream to pyld instead, or neither.
    **Resolved (orchestrator under the owner's delegation, 2026-11-22; reversible):** adopt the public-contract `"tag": "static"` loader change (Step 1.12 guide updated); do not carry the pyld monkeypatch now (maintenance risk for a +42 % bulk-only gain). Revisit, or offer it upstream, if bulk loads exceed the window.
+
+## Step 1.7
+
+1. **Not verified: a manual login against a real identity provider.** The Verify line asks for a
+   login against a local Keycloak or the institution's test IdP. Neither exists on the
+   development machine or in CI, so it was not performed. The whole flow (discovery, redirect
+   with state, nonce and PKCE `S256`, code exchange with `client_secret_basic`, RS256 ID-token
+   validation against the JWKS, user upsert, session cookie, logout) is tested end to end
+   against an in-process fake provider (`backend/tests/auth/conftest.py`), including forged
+   state and a wrong nonce, audience, issuer, expiry, signing key, or PKCE verifier.
+   `docs/dev-setup.md` §2 gives the native Keycloak and generic IdP setup for whoever runs it.
+   Please do one real login before production use and note the IdP and date here.
+2. **System Admin holds every permission, including `publish`.** The guide says "System Admin →
+   everything"; spec §8.2 says "System Admin and Ops administrative permissions are separated
+   cleanly from editorial publish rights". The seed follows the guide. If the spec sentence
+   means the System Admin *role* must not publish, a later migration can drop the editorial
+   permissions from it (ADR-0020). Please confirm.
+3. **Vocabulary Admin is seeded with `manage_vocabularies` only.** The spec names the role but
+   not its permissions; roles are additive, so a vocabulary admin who also edits records needs
+   Editor too (ADR-0020). No decision needed unless you want the role to include editing.

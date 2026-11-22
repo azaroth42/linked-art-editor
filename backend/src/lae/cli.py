@@ -3,7 +3,9 @@
 Sub-command names match the process names in conventions §1, the entries in ``deploy/Procfile``,
 and the ``deploy/systemd/lae-<name>.service`` units. Every command reads ``Settings``
 (``LAE_*``). ``migrate`` runs ``alembic upgrade head`` against ``LAE_DATABASE_URL``; ``api``
-configures JSON logging and runs uvicorn on ``lae.app.create_app``.
+configures JSON logging and runs uvicorn on ``lae.app.create_app``, and refuses to start (exit
+``EXIT_CONFIG_ERROR``) when the authentication settings are unsafe, e.g. ``LAE_DEV_USER`` with
+``LAE_ENV=production`` (``lae.auth.setup.AuthConfigError``).
 
 ``crdt-ws``, ``sync-worker``, and ``scheduler`` run ``main(settings)`` from the module named in
 ``PROCESS_MODULES``; ``main`` may be a coroutine function and returns an exit code (``None``
@@ -25,6 +27,7 @@ from types import ModuleType
 import uvicorn
 
 from lae.app import create_app
+from lae.auth.setup import AuthConfigError
 from lae.db import migrate
 from lae.logging import configure_logging
 from lae.settings import Settings, get_settings
@@ -52,6 +55,9 @@ NOT_IMPLEMENTED: dict[str, str] = {
 
 EXIT_NOT_IMPLEMENTED = 3
 """Exit code of a command whose implementing step has not landed."""
+
+EXIT_CONFIG_ERROR = 2
+"""Exit code of a process that refuses to start because of its settings."""
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -83,8 +89,13 @@ def run_api() -> int:
     """``lae api``: serve ``create_app(settings)`` with uvicorn until interrupted."""
     settings = get_settings()
     configure_logging(settings.log_level)
+    try:
+        app = create_app(settings)
+    except AuthConfigError as exc:
+        print(f"lae api: refusing to start: {exc}", file=sys.stderr)
+        return EXIT_CONFIG_ERROR
     uvicorn.run(
-        create_app(settings),
+        app,
         host=settings.api_host,
         port=settings.api_port,
         log_config=None,  # keep the JSON logging configured above

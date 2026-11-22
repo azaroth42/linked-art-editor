@@ -10,6 +10,7 @@ dependencies = [
     "authlib>=1.9.10",
     "fastapi>=0.165.0",
     "httpx[http2]>=0.28.1",
+    "itsdangerous>=2.2.0",
     "jsonschema>=4.26.0",
     "orjson>=3.13.0",
     # pycrdt and pycrdt-websocket are pinned together (conventions §4); bump both at once.
@@ -51,6 +52,11 @@ select = ["E", "F", "I", "B", "UP", "ASYNC"]
 strict = true
 python_version = "3.12"
 plugins = ["pydantic.mypy"]
+
+[[tool.mypy.overrides]]
+# Authlib ships neither type hints nor stubs (lae.auth.oidc).
+module = ["authlib", "authlib.*"]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"

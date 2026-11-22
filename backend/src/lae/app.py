@@ -1,9 +1,12 @@
 """The FastAPI application factory for the ``api`` process (``lae api``).
 
-``create_app`` registers the routers from ``lae.api``, the health endpoints, and request logging.
-Its lifespan owns the two process-wide resources, both kept on ``app.state``: the SQLAlchemy async
-engine (with its session factory, see ``lae.db.session.get_session``) and one ``httpx.AsyncClient``
-for outgoing calls (QLever, ``crdt-ws``).
+``create_app`` registers the routers from ``lae.api``, the health endpoints, request logging,
+authentication (``lae.auth.setup.install_auth``: session cookie, OIDC client, settings checks that
+raise ``AuthConfigError``), and the handler that turns ``lae.api.errors.ApiError`` into a
+structured ``{code, path, params}`` body. Its lifespan owns the two process-wide resources, both
+kept on ``app.state``: the SQLAlchemy async engine (with its session factory, see
+``lae.db.session.get_session``) and one ``httpx.AsyncClient`` for outgoing calls (QLever,
+``crdt-ws``).
 """
 
 from __future__ import annotations
@@ -21,6 +24,8 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 import lae
 from lae import api
+from lae.api.errors import ApiError, api_error_handler
+from lae.auth.setup import install_auth
 from lae.db.session import create_engine, create_sessionmaker
 from lae.logging import RequestContextMiddleware, get_logger
 from lae.settings import Settings
@@ -137,7 +142,10 @@ async def health_ready(
 def create_app(
     settings: Settings, *, http_transport: httpx.AsyncBaseTransport | None = None
 ) -> FastAPI:
-    """Build the ``api`` application; ``http_transport`` replaces the network in tests."""
+    """Build the ``api`` application; ``http_transport`` replaces the network in tests.
+
+    Raises ``lae.auth.setup.AuthConfigError`` when the authentication settings must not be served.
+    """
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -154,7 +162,9 @@ def create_app(
 
     app = FastAPI(title="Linked Art Editor", version=lae.__version__, lifespan=lifespan)
     app.state.settings = settings
+    install_auth(app, settings, http_transport)
     app.add_middleware(RequestContextMiddleware)
+    app.add_exception_handler(ApiError, api_error_handler)
     app.include_router(health_router)
     for router in api.routers():
         app.include_router(router)
