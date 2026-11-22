@@ -6,11 +6,11 @@
 
 | Item | State |
 | :-- | :-- |
-| Repository | Initial commit only: `LICENSE`, `README.md`, `.gitignore`, and this `docs/` tree. **No application code exists yet.** |
+| Repository | Monorepo skeleton, CI (backend, frontend, e2e, config), native PostgreSQL/QLever setup, golden corpus (244 records), core schema, profile schemas, app factory, identifiers, and label transclusion are on `main`. |
 | Design | Complete and locked. See `spec/` and `decisions/REGISTER.md`. |
 | Implementation plan | Complete. Five phases with step-by-step guides under `phases/`. |
-| Spikes | None run yet. Phase 0 runs them. |
-| Next action | **Phase 0, Step 0.1** in `phases/phase-0-foundations.md` (GitHub issue #1). |
+| Spikes | S1 QLever (GO except text freshness: NO-GO, overlay fallback), S2 pycrdt-websocket (GO), S3 projection (GO, ADR-0018), S4 SHACL (GO), S5 Canvas Panel (GO with conditions) done; S6 bootstrap running. Reports in `spikes/`. |
+| Next action | Open issues in milestone order; see the progress board and the GitHub milestones. Steps without unmet dependencies may start before the previous phase's tracking issue closes when they do not depend on its spike results. |
 | GitHub issues | One issue per guide step plus one tracking issue per phase, created in dependency order with labels `phase-N`, `difficulty:S/M/L/XL`, `area:*`, and `critical-model`. Tracking issues: Phase 0 #13, Phase 1 #36, Phase 2 #57, Phase 3 #71, Phase 4 #91. Each step issue lists its dependencies; work them in issue-number order within a phase. |
 
 ### Progress board
@@ -19,8 +19,8 @@ Tick a step only when its **Verify** block passes, CI is green, and the commit e
 
 | Phase | Steps done | Notes |
 | :-- | :-- | :-- |
-| 0 — Foundations & spikes | 0 / 12 | |
-| 1 — Core authoring loop | 0 / 22 | |
+| 0 — Foundations & spikes | 11 / 12 | 0.11 (S6 bootstrap timing) in progress. |
+| 1 — Core authoring loop | 3 / 22 | 1.1, 1.2, 1.5 merged; 1.3, 1.4 (critical) and 1.7 in progress. |
 | 2 — Curation, vocabularies, scale | 0 / 20 | |
 | 3 — Semantic search & agents | 0 / 13 | |
 | 4 — Explorers, translation, admin | 0 / 19 | |
