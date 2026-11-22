@@ -1,0 +1,265 @@
+{
+  "delta_before": {
+    "metrics": {
+      "qlever_index_num_triples": "9999922",
+      "qlever_index_rebuild_in_progress": "0",
+      "qlever_delta_triples": "0",
+      "qlever_delta_triples{type=\"deleted\"}": "0",
+      "qlever_delta_triples{type=\"inserted\"}": "0"
+    },
+    "stats": {
+      "num-triples-internal": 2504351,
+      "num-triples-normal": 9999922
+    }
+  },
+  "insert_data_100": {
+    "latency": {
+      "n": 20,
+      "p50_ms": 3.37,
+      "p95_ms": 4.14,
+      "p99_ms": 8.95,
+      "max_ms": 8.95,
+      "mean_ms": 3.68
+    },
+    "triples_after_each": [
+      100
+    ],
+    "first_response": {
+      "operations": [
+        {
+          "status": "OK",
+          "delta-triples": {
+            "after": {
+              "deleted": 0,
+              "inserted": 100,
+              "total": 100
+            },
+            "before": {
+              "deleted": 0,
+              "inserted": 0,
+              "total": 0
+            },
+            "difference": {
+              "deleted": 0,
+              "inserted": 100,
+              "total": 100
+            },
+            "operation": {
+              "deleted": 0,
+              "inserted": 100,
+              "total": 100
+            }
+          },
+          "time_total_ms": 2,
+          "warnings": [
+            "SPARQL 1.1 Update for QLever is experimental."
+          ]
+        }
+      ]
+    }
+  },
+  "delete_data_100": {
+    "latency": {
+      "n": 20,
+      "p50_ms": 3.18,
+      "p95_ms": 3.97,
+      "p99_ms": 6.02,
+      "max_ms": 6.02,
+      "mean_ms": 3.44
+    },
+    "triples_after_each": [
+      0
+    ],
+    "first_response": {
+      "operations": [
+        {
+          "status": "OK",
+          "delta-triples": {
+            "after": {
+              "deleted": 100,
+              "inserted": 0,
+              "total": 100
+            },
+            "before": {
+              "deleted": 0,
+              "inserted": 100,
+              "total": 100
+            },
+            "difference": {
+              "deleted": 100,
+              "inserted": -100,
+              "total": 0
+            },
+            "operation": {
+              "deleted": 100,
+              "inserted": 0,
+              "total": 100
+            }
+          },
+          "time_total_ms": 1,
+          "warnings": [
+            "SPARQL 1.1 Update for QLever is experimental."
+          ]
+        }
+      ]
+    }
+  },
+  "delete_where_subject": {
+    "subjects": "http://localhost:8000/id/s1/12345 .. http://localhost:8000/id/s1/12364",
+    "latency": {
+      "n": 20,
+      "p50_ms": 3.32,
+      "p95_ms": 4.15,
+      "p99_ms": 4.64,
+      "max_ms": 4.64,
+      "mean_ms": 3.46
+    },
+    "triples_before_each": [
+      100
+    ],
+    "triples_after_each": [
+      0
+    ],
+    "first_response": {
+      "operations": [
+        {
+          "status": "OK",
+          "delta-triples": {
+            "after": {
+              "deleted": 200,
+              "inserted": 0,
+              "total": 200
+            },
+            "before": {
+              "deleted": 100,
+              "inserted": 0,
+              "total": 100
+            },
+            "difference": {
+              "deleted": 100,
+              "inserted": 0,
+              "total": 100
+            },
+            "operation": {
+              "deleted": 100,
+              "inserted": 0,
+              "total": 100
+            }
+          },
+          "time_total_ms": 1,
+          "warnings": [
+            "SPARQL 1.1 Update for QLever is experimental."
+          ]
+        }
+      ]
+    }
+  },
+  "delta_after_single_ops": {
+    "metrics": {
+      "qlever_index_num_triples": "9999922",
+      "qlever_index_rebuild_in_progress": "0",
+      "qlever_delta_triples": "4000",
+      "qlever_delta_triples{type=\"deleted\"}": "4000",
+      "qlever_delta_triples{type=\"inserted\"}": "0"
+    },
+    "stats": {
+      "num-triples-internal": 2504351,
+      "num-triples-normal": 9999922
+    }
+  },
+  "small_updates": {
+    "description": "DELETE DATA (5 triples) ; INSERT DATA (5 triples) per request",
+    "client": {
+      "n": 1000,
+      "p50_ms": 2.8,
+      "p95_ms": 3.76,
+      "p99_ms": 4.01,
+      "max_ms": 9.84,
+      "mean_ms": 2.84
+    },
+    "server_reported": {
+      "n": 1000,
+      "p50_ms": 0.0,
+      "p95_ms": 0.0,
+      "p99_ms": 0.0,
+      "max_ms": 0.0,
+      "mean_ms": 0.0
+    },
+    "last_response": {
+      "operations": [
+        {
+          "status": "OK",
+          "delta-triples": {
+            "after": {
+              "deleted": 9000,
+              "inserted": 4995,
+              "total": 13995
+            },
+            "before": {
+              "deleted": 8995,
+              "inserted": 4995,
+              "total": 13990
+            },
+            "difference": {
+              "deleted": 5,
+              "inserted": 0,
+              "total": 5
+            },
+            "operation": {
+              "deleted": 5,
+              "inserted": 0,
+              "total": 5
+            }
+          },
+          "time_total_ms": 0,
+          "warnings": [
+            "SPARQL 1.1 Update for QLever is experimental."
+          ]
+        },
+        {
+          "status": "OK",
+          "delta-triples": {
+            "after": {
+              "deleted": 9000,
+              "inserted": 5000,
+              "total": 14000
+            },
+            "before": {
+              "deleted": 9000,
+              "inserted": 4995,
+              "total": 13995
+            },
+            "difference": {
+              "deleted": 0,
+              "inserted": 5,
+              "total": 5
+            },
+            "operation": {
+              "deleted": 0,
+              "inserted": 5,
+              "total": 5
+            }
+          },
+          "time_total_ms": 0,
+          "warnings": [
+            "SPARQL 1.1 Update for QLever is experimental."
+          ]
+        }
+      ]
+    },
+    "check_edited_labels": 1000
+  },
+  "delta_after_small_updates": {
+    "metrics": {
+      "qlever_index_num_triples": "9999922",
+      "qlever_index_rebuild_in_progress": "0",
+      "qlever_delta_triples": "14000",
+      "qlever_delta_triples{type=\"deleted\"}": "9000",
+      "qlever_delta_triples{type=\"inserted\"}": "5000"
+    },
+    "stats": {
+      "num-triples-internal": 2504351,
+      "num-triples-normal": 9999922
+    }
+  }
+}

@@ -12,3 +12,6 @@ qlever_control        = qlever-control 0.6.0 (`qlever --version`: qlever 0.6.0)
 # Source checkout kept for reference (upstream https://github.com/ad-freiburg/qlever, master).
 # The binary above is 480 commits behind this commit.
 source_commit         = ba7b74ccb00993efe9d4ca4d5a539426379493ab (2026-11-21, "Store the triples of updates as `qlm::vector` (#3957)")
+
+# Spike S1 (docs/spikes/S1-qlever.md, Step 0.6) used the binary above and, for comparison, a source
+# build of source_commit; the pin is unchanged (see docs/questions.md, Step 0.6, question 2).

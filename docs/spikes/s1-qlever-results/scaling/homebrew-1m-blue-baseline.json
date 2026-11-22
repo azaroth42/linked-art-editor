@@ -1,0 +1,13 @@
+{
+  "duration_s": 20.0,
+  "queries": 293,
+  "errors": 0,
+  "latency": {
+    "n": 293,
+    "p50_ms": 13.49,
+    "p95_ms": 22.09,
+    "p99_ms": 22.88,
+    "max_ms": 24.3,
+    "mean_ms": 12.02
+  }
+}

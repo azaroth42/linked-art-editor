@@ -1,0 +1,4 @@
+qlever-index: /opt/homebrew/bin/qlever-index (qlever-index v0.6.0)
+qlever-server: /opt/homebrew/bin/qlever-server (qlever-server v0.6.0)
+date: 2026-11-22T20:14:48Z
+machine: Apple M5 Max, 18 cores, 128 GiB

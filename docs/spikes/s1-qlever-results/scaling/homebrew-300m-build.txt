@@ -1,0 +1,7 @@
+command: qlever --qleverfile <repo>/deploy/Qleverfile index
+exit_status: 0
+wall_clock_s: 507.8
+peak_rss_sampled_mib: 4232
+max_rss_children_mib: 4332
+load_average: { 4.51 9.97 10.00 }
+index_size_mib: 8421

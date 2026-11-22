@@ -1,0 +1,1 @@
+{"markers_before": 0, "acked_before_kill_9": 50, "markers_after_restart": 50, "lost": 0, "restart": {"stop_s": 0.65, "start_until_ready_s": 1.8, "first_query_after_ready_s": 0.06, "restart_total_s": 2.52}}

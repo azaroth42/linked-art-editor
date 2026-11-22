@@ -1,0 +1,34 @@
+{
+  "points": [
+    {
+      "triples": 10000000.0,
+      "wall_clock_s": 13.0,
+      "peak_rss_sampled_mib": 1333.0,
+      "max_rss_children_mib": 1371.0
+    },
+    {
+      "triples": 30000000.0,
+      "wall_clock_s": 39.3,
+      "peak_rss_sampled_mib": 2355.0,
+      "max_rss_children_mib": 2515.0
+    },
+    {
+      "triples": 100000000.0,
+      "wall_clock_s": 145.7,
+      "peak_rss_sampled_mib": 3978.0,
+      "max_rss_children_mib": 3990.0
+    },
+    {
+      "triples": 300000000.0,
+      "wall_clock_s": 507.8,
+      "peak_rss_sampled_mib": 4232.0,
+      "max_rss_children_mib": 4332.0
+    }
+  ],
+  "fit": {
+    "exponent_b": 1.079,
+    "coefficient_a": 0.0
+  },
+  "estimate_1e9_power_law_s": 1800,
+  "estimate_1e9_linear_from_largest_s": 1693
+}
