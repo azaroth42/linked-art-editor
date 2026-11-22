@@ -244,11 +244,13 @@ export interface paths {
          *     The row holds the skeleton ``{"@context", "id", "type"}``, plus the ``template``'s content
          *     when one is given, with internal node IRIs assigned.
          *
-         *     **Draft room (Step 1.8).** This endpoint does not open the draft yet and writes no
-         *     ``crdt_drafts`` row: Step 1.8 (``crdt-ws``, ``RoomManager.open``) wires room opening in here
-         *     and returns the room's ``draft_epoch``. Until then ``draft_epoch`` is that of a new record,
-         *     ``0`` (``records.draft_epoch``, migration ``0004``, defaults to 0). ``RoomManager.open``
-         *     hydrates the room from ``records.data``, so the template becomes the draft's content.
+         *     **Draft room (Step 1.8).** Once the row is committed the draft is opened in ``crdt-ws``
+         *     (``CrdtWsClient.open``): the room hydrates from ``records.data``, so the template becomes
+         *     the draft's content, and inserts the ``crdt_drafts`` row that makes the record readable
+         *     through ``GET /api/records/{id}``. ``draft_epoch`` is the room's; the editor passes it when
+         *     it connects to ``/ws/rooms/{id}``. If ``crdt-ws`` cannot open the draft, the new row is
+         *     deleted again and the error is passed on (503 ``LAE-CRDT-009`` when it is unreachable): a
+         *     never-published record without a draft would be invisible and never reaped.
          */
         post: operations["create_record_api_records_post"];
         delete?: never;
