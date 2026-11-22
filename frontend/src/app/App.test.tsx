@@ -1,5 +1,5 @@
 import { QueryClient } from "@tanstack/react-query";
-import { cleanup, render, screen, within } from "@testing-library/react";
+import { cleanup, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Suspense } from "react";
 import { I18nextProvider } from "react-i18next";
@@ -42,7 +42,8 @@ describe("App", () => {
     const header = screen.getByRole("banner");
     expect(within(header).getByText("Signed in as editor@example.org (Editor)")).toBeDefined();
     expect(within(header).getByRole("button", { name: "Sign out" })).toBeDefined();
-    expect(document.title).toBe("Linked Art Editor");
+    // The title is set in an effect after render; wait for it instead of reading it once.
+    await waitFor(() => expect(document.title).toBe("Linked Art Editor"));
   });
 
   it("sends an anonymous visitor to the login page, which returns to the requested page", async () => {
@@ -55,7 +56,8 @@ describe("App", () => {
     expect(link.getAttribute("href")).toBe(
       `/auth/login?${new URLSearchParams({ next }).toString()}`,
     );
-    expect(document.title).toBe("Sign in – Linked Art Editor");
+    // The title is set in an effect after render; wait for it instead of reading it once.
+    await waitFor(() => expect(document.title).toBe("Sign in – Linked Art Editor"));
   });
 
   it("sends a signed-in user from the login page to next", async () => {
@@ -75,7 +77,8 @@ describe("App", () => {
     const user = userEvent.setup();
     const { router } = renderApp(`/records/${RECORD_ID}/history`, signedIn);
     await screen.findByRole("heading", { level: 1, name: "Revision history" });
-    expect(document.title).toBe("Revision history – Linked Art Editor");
+    // The title is set in an effect after render; wait for it instead of reading it once.
+    await waitFor(() => expect(document.title).toBe("Revision history – Linked Art Editor"));
     await user.click(screen.getByRole("link", { name: "Back to the editor" }));
     await screen.findByRole("heading", { level: 1, name: "Edit record" });
     expect(router.state.location.pathname).toBe(`/edit/${RECORD_ID}`);
