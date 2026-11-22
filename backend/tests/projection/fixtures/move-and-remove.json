@@ -1,0 +1,486 @@
+{
+  "description": "move_entry writes only the moved entry's _order (the candidate for its new neighbours) and nothing when the entry is already there; remove_entry deletes one key. A move and an insert made concurrently both apply; an entry added while another client removes every entry is the one that remains; removing the last entry leaves the property absent.",
+  "rules": [
+    "R12",
+    "R14",
+    "R18"
+  ],
+  "record_uri": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f",
+  "clients": {
+    "a": 101,
+    "b": 202
+  },
+  "initial": {
+    "@context": "https://linked.art/ns/v1/linked-art.json",
+    "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f",
+    "type": "HumanMadeObject",
+    "classified_as": [
+      {
+        "id": "http://vocab.getty.edu/aat/1",
+        "type": "Type"
+      },
+      {
+        "id": "http://vocab.getty.edu/aat/2",
+        "type": "Type"
+      },
+      {
+        "id": "http://vocab.getty.edu/aat/3",
+        "type": "Type"
+      },
+      {
+        "id": "http://vocab.getty.edu/aat/4",
+        "type": "Type"
+      },
+      {
+        "id": "http://vocab.getty.edu/aat/5",
+        "type": "Type"
+      }
+    ],
+    "member_of": [
+      {
+        "id": "https://example.org/id/set-1",
+        "type": "Set"
+      }
+    ]
+  },
+  "initial_update": "ARuGs7ex6JfGDgAoAQZyZWNvcmQIQGNvbnRleHQBdyhodHRwczovL2xpbmtlZC5hcnQvbnMvdjEvbGlua2VkLWFydC5qc29uKAEGcmVjb3JkAmlkAXc7aHR0cHM6Ly9leGFtcGxlLm9yZy9pZC8wMTkyZjBjMS03YjFlLTdjM2EtOWQyZS01YTFiMmMzZDRlNWYoAQZyZWNvcmQEdHlwZQF3D0h1bWFuTWFkZU9iamVjdCcBBnJlY29yZDBbImNsYXNzaWZpZWRfYXMiLCJodHRwOi8vdm9jYWIuZ2V0dHkuZWR1L2FhdC8xIl0BKACGs7ex6JfGDgMCaWQBdxxodHRwOi8vdm9jYWIuZ2V0dHkuZWR1L2FhdC8xKACGs7ex6JfGDgMEdHlwZQF3BFR5cGUoAIazt7Hol8YOAwZfb3JkZXIBfAAAAAAnAQZyZWNvcmQwWyJjbGFzc2lmaWVkX2FzIiwiaHR0cDovL3ZvY2FiLmdldHR5LmVkdS9hYXQvMiJdASgAhrO3seiXxg4HAmlkAXccaHR0cDovL3ZvY2FiLmdldHR5LmVkdS9hYXQvMigAhrO3seiXxg4HBHR5cGUBdwRUeXBlKACGs7ex6JfGDgcGX29yZGVyAXw/gAAAJwEGcmVjb3JkMFsiY2xhc3NpZmllZF9hcyIsImh0dHA6Ly92b2NhYi5nZXR0eS5lZHUvYWF0LzMiXQEoAIazt7Hol8YOCwJpZAF3HGh0dHA6Ly92b2NhYi5nZXR0eS5lZHUvYWF0LzMoAIazt7Hol8YOCwR0eXBlAXcEVHlwZSgAhrO3seiXxg4LBl9vcmRlcgF8QAAAACcBBnJlY29yZDBbImNsYXNzaWZpZWRfYXMiLCJodHRwOi8vdm9jYWIuZ2V0dHkuZWR1L2FhdC80Il0BKACGs7ex6JfGDg8CaWQBdxxodHRwOi8vdm9jYWIuZ2V0dHkuZWR1L2FhdC80KACGs7ex6JfGDg8EdHlwZQF3BFR5cGUoAIazt7Hol8YODwZfb3JkZXIBfEBAAAAnAQZyZWNvcmQwWyJjbGFzc2lmaWVkX2FzIiwiaHR0cDovL3ZvY2FiLmdldHR5LmVkdS9hYXQvNSJdASgAhrO3seiXxg4TAmlkAXccaHR0cDovL3ZvY2FiLmdldHR5LmVkdS9hYXQvNSgAhrO3seiXxg4TBHR5cGUBdwRUeXBlKACGs7ex6JfGDhMGX29yZGVyAXxAgAAAJwEGcmVjb3JkLFsibWVtYmVyX29mIiwiaHR0cHM6Ly9leGFtcGxlLm9yZy9pZC9zZXQtMSJdASgAhrO3seiXxg4XAmlkAXccaHR0cHM6Ly9leGFtcGxlLm9yZy9pZC9zZXQtMSgAhrO3seiXxg4XBHR5cGUBdwNTZXQoAIazt7Hol8YOFwZfb3JkZXIBfAAAAAAA",
+  "initial_state": {
+    "map": {
+      "@context": {
+        "plain": "https://linked.art/ns/v1/linked-art.json"
+      },
+      "[\"classified_as\",\"http://vocab.getty.edu/aat/1\"]": {
+        "map": {
+          "_order": {
+            "plain": 0.0
+          },
+          "id": {
+            "plain": "http://vocab.getty.edu/aat/1"
+          },
+          "type": {
+            "plain": "Type"
+          }
+        }
+      },
+      "[\"classified_as\",\"http://vocab.getty.edu/aat/2\"]": {
+        "map": {
+          "_order": {
+            "plain": 1.0
+          },
+          "id": {
+            "plain": "http://vocab.getty.edu/aat/2"
+          },
+          "type": {
+            "plain": "Type"
+          }
+        }
+      },
+      "[\"classified_as\",\"http://vocab.getty.edu/aat/3\"]": {
+        "map": {
+          "_order": {
+            "plain": 2.0
+          },
+          "id": {
+            "plain": "http://vocab.getty.edu/aat/3"
+          },
+          "type": {
+            "plain": "Type"
+          }
+        }
+      },
+      "[\"classified_as\",\"http://vocab.getty.edu/aat/4\"]": {
+        "map": {
+          "_order": {
+            "plain": 3.0
+          },
+          "id": {
+            "plain": "http://vocab.getty.edu/aat/4"
+          },
+          "type": {
+            "plain": "Type"
+          }
+        }
+      },
+      "[\"classified_as\",\"http://vocab.getty.edu/aat/5\"]": {
+        "map": {
+          "_order": {
+            "plain": 4.0
+          },
+          "id": {
+            "plain": "http://vocab.getty.edu/aat/5"
+          },
+          "type": {
+            "plain": "Type"
+          }
+        }
+      },
+      "[\"member_of\",\"https://example.org/id/set-1\"]": {
+        "map": {
+          "_order": {
+            "plain": 0.0
+          },
+          "id": {
+            "plain": "https://example.org/id/set-1"
+          },
+          "type": {
+            "plain": "Set"
+          }
+        }
+      },
+      "id": {
+        "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f"
+      },
+      "type": {
+        "plain": "HumanMadeObject"
+      }
+    }
+  },
+  "steps": [
+    {
+      "client": "a",
+      "op": "move_entry",
+      "args": {
+        "path": "classified_as",
+        "key": "[\"classified_as\",\"http://vocab.getty.edu/aat/1\"]",
+        "before_key": null
+      },
+      "returns": null
+    },
+    {
+      "client": "a",
+      "op": "move_entry",
+      "args": {
+        "path": "classified_as",
+        "key": "[\"classified_as\",\"http://vocab.getty.edu/aat/5\"]",
+        "before_key": "[\"classified_as\",\"http://vocab.getty.edu/aat/2\"]"
+      },
+      "returns": null
+    },
+    {
+      "client": "a",
+      "op": "move_entry",
+      "args": {
+        "path": "classified_as",
+        "key": "[\"classified_as\",\"http://vocab.getty.edu/aat/4\"]",
+        "before_key": "[\"classified_as\",\"http://vocab.getty.edu/aat/3\"]"
+      },
+      "returns": null
+    },
+    {
+      "client": "a",
+      "op": "list_entries",
+      "args": {
+        "path": "classified_as"
+      },
+      "returns": [
+        "[\"classified_as\",\"http://vocab.getty.edu/aat/5\"]",
+        "[\"classified_as\",\"http://vocab.getty.edu/aat/2\"]",
+        "[\"classified_as\",\"http://vocab.getty.edu/aat/4\"]",
+        "[\"classified_as\",\"http://vocab.getty.edu/aat/3\"]",
+        "[\"classified_as\",\"http://vocab.getty.edu/aat/1\"]"
+      ]
+    },
+    {
+      "client": "a",
+      "op": "move_entry",
+      "args": {
+        "path": "classified_as",
+        "key": "[\"classified_as\",\"http://vocab.getty.edu/aat/4\"]",
+        "before_key": "[\"classified_as\",\"http://vocab.getty.edu/aat/3\"]"
+      },
+      "returns": null
+    },
+    {
+      "client": "a",
+      "op": "move_entry",
+      "args": {
+        "path": "classified_as",
+        "key": "[\"classified_as\",\"http://vocab.getty.edu/aat/1\"]",
+        "before_key": null
+      },
+      "returns": null
+    },
+    {
+      "client": "a",
+      "op": "move_entry",
+      "args": {
+        "path": "classified_as",
+        "key": "[\"classified_as\",\"http://vocab.getty.edu/aat/2\"]",
+        "before_key": "[\"classified_as\",\"http://vocab.getty.edu/aat/2\"]"
+      },
+      "returns": null
+    },
+    {
+      "client": "a",
+      "op": "move_entry",
+      "args": {
+        "path": "classified_as[Type]",
+        "key": "[\"classified_as\",\"http://vocab.getty.edu/aat/2\"]",
+        "before_key": "[\"classified_as\",\"http://vocab.getty.edu/aat/5\"]"
+      },
+      "returns": null
+    },
+    {
+      "client": "a",
+      "op": "list_entries",
+      "args": {
+        "path": "classified_as"
+      },
+      "returns": [
+        "[\"classified_as\",\"http://vocab.getty.edu/aat/2\"]",
+        "[\"classified_as\",\"http://vocab.getty.edu/aat/5\"]",
+        "[\"classified_as\",\"http://vocab.getty.edu/aat/4\"]",
+        "[\"classified_as\",\"http://vocab.getty.edu/aat/3\"]",
+        "[\"classified_as\",\"http://vocab.getty.edu/aat/1\"]"
+      ]
+    },
+    {
+      "client": "a",
+      "op": "move_entry",
+      "args": {
+        "path": "classified_as",
+        "key": "[\"classified_as\",\"http://vocab.getty.edu/aat/9\"]",
+        "before_key": null
+      },
+      "error": "LAE-PROJ-008"
+    },
+    {
+      "client": "a",
+      "op": "move_entry",
+      "args": {
+        "path": "classified_as",
+        "key": "[\"classified_as\",\"http://vocab.getty.edu/aat/2\"]",
+        "before_key": "[\"classified_as\",\"http://vocab.getty.edu/aat/9\"]"
+      },
+      "error": "LAE-PROJ-008"
+    },
+    {
+      "client": "a",
+      "op": "move_entry",
+      "args": {
+        "path": "classified_as",
+        "key": "[\"member_of\",\"https://example.org/id/set-1\"]",
+        "before_key": null
+      },
+      "error": "LAE-PROJ-008"
+    },
+    {
+      "client": "a",
+      "op": "move_entry",
+      "args": {
+        "path": "classified_as",
+        "key": "classified_as",
+        "before_key": null
+      },
+      "error": "LAE-PROJ-008"
+    },
+    {
+      "client": "a",
+      "op": "remove_entry",
+      "args": {
+        "path": "classified_as",
+        "key": "[\"member_of\",\"https://example.org/id/set-1\"]"
+      },
+      "error": "LAE-PROJ-008"
+    },
+    {
+      "client": "a",
+      "op": "remove_entry",
+      "args": {
+        "path": "produced_by.classified_as",
+        "key": "[\"classified_as\",\"http://vocab.getty.edu/aat/2\"]"
+      },
+      "returns": false
+    },
+    {
+      "sync": [
+        "a",
+        "b"
+      ]
+    },
+    {
+      "client": "a",
+      "op": "move_entry",
+      "args": {
+        "path": "classified_as",
+        "key": "[\"classified_as\",\"http://vocab.getty.edu/aat/3\"]",
+        "before_key": "[\"classified_as\",\"http://vocab.getty.edu/aat/2\"]"
+      },
+      "returns": null
+    },
+    {
+      "client": "b",
+      "op": "add_reference",
+      "args": {
+        "path": "classified_as",
+        "uri": "http://vocab.getty.edu/aat/9",
+        "type": "Type",
+        "before_key": "[\"classified_as\",\"http://vocab.getty.edu/aat/3\"]"
+      },
+      "returns": "[\"classified_as\",\"http://vocab.getty.edu/aat/9\"]"
+    },
+    {
+      "sync": [
+        "a",
+        "b"
+      ]
+    },
+    {
+      "client": "b",
+      "op": "list_entries",
+      "args": {
+        "path": "classified_as"
+      },
+      "returns": [
+        "[\"classified_as\",\"http://vocab.getty.edu/aat/3\"]",
+        "[\"classified_as\",\"http://vocab.getty.edu/aat/2\"]",
+        "[\"classified_as\",\"http://vocab.getty.edu/aat/5\"]",
+        "[\"classified_as\",\"http://vocab.getty.edu/aat/4\"]",
+        "[\"classified_as\",\"http://vocab.getty.edu/aat/9\"]",
+        "[\"classified_as\",\"http://vocab.getty.edu/aat/1\"]"
+      ]
+    },
+    {
+      "client": "a",
+      "op": "remove_entry",
+      "args": {
+        "path": "classified_as",
+        "key": "[\"classified_as\",\"http://vocab.getty.edu/aat/1\"]"
+      },
+      "returns": true
+    },
+    {
+      "client": "a",
+      "op": "remove_entry",
+      "args": {
+        "path": "classified_as",
+        "key": "[\"classified_as\",\"http://vocab.getty.edu/aat/2\"]"
+      },
+      "returns": true
+    },
+    {
+      "client": "a",
+      "op": "remove_entry",
+      "args": {
+        "path": "classified_as",
+        "key": "[\"classified_as\",\"http://vocab.getty.edu/aat/3\"]"
+      },
+      "returns": true
+    },
+    {
+      "client": "a",
+      "op": "remove_entry",
+      "args": {
+        "path": "classified_as",
+        "key": "[\"classified_as\",\"http://vocab.getty.edu/aat/4\"]"
+      },
+      "returns": true
+    },
+    {
+      "client": "a",
+      "op": "remove_entry",
+      "args": {
+        "path": "classified_as",
+        "key": "[\"classified_as\",\"http://vocab.getty.edu/aat/5\"]"
+      },
+      "returns": true
+    },
+    {
+      "client": "a",
+      "op": "remove_entry",
+      "args": {
+        "path": "classified_as",
+        "key": "[\"classified_as\",\"http://vocab.getty.edu/aat/9\"]"
+      },
+      "returns": true
+    },
+    {
+      "client": "a",
+      "op": "remove_entry",
+      "args": {
+        "path": "classified_as",
+        "key": "[\"classified_as\",\"http://vocab.getty.edu/aat/1\"]"
+      },
+      "returns": false
+    },
+    {
+      "client": "a",
+      "op": "project",
+      "args": {},
+      "returns": {
+        "@context": "https://linked.art/ns/v1/linked-art.json",
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f",
+        "type": "HumanMadeObject",
+        "member_of": [
+          {
+            "type": "Set",
+            "id": "https://example.org/id/set-1"
+          }
+        ]
+      }
+    },
+    {
+      "client": "b",
+      "op": "add_reference",
+      "args": {
+        "path": "classified_as",
+        "uri": "http://vocab.getty.edu/aat/10",
+        "type": "Type",
+        "before_key": "[\"classified_as\",\"http://vocab.getty.edu/aat/1\"]"
+      },
+      "returns": "[\"classified_as\",\"http://vocab.getty.edu/aat/10\"]"
+    },
+    {
+      "client": "a",
+      "op": "remove_entry",
+      "args": {
+        "path": "member_of",
+        "key": "[\"member_of\",\"https://example.org/id/set-1\"]"
+      },
+      "returns": true
+    },
+    {
+      "sync": [
+        "a",
+        "b"
+      ]
+    }
+  ],
+  "expected": {
+    "@context": "https://linked.art/ns/v1/linked-art.json",
+    "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f",
+    "type": "HumanMadeObject",
+    "classified_as": [
+      {
+        "id": "http://vocab.getty.edu/aat/10",
+        "type": "Type"
+      }
+    ]
+  },
+  "expected_state": {
+    "map": {
+      "@context": {
+        "plain": "https://linked.art/ns/v1/linked-art.json"
+      },
+      "[\"classified_as\",\"http://vocab.getty.edu/aat/10\"]": {
+        "map": {
+          "_order": {
+            "plain": 3.375
+          },
+          "id": {
+            "plain": "http://vocab.getty.edu/aat/10"
+          },
+          "type": {
+            "plain": "Type"
+          }
+        }
+      },
+      "id": {
+        "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f"
+      },
+      "type": {
+        "plain": "HumanMadeObject"
+      }
+    }
+  }
+}

@@ -1,0 +1,563 @@
+{
+  "description": "An id that occurs twice in one array keeps both entries: the second is keyed '<id> #2'. Operations never add a duplicate: adding an item whose id is present under its base item key returns that entry. When the base item key is held by a different item the new entry takes the next unused suffix.",
+  "rules": [
+    "R6",
+    "R7"
+  ],
+  "record_uri": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f",
+  "clients": {
+    "a": 101
+  },
+  "initial": {
+    "@context": "https://linked.art/ns/v1/linked-art.json",
+    "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f",
+    "type": "HumanMadeObject",
+    "classified_as": [
+      {
+        "id": "http://vocab.getty.edu/aat/300027221",
+        "type": "Type"
+      },
+      {
+        "id": "http://vocab.getty.edu/aat/300404670",
+        "type": "Type"
+      },
+      {
+        "id": "http://vocab.getty.edu/aat/300027221",
+        "type": "Type",
+        "_label": "again"
+      }
+    ],
+    "member_of": [
+      {
+        "id": "https://example.org/thing/z",
+        "type": "Set",
+        "identified_by": [
+          {
+            "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000001",
+            "type": "Name",
+            "content": "first"
+          }
+        ]
+      },
+      {
+        "id": "https://example.org/thing/z",
+        "type": "Set",
+        "identified_by": [
+          {
+            "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002",
+            "type": "Name",
+            "content": "second"
+          }
+        ]
+      },
+      {
+        "id": "https://example.org/thing/z",
+        "type": "Set"
+      }
+    ]
+  },
+  "initial_update": "ASjmqITG463kBAAoAQZyZWNvcmQIQGNvbnRleHQBdyhodHRwczovL2xpbmtlZC5hcnQvbnMvdjEvbGlua2VkLWFydC5qc29uKAEGcmVjb3JkAmlkAXc7aHR0cHM6Ly9leGFtcGxlLm9yZy9pZC8wMTkyZjBjMS03YjFlLTdjM2EtOWQyZS01YTFiMmMzZDRlNWYoAQZyZWNvcmQEdHlwZQF3D0h1bWFuTWFkZU9iamVjdCcBBnJlY29yZDhbImNsYXNzaWZpZWRfYXMiLCJodHRwOi8vdm9jYWIuZ2V0dHkuZWR1L2FhdC8zMDAwMjcyMjEiXQEoAOaohMbjreQEAwJpZAF3JGh0dHA6Ly92b2NhYi5nZXR0eS5lZHUvYWF0LzMwMDAyNzIyMSgA5qiExuOt5AQDBHR5cGUBdwRUeXBlKADmqITG463kBAMGX29yZGVyAXwAAAAAJwEGcmVjb3JkOFsiY2xhc3NpZmllZF9hcyIsImh0dHA6Ly92b2NhYi5nZXR0eS5lZHUvYWF0LzMwMDQwNDY3MCJdASgA5qiExuOt5AQHAmlkAXckaHR0cDovL3ZvY2FiLmdldHR5LmVkdS9hYXQvMzAwNDA0NjcwKADmqITG463kBAcEdHlwZQF3BFR5cGUoAOaohMbjreQEBwZfb3JkZXIBfD+AAAAnAQZyZWNvcmQ7WyJjbGFzc2lmaWVkX2FzIiwiaHR0cDovL3ZvY2FiLmdldHR5LmVkdS9hYXQvMzAwMDI3MjIxICMyIl0BKADmqITG463kBAsCaWQBdyRodHRwOi8vdm9jYWIuZ2V0dHkuZWR1L2FhdC8zMDAwMjcyMjEoAOaohMbjreQECwR0eXBlAXcEVHlwZSgA5qiExuOt5AQLBl9sYWJlbAF3BWFnYWluKADmqITG463kBAsGX29yZGVyAXxAAAAAJwEGcmVjb3JkK1sibWVtYmVyX29mIiwiaHR0cHM6Ly9leGFtcGxlLm9yZy90aGluZy96Il0BKADmqITG463kBBACaWQBdxtodHRwczovL2V4YW1wbGUub3JnL3RoaW5nL3ooAOaohMbjreQEEAR0eXBlAXcDU2V0JwDmqITG463kBBB5WyJpZGVudGlmaWVkX2J5IiwiaHR0cHM6Ly9leGFtcGxlLm9yZy9pZC8wMTkyZjBjMS03YjFlLTdjM2EtOWQyZS01YTFiMmMzZDRlNWYvbm9kZS8wMTkyZjBjMS03YjFlLTcwMDAtODAwMC0wMDAwMDAwMDAwMDEiXQEoAOaohMbjreQEEwJpZAF3ZWh0dHBzOi8vZXhhbXBsZS5vcmcvaWQvMDE5MmYwYzEtN2IxZS03YzNhLTlkMmUtNWExYjJjM2Q0ZTVmL25vZGUvMDE5MmYwYzEtN2IxZS03MDAwLTgwMDAtMDAwMDAwMDAwMDAxKADmqITG463kBBMEdHlwZQF3BE5hbWUnAOaohMbjreQEEwdjb250ZW50AgQA5qiExuOt5AQWBWZpcnN0KADmqITG463kBBMGX29yZGVyAXwAAAAAKADmqITG463kBBAGX29yZGVyAXwAAAAAJwEGcmVjb3JkLlsibWVtYmVyX29mIiwiaHR0cHM6Ly9leGFtcGxlLm9yZy90aGluZy96ICMyIl0BKADmqITG463kBB4CaWQBdxtodHRwczovL2V4YW1wbGUub3JnL3RoaW5nL3ooAOaohMbjreQEHgR0eXBlAXcDU2V0JwDmqITG463kBB55WyJpZGVudGlmaWVkX2J5IiwiaHR0cHM6Ly9leGFtcGxlLm9yZy9pZC8wMTkyZjBjMS03YjFlLTdjM2EtOWQyZS01YTFiMmMzZDRlNWYvbm9kZS8wMTkyZjBjMS03YjFlLTcwMDAtODAwMC0wMDAwMDAwMDAwMDIiXQEoAOaohMbjreQEIQJpZAF3ZWh0dHBzOi8vZXhhbXBsZS5vcmcvaWQvMDE5MmYwYzEtN2IxZS03YzNhLTlkMmUtNWExYjJjM2Q0ZTVmL25vZGUvMDE5MmYwYzEtN2IxZS03MDAwLTgwMDAtMDAwMDAwMDAwMDAyKADmqITG463kBCEEdHlwZQF3BE5hbWUnAOaohMbjreQEIQdjb250ZW50AgQA5qiExuOt5AQkBnNlY29uZCgA5qiExuOt5AQhBl9vcmRlcgF8AAAAACgA5qiExuOt5AQeBl9vcmRlcgF8P4AAACcBBnJlY29yZC5bIm1lbWJlcl9vZiIsImh0dHBzOi8vZXhhbXBsZS5vcmcvdGhpbmcveiAjMyJdASgA5qiExuOt5AQtAmlkAXcbaHR0cHM6Ly9leGFtcGxlLm9yZy90aGluZy96KADmqITG463kBC0EdHlwZQF3A1NldCgA5qiExuOt5AQtBl9vcmRlcgF8QAAAAAA=",
+  "initial_state": {
+    "map": {
+      "@context": {
+        "plain": "https://linked.art/ns/v1/linked-art.json"
+      },
+      "[\"classified_as\",\"http://vocab.getty.edu/aat/300027221 #2\"]": {
+        "map": {
+          "_label": {
+            "plain": "again"
+          },
+          "_order": {
+            "plain": 2.0
+          },
+          "id": {
+            "plain": "http://vocab.getty.edu/aat/300027221"
+          },
+          "type": {
+            "plain": "Type"
+          }
+        }
+      },
+      "[\"classified_as\",\"http://vocab.getty.edu/aat/300027221\"]": {
+        "map": {
+          "_order": {
+            "plain": 0.0
+          },
+          "id": {
+            "plain": "http://vocab.getty.edu/aat/300027221"
+          },
+          "type": {
+            "plain": "Type"
+          }
+        }
+      },
+      "[\"classified_as\",\"http://vocab.getty.edu/aat/300404670\"]": {
+        "map": {
+          "_order": {
+            "plain": 1.0
+          },
+          "id": {
+            "plain": "http://vocab.getty.edu/aat/300404670"
+          },
+          "type": {
+            "plain": "Type"
+          }
+        }
+      },
+      "[\"member_of\",\"https://example.org/thing/z #2\"]": {
+        "map": {
+          "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]": {
+            "map": {
+              "_order": {
+                "plain": 0.0
+              },
+              "content": {
+                "text": "second"
+              },
+              "id": {
+                "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002"
+              },
+              "type": {
+                "plain": "Name"
+              }
+            }
+          },
+          "_order": {
+            "plain": 1.0
+          },
+          "id": {
+            "plain": "https://example.org/thing/z"
+          },
+          "type": {
+            "plain": "Set"
+          }
+        }
+      },
+      "[\"member_of\",\"https://example.org/thing/z #3\"]": {
+        "map": {
+          "_order": {
+            "plain": 2.0
+          },
+          "id": {
+            "plain": "https://example.org/thing/z"
+          },
+          "type": {
+            "plain": "Set"
+          }
+        }
+      },
+      "[\"member_of\",\"https://example.org/thing/z\"]": {
+        "map": {
+          "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000001\"]": {
+            "map": {
+              "_order": {
+                "plain": 0.0
+              },
+              "content": {
+                "text": "first"
+              },
+              "id": {
+                "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000001"
+              },
+              "type": {
+                "plain": "Name"
+              }
+            }
+          },
+          "_order": {
+            "plain": 0.0
+          },
+          "id": {
+            "plain": "https://example.org/thing/z"
+          },
+          "type": {
+            "plain": "Set"
+          }
+        }
+      },
+      "id": {
+        "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f"
+      },
+      "type": {
+        "plain": "HumanMadeObject"
+      }
+    }
+  },
+  "steps": [
+    {
+      "client": "a",
+      "op": "list_entries",
+      "args": {
+        "path": "classified_as"
+      },
+      "returns": [
+        "[\"classified_as\",\"http://vocab.getty.edu/aat/300027221\"]",
+        "[\"classified_as\",\"http://vocab.getty.edu/aat/300404670\"]",
+        "[\"classified_as\",\"http://vocab.getty.edu/aat/300027221 #2\"]"
+      ]
+    },
+    {
+      "client": "a",
+      "op": "list_entries",
+      "args": {
+        "path": "member_of"
+      },
+      "returns": [
+        "[\"member_of\",\"https://example.org/thing/z\"]",
+        "[\"member_of\",\"https://example.org/thing/z #2\"]",
+        "[\"member_of\",\"https://example.org/thing/z #3\"]"
+      ]
+    },
+    {
+      "client": "a",
+      "op": "add_reference",
+      "args": {
+        "path": "classified_as",
+        "uri": "http://vocab.getty.edu/aat/300027221",
+        "type": "Type",
+        "label": "not added"
+      },
+      "returns": "[\"classified_as\",\"http://vocab.getty.edu/aat/300027221\"]"
+    },
+    {
+      "client": "a",
+      "op": "remove_entry",
+      "args": {
+        "path": "classified_as",
+        "key": "[\"classified_as\",\"http://vocab.getty.edu/aat/300027221\"]"
+      },
+      "returns": true
+    },
+    {
+      "client": "a",
+      "op": "get_path",
+      "args": {
+        "path": "classified_as"
+      },
+      "returns": [
+        {
+          "type": "Type",
+          "id": "http://vocab.getty.edu/aat/300404670"
+        },
+        {
+          "_label": "again",
+          "id": "http://vocab.getty.edu/aat/300027221",
+          "type": "Type"
+        }
+      ]
+    },
+    {
+      "client": "a",
+      "op": "add_reference",
+      "args": {
+        "path": "classified_as",
+        "uri": "http://vocab.getty.edu/aat/300027221",
+        "type": "Type",
+        "label": "not added: held as #2"
+      },
+      "returns": "[\"classified_as\",\"http://vocab.getty.edu/aat/300027221 #2\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_reference",
+      "args": {
+        "path": "classified_as",
+        "uri": "http://vocab.getty.edu/aat/300027221 #2",
+        "type": "Type"
+      },
+      "returns": "[\"classified_as\",\"http://vocab.getty.edu/aat/300027221 #2 #2\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_reference",
+      "args": {
+        "path": "classified_as",
+        "uri": "http://vocab.getty.edu/aat/300027221 #2",
+        "type": "Type",
+        "label": "not added"
+      },
+      "returns": "[\"classified_as\",\"http://vocab.getty.edu/aat/300027221 #2 #2\"]"
+    },
+    {
+      "client": "a",
+      "op": "list_entries",
+      "args": {
+        "path": "classified_as"
+      },
+      "returns": [
+        "[\"classified_as\",\"http://vocab.getty.edu/aat/300404670\"]",
+        "[\"classified_as\",\"http://vocab.getty.edu/aat/300027221 #2\"]",
+        "[\"classified_as\",\"http://vocab.getty.edu/aat/300027221 #2 #2\"]"
+      ]
+    },
+    {
+      "client": "a",
+      "op": "remove_entry",
+      "args": {
+        "path": "classified_as",
+        "key": "[\"classified_as\",\"http://vocab.getty.edu/aat/300027221 #2\"]"
+      },
+      "returns": true
+    },
+    {
+      "client": "a",
+      "op": "remove_entry",
+      "args": {
+        "path": "classified_as",
+        "key": "[\"classified_as\",\"http://vocab.getty.edu/aat/300027221 #2\"]"
+      },
+      "returns": false
+    },
+    {
+      "client": "a",
+      "op": "add_node",
+      "args": {
+        "path": "member_of",
+        "node": {
+          "id": "https://example.org/thing/z",
+          "type": "Set",
+          "_label": "no"
+        }
+      },
+      "returns": "[\"member_of\",\"https://example.org/thing/z\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_node",
+      "args": {
+        "path": "member_of[Set]",
+        "node": {
+          "id": "https://example.org/thing/z/other",
+          "identified_by": [
+            {
+              "type": "Name",
+              "content": "kept id"
+            }
+          ]
+        },
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000003"
+        ]
+      },
+      "returns": "[\"member_of\",\"https://example.org/thing/z/other\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_node",
+      "args": {
+        "path": "member_of",
+        "node": {
+          "id": "https://example.org/thing/z/other",
+          "type": "Set"
+        }
+      },
+      "returns": "[\"member_of\",\"https://example.org/thing/z/other\"]"
+    },
+    {
+      "client": "a",
+      "op": "list_entries",
+      "args": {
+        "path": "member_of"
+      },
+      "returns": [
+        "[\"member_of\",\"https://example.org/thing/z\"]",
+        "[\"member_of\",\"https://example.org/thing/z #2\"]",
+        "[\"member_of\",\"https://example.org/thing/z #3\"]",
+        "[\"member_of\",\"https://example.org/thing/z/other\"]"
+      ]
+    }
+  ],
+  "expected": {
+    "@context": "https://linked.art/ns/v1/linked-art.json",
+    "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f",
+    "type": "HumanMadeObject",
+    "member_of": [
+      {
+        "id": "https://example.org/thing/z",
+        "type": "Set",
+        "identified_by": [
+          {
+            "content": "first",
+            "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000001",
+            "type": "Name"
+          }
+        ]
+      },
+      {
+        "type": "Set",
+        "id": "https://example.org/thing/z",
+        "identified_by": [
+          {
+            "content": "second",
+            "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002",
+            "type": "Name"
+          }
+        ]
+      },
+      {
+        "id": "https://example.org/thing/z",
+        "type": "Set"
+      },
+      {
+        "id": "https://example.org/thing/z/other",
+        "type": "Set",
+        "identified_by": [
+          {
+            "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000003",
+            "content": "kept id",
+            "type": "Name"
+          }
+        ]
+      }
+    ],
+    "classified_as": [
+      {
+        "type": "Type",
+        "id": "http://vocab.getty.edu/aat/300404670"
+      },
+      {
+        "id": "http://vocab.getty.edu/aat/300027221 #2",
+        "type": "Type"
+      }
+    ]
+  },
+  "expected_state": {
+    "map": {
+      "@context": {
+        "plain": "https://linked.art/ns/v1/linked-art.json"
+      },
+      "[\"classified_as\",\"http://vocab.getty.edu/aat/300027221 #2 #2\"]": {
+        "map": {
+          "_order": {
+            "plain": 3.0
+          },
+          "id": {
+            "plain": "http://vocab.getty.edu/aat/300027221 #2"
+          },
+          "type": {
+            "plain": "Type"
+          }
+        }
+      },
+      "[\"classified_as\",\"http://vocab.getty.edu/aat/300404670\"]": {
+        "map": {
+          "_order": {
+            "plain": 1.0
+          },
+          "id": {
+            "plain": "http://vocab.getty.edu/aat/300404670"
+          },
+          "type": {
+            "plain": "Type"
+          }
+        }
+      },
+      "[\"member_of\",\"https://example.org/thing/z #2\"]": {
+        "map": {
+          "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]": {
+            "map": {
+              "_order": {
+                "plain": 0.0
+              },
+              "content": {
+                "text": "second"
+              },
+              "id": {
+                "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002"
+              },
+              "type": {
+                "plain": "Name"
+              }
+            }
+          },
+          "_order": {
+            "plain": 1.0
+          },
+          "id": {
+            "plain": "https://example.org/thing/z"
+          },
+          "type": {
+            "plain": "Set"
+          }
+        }
+      },
+      "[\"member_of\",\"https://example.org/thing/z #3\"]": {
+        "map": {
+          "_order": {
+            "plain": 2.0
+          },
+          "id": {
+            "plain": "https://example.org/thing/z"
+          },
+          "type": {
+            "plain": "Set"
+          }
+        }
+      },
+      "[\"member_of\",\"https://example.org/thing/z\"]": {
+        "map": {
+          "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000001\"]": {
+            "map": {
+              "_order": {
+                "plain": 0.0
+              },
+              "content": {
+                "text": "first"
+              },
+              "id": {
+                "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000001"
+              },
+              "type": {
+                "plain": "Name"
+              }
+            }
+          },
+          "_order": {
+            "plain": 0.0
+          },
+          "id": {
+            "plain": "https://example.org/thing/z"
+          },
+          "type": {
+            "plain": "Set"
+          }
+        }
+      },
+      "[\"member_of\",\"https://example.org/thing/z/other\"]": {
+        "map": {
+          "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000003\"]": {
+            "map": {
+              "_order": {
+                "plain": 0.0
+              },
+              "content": {
+                "text": "kept id"
+              },
+              "id": {
+                "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000003"
+              },
+              "type": {
+                "plain": "Name"
+              }
+            }
+          },
+          "_order": {
+            "plain": 3.0
+          },
+          "id": {
+            "plain": "https://example.org/thing/z/other"
+          },
+          "type": {
+            "plain": "Set"
+          }
+        }
+      },
+      "id": {
+        "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f"
+      },
+      "type": {
+        "plain": "HumanMadeObject"
+      }
+    }
+  }
+}

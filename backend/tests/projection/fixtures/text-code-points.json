@@ -1,0 +1,470 @@
+{
+  "description": "Text positions count Unicode code points, whatever the library counts (UTF-8 bytes in pycrdt, UTF-16 code units in Yjs). set_scalar on an existing Text applies the one splice between the longest common prefix and suffix, so concurrent edits elsewhere in the text survive. content is a Text only on Name, Identifier and LinguisticObject.",
+  "rules": [
+    "R8",
+    "R19",
+    "R23"
+  ],
+  "record_uri": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f",
+  "clients": {
+    "a": 101,
+    "b": 202
+  },
+  "initial": {
+    "@context": "https://linked.art/ns/v1/linked-art.json",
+    "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f",
+    "type": "HumanMadeObject",
+    "identified_by": [
+      {
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000001",
+        "type": "Name",
+        "content": "a😀b𝒳c"
+      }
+    ],
+    "referred_to_by": [
+      {
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002",
+        "type": "LinguisticObject",
+        "content": "naïve café 🎨 — 終わり"
+      }
+    ],
+    "classified_as": [
+      {
+        "id": "http://vocab.getty.edu/aat/300033618",
+        "type": "Type",
+        "content": "plain 😀"
+      }
+    ]
+  },
+  "initial_update": "ARTZ7Y7c+pPNDAAoAQZyZWNvcmQIQGNvbnRleHQBdyhodHRwczovL2xpbmtlZC5hcnQvbnMvdjEvbGlua2VkLWFydC5qc29uKAEGcmVjb3JkAmlkAXc7aHR0cHM6Ly9leGFtcGxlLm9yZy9pZC8wMTkyZjBjMS03YjFlLTdjM2EtOWQyZS01YTFiMmMzZDRlNWYoAQZyZWNvcmQEdHlwZQF3D0h1bWFuTWFkZU9iamVjdCcBBnJlY29yZHlbImlkZW50aWZpZWRfYnkiLCJodHRwczovL2V4YW1wbGUub3JnL2lkLzAxOTJmMGMxLTdiMWUtN2MzYS05ZDJlLTVhMWIyYzNkNGU1Zi9ub2RlLzAxOTJmMGMxLTdiMWUtNzAwMC04MDAwLTAwMDAwMDAwMDAwMSJdASgA2e2O3PqTzQwDAmlkAXdlaHR0cHM6Ly9leGFtcGxlLm9yZy9pZC8wMTkyZjBjMS03YjFlLTdjM2EtOWQyZS01YTFiMmMzZDRlNWYvbm9kZS8wMTkyZjBjMS03YjFlLTcwMDAtODAwMC0wMDAwMDAwMDAwMDEoANntjtz6k80MAwR0eXBlAXcETmFtZScA2e2O3PqTzQwDB2NvbnRlbnQCBADZ7Y7c+pPNDAYLYfCfmIBi8J2Ss2MoANntjtz6k80MAwZfb3JkZXIBfAAAAAAnAQZyZWNvcmR6WyJyZWZlcnJlZF90b19ieSIsImh0dHBzOi8vZXhhbXBsZS5vcmcvaWQvMDE5MmYwYzEtN2IxZS03YzNhLTlkMmUtNWExYjJjM2Q0ZTVmL25vZGUvMDE5MmYwYzEtN2IxZS03MDAwLTgwMDAtMDAwMDAwMDAwMDAyIl0BKADZ7Y7c+pPNDA8CaWQBd2VodHRwczovL2V4YW1wbGUub3JnL2lkLzAxOTJmMGMxLTdiMWUtN2MzYS05ZDJlLTVhMWIyYzNkNGU1Zi9ub2RlLzAxOTJmMGMxLTdiMWUtNzAwMC04MDAwLTAwMDAwMDAwMDAwMigA2e2O3PqTzQwPBHR5cGUBdxBMaW5ndWlzdGljT2JqZWN0JwDZ7Y7c+pPNDA8HY29udGVudAIEANntjtz6k80MEh9uYcOvdmUgY2Fmw6kg8J+OqCDigJQg57WC44KP44KKKADZ7Y7c+pPNDA8GX29yZGVyAXwAAAAAJwEGcmVjb3JkOFsiY2xhc3NpZmllZF9hcyIsImh0dHA6Ly92b2NhYi5nZXR0eS5lZHUvYWF0LzMwMDAzMzYxOCJdASgA2e2O3PqTzQwnAmlkAXckaHR0cDovL3ZvY2FiLmdldHR5LmVkdS9hYXQvMzAwMDMzNjE4KADZ7Y7c+pPNDCcEdHlwZQF3BFR5cGUoANntjtz6k80MJwdjb250ZW50AXcKcGxhaW4g8J+YgCgA2e2O3PqTzQwnBl9vcmRlcgF8AAAAAAA=",
+  "initial_state": {
+    "map": {
+      "@context": {
+        "plain": "https://linked.art/ns/v1/linked-art.json"
+      },
+      "[\"classified_as\",\"http://vocab.getty.edu/aat/300033618\"]": {
+        "map": {
+          "_order": {
+            "plain": 0.0
+          },
+          "content": {
+            "plain": "plain 😀"
+          },
+          "id": {
+            "plain": "http://vocab.getty.edu/aat/300033618"
+          },
+          "type": {
+            "plain": "Type"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000001\"]": {
+        "map": {
+          "_order": {
+            "plain": 0.0
+          },
+          "content": {
+            "text": "a😀b𝒳c"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000001"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"referred_to_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]": {
+        "map": {
+          "_order": {
+            "plain": 0.0
+          },
+          "content": {
+            "text": "naïve café 🎨 — 終わり"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002"
+          },
+          "type": {
+            "plain": "LinguisticObject"
+          }
+        }
+      },
+      "id": {
+        "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f"
+      },
+      "type": {
+        "plain": "HumanMadeObject"
+      }
+    }
+  },
+  "steps": [
+    {
+      "client": "a",
+      "op": "splice_text",
+      "args": {
+        "path": "identified_by[Name].content",
+        "index": 2,
+        "delete": 0,
+        "insert": "é"
+      },
+      "returns": null
+    },
+    {
+      "client": "b",
+      "op": "splice_text",
+      "args": {
+        "path": "identified_by[Name].content",
+        "index": 4,
+        "delete": 0,
+        "insert": "🎨🎨"
+      },
+      "returns": null
+    },
+    {
+      "sync": [
+        "a",
+        "b"
+      ]
+    },
+    {
+      "client": "a",
+      "op": "get_path",
+      "args": {
+        "path": "identified_by[Name].content"
+      },
+      "returns": [
+        "a😀éb𝒳🎨🎨c"
+      ]
+    },
+    {
+      "client": "a",
+      "op": "set_scalar",
+      "args": {
+        "path": "identified_by[Name].content",
+        "value": "a😀éB𝒳🎨🎨c"
+      },
+      "returns": null
+    },
+    {
+      "client": "b",
+      "op": "splice_text",
+      "args": {
+        "path": "identified_by[Name].content",
+        "index": 7,
+        "delete": 1,
+        "insert": "𝒴!"
+      },
+      "returns": null
+    },
+    {
+      "sync": [
+        "a",
+        "b"
+      ]
+    },
+    {
+      "client": "b",
+      "op": "get_path",
+      "args": {
+        "path": "identified_by[Name].content"
+      },
+      "returns": [
+        "a😀éB𝒳🎨🎨𝒴!"
+      ]
+    },
+    {
+      "client": "a",
+      "op": "splice_text",
+      "args": {
+        "path": "identified_by[Name].content",
+        "index": 1,
+        "delete": 2,
+        "insert": ""
+      },
+      "returns": null
+    },
+    {
+      "client": "a",
+      "op": "splice_text",
+      "args": {
+        "path": "identified_by[Name].content",
+        "index": 7,
+        "delete": 0,
+        "insert": "."
+      },
+      "returns": null
+    },
+    {
+      "client": "a",
+      "op": "splice_text",
+      "args": {
+        "path": "identified_by[Name].content",
+        "index": 8,
+        "delete": 1,
+        "insert": "x"
+      },
+      "error": "LAE-PROJ-008"
+    },
+    {
+      "client": "a",
+      "op": "splice_text",
+      "args": {
+        "path": "identified_by[Name].content",
+        "index": 9,
+        "delete": 0,
+        "insert": "x"
+      },
+      "error": "LAE-PROJ-008"
+    },
+    {
+      "client": "a",
+      "op": "splice_text",
+      "args": {
+        "path": "identified_by[Name].content",
+        "index": -1,
+        "delete": 0,
+        "insert": "x"
+      },
+      "error": "LAE-PROJ-008"
+    },
+    {
+      "client": "a",
+      "op": "splice_text",
+      "args": {
+        "path": "classified_as[Type].content",
+        "index": 0,
+        "delete": 0,
+        "insert": "x"
+      },
+      "error": "LAE-PROJ-007"
+    },
+    {
+      "client": "a",
+      "op": "splice_text",
+      "args": {
+        "path": "identified_by[Identifier].content",
+        "index": 0,
+        "delete": 0,
+        "insert": "x"
+      },
+      "error": "LAE-PROJ-007"
+    },
+    {
+      "client": "a",
+      "op": "set_scalar",
+      "args": {
+        "path": "referred_to_by[LinguisticObject].content",
+        "value": "Naïve café 🎨 — 終わり"
+      },
+      "returns": null
+    },
+    {
+      "client": "b",
+      "op": "set_scalar",
+      "args": {
+        "path": "referred_to_by[LinguisticObject].content",
+        "value": "naïve café 🎨 — 終わり。"
+      },
+      "returns": null
+    },
+    {
+      "sync": [
+        "a",
+        "b"
+      ]
+    },
+    {
+      "client": "a",
+      "op": "get_path",
+      "args": {
+        "path": "referred_to_by[LinguisticObject].content"
+      },
+      "returns": [
+        "Naïve café 🎨 — 終わり。"
+      ]
+    },
+    {
+      "client": "a",
+      "op": "set_scalar",
+      "args": {
+        "path": "referred_to_by[LinguisticObject].content",
+        "value": "Naïve 🎨🎨 — 終わり。"
+      },
+      "returns": null
+    },
+    {
+      "client": "a",
+      "op": "set_scalar",
+      "args": {
+        "path": "referred_to_by[LinguisticObject].content",
+        "value": "Naïve 🎨🎨 — 終わり。"
+      },
+      "returns": null
+    },
+    {
+      "client": "a",
+      "op": "set_scalar",
+      "args": {
+        "path": "referred_to_by[LinguisticObject].content",
+        "value": ""
+      },
+      "returns": null
+    },
+    {
+      "client": "a",
+      "op": "set_scalar",
+      "args": {
+        "path": "referred_to_by[LinguisticObject].content",
+        "value": "𝒳"
+      },
+      "returns": null
+    },
+    {
+      "client": "a",
+      "op": "set_scalar",
+      "args": {
+        "path": "classified_as[Type].content",
+        "value": "plain 𝒳"
+      },
+      "returns": null
+    },
+    {
+      "client": "a",
+      "op": "set_scalar",
+      "args": {
+        "path": "identified_by[Identifier].content",
+        "value": "INV 😀 1",
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000003"
+        ]
+      },
+      "returns": null
+    },
+    {
+      "client": "a",
+      "op": "splice_text",
+      "args": {
+        "path": "identified_by[Identifier].content",
+        "index": 5,
+        "delete": 0,
+        "insert": "7"
+      },
+      "returns": null
+    },
+    {
+      "sync": [
+        "a",
+        "b"
+      ]
+    }
+  ],
+  "expected": {
+    "type": "HumanMadeObject",
+    "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f",
+    "@context": "https://linked.art/ns/v1/linked-art.json",
+    "referred_to_by": [
+      {
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002",
+        "content": "𝒳",
+        "type": "LinguisticObject"
+      }
+    ],
+    "classified_as": [
+      {
+        "content": "plain 𝒳",
+        "id": "http://vocab.getty.edu/aat/300033618",
+        "type": "Type"
+      }
+    ],
+    "identified_by": [
+      {
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000001",
+        "type": "Name",
+        "content": "aB𝒳🎨🎨𝒴!."
+      },
+      {
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000003",
+        "type": "Identifier",
+        "content": "INV 😀7 1"
+      }
+    ]
+  },
+  "expected_state": {
+    "map": {
+      "@context": {
+        "plain": "https://linked.art/ns/v1/linked-art.json"
+      },
+      "[\"classified_as\",\"http://vocab.getty.edu/aat/300033618\"]": {
+        "map": {
+          "_order": {
+            "plain": 0.0
+          },
+          "content": {
+            "plain": "plain 𝒳"
+          },
+          "id": {
+            "plain": "http://vocab.getty.edu/aat/300033618"
+          },
+          "type": {
+            "plain": "Type"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000001\"]": {
+        "map": {
+          "_order": {
+            "plain": 0.0
+          },
+          "content": {
+            "text": "aB𝒳🎨🎨𝒴!."
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000001"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000003\"]": {
+        "map": {
+          "_order": {
+            "plain": 1.0
+          },
+          "content": {
+            "text": "INV 😀7 1"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000003"
+          },
+          "type": {
+            "plain": "Identifier"
+          }
+        }
+      },
+      "[\"referred_to_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]": {
+        "map": {
+          "_order": {
+            "plain": 0.0
+          },
+          "content": {
+            "text": "𝒳"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002"
+          },
+          "type": {
+            "plain": "LinguisticObject"
+          }
+        }
+      },
+      "id": {
+        "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f"
+      },
+      "type": {
+        "plain": "HumanMadeObject"
+      }
+    }
+  }
+}

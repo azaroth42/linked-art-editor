@@ -266,3 +266,30 @@ Spike S6 (`docs/spikes/S6-bootstrap.md`) is a **GO**: 1M records bootstrap in 10
    differently (it cannot end the string, so it is not an injection). Phase 2 Step 2.2, which
    builds queries from user input with it, should apply the same escape, and the fix should go
    upstream to `lux/qlever-middletier`. No decision needed.
+
+## Step 1.4
+
+1. **Rules R20–R25 and a refinement of R7 were added to `docs/spikes/S3-projection.md`.** The
+   spike fixed the document layout and the entry primitives but not how the path operations
+   behave, and the TypeScript mirror (Step 1.17) has to match them exactly. Nothing in R1–R19
+   changed except R7's no-op, which now also applies when the item survives only as a ` #n`
+   duplicate (otherwise an operation could create a duplicate). Points a human may want to
+   confirm: (a) a missing intermediate node is created single-valued only for ten properties
+   (`timespan`, `produced_by`, `created_by`, `destroyed_by`, `born`, `died`, `formed_by`,
+   `dissolved_by`, `duration`, `paid_amount`) and as an array entry otherwise, which then needs a
+   class filter in the path; (b) `add_node` and `add_reference` return the **entry key**, not the
+   node IRI, because that is what `remove_entry` and `move_entry` take (S3 section 5); (c) operations
+   beyond the guide's six were needed and added: `set_object`, `remove_value`, `splice_text`,
+   `list_entries`, `get_entry`, and a `base` argument for editing inside one array entry.
+   **Review (PR #117) added to R20:** a path given to an operation that writes or removes may
+   not name `id` or `type` (`LAE-PROJ-007`). Before that, `set_scalar(doc, "id", …)` replaced the
+   record URI, and a path that had to create a node and then write its `type` (for example
+   `add_reference(doc, "identified_by[Identifier].type", …)`) failed after creating the node. A
+   node's `type` is therefore changed only by replacing the node; say so if in-place type edits
+   are wanted, since they need a rule for the `content` `Text` (R8.2) as well. `_label` cannot be
+   named by a path either (the grammar excludes it): it is written with the node or reference
+   (`add_reference(label=…)`, `set_object`).
+2. **Not verified here:** the TypeScript mirror does not exist yet, so "same Y.Doc state in both
+   implementations" rests on the shared fixtures plus a manual Yjs 13.6.33 check of the
+   library-dependent outcomes (last-writer-wins by client id, write against removal, concurrent
+   `Text` splices). Step 1.17 must run every fixture unchanged.

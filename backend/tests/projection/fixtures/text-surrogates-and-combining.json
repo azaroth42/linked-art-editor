@@ -1,0 +1,384 @@
+{
+  "description": "The splice of set_scalar is computed on code points, never on UTF-16 code units or on normalized text. U+1F600 and U+1F601 share their high surrogate and U+1F600 and U+1FA00 their low surrogate: a prefix or suffix counted in code units would cut a character in half. 'e' + U+0301 and U+00E9 are different strings: both code points are replaced. Each case has a concurrent insert next to the replaced character, which lands where it would only if the splice is exactly (index, delete, insert) as R23 gives it. splice_text takes integers and a string.",
+  "rules": [
+    "R19",
+    "R23"
+  ],
+  "record_uri": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f",
+  "clients": {
+    "a": 101,
+    "b": 202
+  },
+  "initial": {
+    "@context": "https://linked.art/ns/v1/linked-art.json",
+    "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f",
+    "type": "HumanMadeObject",
+    "identified_by": [
+      {
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000001",
+        "type": "Name",
+        "content": "x😀y"
+      },
+      {
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002",
+        "type": "Name",
+        "content": "😀z"
+      },
+      {
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000003",
+        "type": "Name",
+        "content": "café"
+      }
+    ]
+  },
+  "initial_update": "ARXGtMX7ybzbAgAoAQZyZWNvcmQIQGNvbnRleHQBdyhodHRwczovL2xpbmtlZC5hcnQvbnMvdjEvbGlua2VkLWFydC5qc29uKAEGcmVjb3JkAmlkAXc7aHR0cHM6Ly9leGFtcGxlLm9yZy9pZC8wMTkyZjBjMS03YjFlLTdjM2EtOWQyZS01YTFiMmMzZDRlNWYoAQZyZWNvcmQEdHlwZQF3D0h1bWFuTWFkZU9iamVjdCcBBnJlY29yZHlbImlkZW50aWZpZWRfYnkiLCJodHRwczovL2V4YW1wbGUub3JnL2lkLzAxOTJmMGMxLTdiMWUtN2MzYS05ZDJlLTVhMWIyYzNkNGU1Zi9ub2RlLzAxOTJmMGMxLTdiMWUtNzAwMC04MDAwLTAwMDAwMDAwMDAwMSJdASgAxrTF+8m82wIDAmlkAXdlaHR0cHM6Ly9leGFtcGxlLm9yZy9pZC8wMTkyZjBjMS03YjFlLTdjM2EtOWQyZS01YTFiMmMzZDRlNWYvbm9kZS8wMTkyZjBjMS03YjFlLTcwMDAtODAwMC0wMDAwMDAwMDAwMDEoAMa0xfvJvNsCAwR0eXBlAXcETmFtZScAxrTF+8m82wIDB2NvbnRlbnQCBADGtMX7ybzbAgYGePCfmIB5KADGtMX7ybzbAgMGX29yZGVyAXwAAAAAJwEGcmVjb3JkeVsiaWRlbnRpZmllZF9ieSIsImh0dHBzOi8vZXhhbXBsZS5vcmcvaWQvMDE5MmYwYzEtN2IxZS03YzNhLTlkMmUtNWExYjJjM2Q0ZTVmL25vZGUvMDE5MmYwYzEtN2IxZS03MDAwLTgwMDAtMDAwMDAwMDAwMDAyIl0BKADGtMX7ybzbAgwCaWQBd2VodHRwczovL2V4YW1wbGUub3JnL2lkLzAxOTJmMGMxLTdiMWUtN2MzYS05ZDJlLTVhMWIyYzNkNGU1Zi9ub2RlLzAxOTJmMGMxLTdiMWUtNzAwMC04MDAwLTAwMDAwMDAwMDAwMigAxrTF+8m82wIMBHR5cGUBdwROYW1lJwDGtMX7ybzbAgwHY29udGVudAIEAMa0xfvJvNsCDwXwn5iAeigAxrTF+8m82wIMBl9vcmRlcgF8P4AAACcBBnJlY29yZHlbImlkZW50aWZpZWRfYnkiLCJodHRwczovL2V4YW1wbGUub3JnL2lkLzAxOTJmMGMxLTdiMWUtN2MzYS05ZDJlLTVhMWIyYzNkNGU1Zi9ub2RlLzAxOTJmMGMxLTdiMWUtNzAwMC04MDAwLTAwMDAwMDAwMDAwMyJdASgAxrTF+8m82wIUAmlkAXdlaHR0cHM6Ly9leGFtcGxlLm9yZy9pZC8wMTkyZjBjMS03YjFlLTdjM2EtOWQyZS01YTFiMmMzZDRlNWYvbm9kZS8wMTkyZjBjMS03YjFlLTcwMDAtODAwMC0wMDAwMDAwMDAwMDMoAMa0xfvJvNsCFAR0eXBlAXcETmFtZScAxrTF+8m82wIUB2NvbnRlbnQCBADGtMX7ybzbAhcGY2FmZcyBKADGtMX7ybzbAhQGX29yZGVyAXxAAAAAAA==",
+  "initial_state": {
+    "map": {
+      "@context": {
+        "plain": "https://linked.art/ns/v1/linked-art.json"
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000001\"]": {
+        "map": {
+          "_order": {
+            "plain": 0.0
+          },
+          "content": {
+            "text": "x😀y"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000001"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]": {
+        "map": {
+          "_order": {
+            "plain": 1.0
+          },
+          "content": {
+            "text": "😀z"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000003\"]": {
+        "map": {
+          "_order": {
+            "plain": 2.0
+          },
+          "content": {
+            "text": "café"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000003"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "id": {
+        "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f"
+      },
+      "type": {
+        "plain": "HumanMadeObject"
+      }
+    }
+  },
+  "steps": [
+    {
+      "client": "a",
+      "op": "set_scalar",
+      "args": {
+        "path": "content",
+        "value": "x😁y",
+        "base": [
+          {
+            "path": "identified_by",
+            "key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000001\"]"
+          }
+        ]
+      },
+      "returns": null
+    },
+    {
+      "client": "b",
+      "op": "splice_text",
+      "args": {
+        "path": "content",
+        "index": 2,
+        "delete": 0,
+        "insert": "!",
+        "base": [
+          {
+            "path": "identified_by",
+            "key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000001\"]"
+          }
+        ]
+      },
+      "returns": null
+    },
+    {
+      "client": "a",
+      "op": "set_scalar",
+      "args": {
+        "path": "content",
+        "value": "🨀z",
+        "base": [
+          {
+            "path": "identified_by",
+            "key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]"
+          }
+        ]
+      },
+      "returns": null
+    },
+    {
+      "client": "b",
+      "op": "splice_text",
+      "args": {
+        "path": "content",
+        "index": 1,
+        "delete": 0,
+        "insert": "!",
+        "base": [
+          {
+            "path": "identified_by",
+            "key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]"
+          }
+        ]
+      },
+      "returns": null
+    },
+    {
+      "client": "a",
+      "op": "set_scalar",
+      "args": {
+        "path": "content",
+        "value": "café",
+        "base": [
+          {
+            "path": "identified_by",
+            "key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000003\"]"
+          }
+        ]
+      },
+      "returns": null
+    },
+    {
+      "client": "b",
+      "op": "splice_text",
+      "args": {
+        "path": "content",
+        "index": 5,
+        "delete": 0,
+        "insert": "s",
+        "base": [
+          {
+            "path": "identified_by",
+            "key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000003\"]"
+          }
+        ]
+      },
+      "returns": null
+    },
+    {
+      "sync": [
+        "a",
+        "b"
+      ]
+    },
+    {
+      "client": "a",
+      "op": "get_path",
+      "args": {
+        "path": "identified_by[Name].content"
+      },
+      "returns": [
+        "x😁!y",
+        "🨀!z",
+        "cafés"
+      ]
+    },
+    {
+      "client": "b",
+      "op": "set_scalar",
+      "args": {
+        "path": "content",
+        "value": "cafés",
+        "base": [
+          {
+            "path": "identified_by",
+            "key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000003\"]"
+          }
+        ]
+      },
+      "returns": null
+    },
+    {
+      "client": "b",
+      "op": "splice_text",
+      "args": {
+        "path": "content",
+        "index": 4,
+        "delete": 1,
+        "insert": "̀",
+        "base": [
+          {
+            "path": "identified_by",
+            "key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000003\"]"
+          }
+        ]
+      },
+      "returns": null
+    },
+    {
+      "client": "b",
+      "op": "splice_text",
+      "args": {
+        "path": "content",
+        "index": 1.5,
+        "delete": 0,
+        "insert": "x",
+        "base": [
+          {
+            "path": "identified_by",
+            "key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000003\"]"
+          }
+        ]
+      },
+      "error": "LAE-PROJ-007"
+    },
+    {
+      "client": "b",
+      "op": "splice_text",
+      "args": {
+        "path": "content",
+        "index": 0,
+        "delete": 1,
+        "insert": 5,
+        "base": [
+          {
+            "path": "identified_by",
+            "key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000003\"]"
+          }
+        ]
+      },
+      "error": "LAE-PROJ-007"
+    },
+    {
+      "client": "b",
+      "op": "splice_text",
+      "args": {
+        "path": "content",
+        "index": 0,
+        "delete": 1,
+        "insert": null,
+        "base": [
+          {
+            "path": "identified_by",
+            "key": "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000003\"]"
+          }
+        ]
+      },
+      "error": "LAE-PROJ-007"
+    },
+    {
+      "sync": [
+        "a",
+        "b"
+      ]
+    }
+  ],
+  "expected": {
+    "@context": "https://linked.art/ns/v1/linked-art.json",
+    "type": "HumanMadeObject",
+    "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f",
+    "identified_by": [
+      {
+        "type": "Name",
+        "content": "x😁!y",
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000001"
+      },
+      {
+        "type": "Name",
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002",
+        "content": "🨀!z"
+      },
+      {
+        "type": "Name",
+        "content": "cafès",
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000003"
+      }
+    ]
+  },
+  "expected_state": {
+    "map": {
+      "@context": {
+        "plain": "https://linked.art/ns/v1/linked-art.json"
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000001\"]": {
+        "map": {
+          "_order": {
+            "plain": 0.0
+          },
+          "content": {
+            "text": "x😁!y"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000001"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002\"]": {
+        "map": {
+          "_order": {
+            "plain": 1.0
+          },
+          "content": {
+            "text": "🨀!z"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000002"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "[\"identified_by\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000003\"]": {
+        "map": {
+          "_order": {
+            "plain": 2.0
+          },
+          "content": {
+            "text": "cafès"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000003"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "id": {
+        "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f"
+      },
+      "type": {
+        "plain": "HumanMadeObject"
+      }
+    }
+  }
+}

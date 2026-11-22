@@ -1,0 +1,333 @@
+{
+  "description": "One client writes a single value for a property while another inserts an entry of it: the entries win on every replica and the single value is ignored. The next insert deletes the ignored value. An array that was empty in the source loses its marker on the first insert.",
+  "rules": [
+    "R11",
+    "R14",
+    "R18"
+  ],
+  "record_uri": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f",
+  "clients": {
+    "a": 101,
+    "b": 202
+  },
+  "initial": {
+    "@context": "https://linked.art/ns/v1/linked-art.json",
+    "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f",
+    "type": "HumanMadeObject",
+    "shows": []
+  },
+  "initial_update": "AQSejZ+7tZPXCwAoAQZyZWNvcmQIQGNvbnRleHQBdyhodHRwczovL2xpbmtlZC5hcnQvbnMvdjEvbGlua2VkLWFydC5qc29uKAEGcmVjb3JkAmlkAXc7aHR0cHM6Ly9leGFtcGxlLm9yZy9pZC8wMTkyZjBjMS03YjFlLTdjM2EtOWQyZS01YTFiMmMzZDRlNWYoAQZyZWNvcmQEdHlwZQF3D0h1bWFuTWFkZU9iamVjdCgBBnJlY29yZAVzaG93cwF2AQVfanNvbncCW10A",
+  "initial_state": {
+    "map": {
+      "@context": {
+        "plain": "https://linked.art/ns/v1/linked-art.json"
+      },
+      "id": {
+        "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f"
+      },
+      "shows": {
+        "plain": {
+          "_json": "[]"
+        }
+      },
+      "type": {
+        "plain": "HumanMadeObject"
+      }
+    }
+  },
+  "steps": [
+    {
+      "client": "a",
+      "op": "set_scalar",
+      "args": {
+        "path": "x_note",
+        "value": "single"
+      },
+      "returns": null
+    },
+    {
+      "client": "b",
+      "op": "add_reference",
+      "args": {
+        "path": "x_note",
+        "uri": "http://vocab.getty.edu/aat/1",
+        "type": "Type"
+      },
+      "returns": "[\"x_note\",\"http://vocab.getty.edu/aat/1\"]"
+    },
+    {
+      "client": "a",
+      "op": "add_reference",
+      "args": {
+        "path": "x_note",
+        "uri": "http://vocab.getty.edu/aat/2",
+        "type": "Type"
+      },
+      "error": "LAE-PROJ-006"
+    },
+    {
+      "client": "a",
+      "op": "set_object",
+      "args": {
+        "path": "x_other",
+        "obj": {
+          "id": "http://vocab.getty.edu/aat/3",
+          "type": "Type"
+        }
+      },
+      "returns": "http://vocab.getty.edu/aat/3"
+    },
+    {
+      "client": "b",
+      "op": "add_node",
+      "args": {
+        "path": "x_other",
+        "node": {
+          "type": "Name",
+          "content": "entry"
+        },
+        "mint": [
+          "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000001"
+        ]
+      },
+      "returns": "[\"x_other\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000001\"]"
+    },
+    {
+      "sync": [
+        "a",
+        "b"
+      ]
+    },
+    {
+      "client": "a",
+      "op": "project",
+      "args": {},
+      "returns": {
+        "type": "HumanMadeObject",
+        "@context": "https://linked.art/ns/v1/linked-art.json",
+        "x_note": [
+          {
+            "id": "http://vocab.getty.edu/aat/1",
+            "type": "Type"
+          }
+        ],
+        "x_other": [
+          {
+            "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000001",
+            "type": "Name",
+            "content": "entry"
+          }
+        ],
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f",
+        "shows": []
+      }
+    },
+    {
+      "client": "a",
+      "op": "get_path",
+      "args": {
+        "path": "x_note"
+      },
+      "returns": [
+        {
+          "id": "http://vocab.getty.edu/aat/1",
+          "type": "Type"
+        }
+      ]
+    },
+    {
+      "client": "a",
+      "op": "set_scalar",
+      "args": {
+        "path": "x_note",
+        "value": "rejected"
+      },
+      "error": "LAE-PROJ-007"
+    },
+    {
+      "client": "a",
+      "op": "set_object",
+      "args": {
+        "path": "x_other",
+        "obj": {
+          "id": "http://vocab.getty.edu/aat/4",
+          "type": "Type"
+        }
+      },
+      "error": "LAE-PROJ-007"
+    },
+    {
+      "client": "a",
+      "op": "remove_value",
+      "args": {
+        "path": "x_other"
+      },
+      "error": "LAE-PROJ-007"
+    },
+    {
+      "client": "b",
+      "op": "add_reference",
+      "args": {
+        "path": "x_note",
+        "uri": "http://vocab.getty.edu/aat/5",
+        "type": "Type"
+      },
+      "returns": "[\"x_note\",\"http://vocab.getty.edu/aat/5\"]"
+    },
+    {
+      "sync": [
+        "a",
+        "b"
+      ]
+    },
+    {
+      "client": "a",
+      "op": "add_reference",
+      "args": {
+        "path": "shows",
+        "uri": "https://example.org/id/visual-1",
+        "type": "VisualItem"
+      },
+      "returns": "[\"shows\",\"https://example.org/id/visual-1\"]"
+    },
+    {
+      "client": "b",
+      "op": "add_reference",
+      "args": {
+        "path": "shows",
+        "uri": "https://example.org/id/visual-2",
+        "type": "VisualItem"
+      },
+      "returns": "[\"shows\",\"https://example.org/id/visual-2\"]"
+    },
+    {
+      "sync": [
+        "a",
+        "b"
+      ]
+    }
+  ],
+  "expected": {
+    "type": "HumanMadeObject",
+    "@context": "https://linked.art/ns/v1/linked-art.json",
+    "x_other": [
+      {
+        "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000001",
+        "type": "Name",
+        "content": "entry"
+      }
+    ],
+    "id": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f",
+    "shows": [
+      {
+        "id": "https://example.org/id/visual-1",
+        "type": "VisualItem"
+      },
+      {
+        "type": "VisualItem",
+        "id": "https://example.org/id/visual-2"
+      }
+    ],
+    "x_note": [
+      {
+        "id": "http://vocab.getty.edu/aat/1",
+        "type": "Type"
+      },
+      {
+        "id": "http://vocab.getty.edu/aat/5",
+        "type": "Type"
+      }
+    ]
+  },
+  "expected_state": {
+    "map": {
+      "@context": {
+        "plain": "https://linked.art/ns/v1/linked-art.json"
+      },
+      "[\"shows\",\"https://example.org/id/visual-1\"]": {
+        "map": {
+          "_order": {
+            "plain": 0.0
+          },
+          "id": {
+            "plain": "https://example.org/id/visual-1"
+          },
+          "type": {
+            "plain": "VisualItem"
+          }
+        }
+      },
+      "[\"shows\",\"https://example.org/id/visual-2\"]": {
+        "map": {
+          "_order": {
+            "plain": 0.0
+          },
+          "id": {
+            "plain": "https://example.org/id/visual-2"
+          },
+          "type": {
+            "plain": "VisualItem"
+          }
+        }
+      },
+      "[\"x_note\",\"http://vocab.getty.edu/aat/1\"]": {
+        "map": {
+          "_order": {
+            "plain": 0.0
+          },
+          "id": {
+            "plain": "http://vocab.getty.edu/aat/1"
+          },
+          "type": {
+            "plain": "Type"
+          }
+        }
+      },
+      "[\"x_note\",\"http://vocab.getty.edu/aat/5\"]": {
+        "map": {
+          "_order": {
+            "plain": 1.0
+          },
+          "id": {
+            "plain": "http://vocab.getty.edu/aat/5"
+          },
+          "type": {
+            "plain": "Type"
+          }
+        }
+      },
+      "[\"x_other\",\"https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000001\"]": {
+        "map": {
+          "_order": {
+            "plain": 0.0
+          },
+          "content": {
+            "text": "entry"
+          },
+          "id": {
+            "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f/node/0192f0c1-7b1e-7000-8000-000000000001"
+          },
+          "type": {
+            "plain": "Name"
+          }
+        }
+      },
+      "id": {
+        "plain": "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f"
+      },
+      "type": {
+        "plain": "HumanMadeObject"
+      },
+      "x_other": {
+        "map": {
+          "id": {
+            "plain": "http://vocab.getty.edu/aat/3"
+          },
+          "type": {
+            "plain": "Type"
+          }
+        }
+      }
+    }
+  }
+}
