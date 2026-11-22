@@ -82,7 +82,7 @@ The QLever source the project builds from. It is upstream master, not the older 
 
 | Use | Path | Notes |
 | :-- | :-- | :-- |
-| Build and pin | `Dockerfile`, `docker-entrypoint.sh`, `CMakeLists.txt` | Build the `deploy/` QLever image from this checkout at a recorded commit. The Homebrew `qlever` binary is only a convenience for native development; record which binary each spike used. |
+| Reference | `CMakeLists.txt`, `README.md` build notes | How to build QLever natively on Linux when no package is available. The development machine uses Homebrew `qlever` 0.6.0. Record the binary version in `deploy/QLEVER_VERSION` and which binary each spike used. No Docker images (ADR-0017). |
 | Verify | `src/index/DeltaTriples.cpp` (around lines 236–250) | Updates add the same extra triples as the index build for language tags and `ql:has-word` when the index was built with `ADD_HAS_WORD_TRIPLES`. This is why Spike S1 tests `ql:has-word` on inserted literals; `ql:contains-word` prefix search over updated literals is still a measured question. |
 | Verify | `src/index/IndexImpl.cpp` (`persistUpdates`, around lines 1135 and 1210) | The persistence path behind `--persist-updates`. |
 | Reference | `src/index/IndexBuilderMain.cpp` (`text-index` options), `e2e/`, `examples/` | Index build flags and end-to-end query examples. |

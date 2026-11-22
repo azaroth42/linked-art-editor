@@ -229,12 +229,10 @@ Generated from the phase guides by `scripts/gen_api_index.py` (kept in the scrat
 | `la-i18n translate` | Phase 4 Step 4.9 |
 | `la-i18n validate` | Phase 4 Step 4.9, Phase 4 Step 4.19 |
 | `lae agents create` | Phase 3 Step 3.4 |
-| `lae api` | Phase 0 Step 0.3 |
 | `lae bootstrap aat-labels` | Phase 1 Step 1.12 |
 | `lae bootstrap build-index` | Phase 1 Step 1.12 |
 | `lae bootstrap export-nt` | Phase 1 Step 1.12 |
 | `lae bootstrap load` | Phase 1 Step 1.12 |
-| `lae crdt-ws` | Phase 0 Step 0.3 |
 | `lae embedder` | Phase 3 Step 3.1 |
 | `lae embeddings migrate` | Phase 4 Step 4.18 |
 | `lae embeddings swap` | Phase 4 Step 4.18 |
@@ -244,8 +242,7 @@ Generated from the phase guides by `scripts/gen_api_index.py` (kept in the scrat
 | `lae import jsonld` | Phase 2 Step 2.15 |
 | `lae migrate` | Phase 0 Step 0.5, Phase 0 Step 0.12 |
 | `lae reconcile-service` | Phase 3 Step 3.11 |
-| `lae scheduler` | Phase 0 Step 0.3 |
 | `lae sidecar load` | Phase 2 Step 2.14 |
-| `lae sync-worker` | Phase 0 Step 0.3, Phase 1 Step 1.11 |
+| `lae sync-worker` | Phase 1 Step 1.11 |
 | `lae vocab export` | Phase 2 Step 2.1 |
 | `lae vocab import` | Phase 2 Step 2.1, Phase 2 Step 2.2, Phase 2 Step 2.20 |

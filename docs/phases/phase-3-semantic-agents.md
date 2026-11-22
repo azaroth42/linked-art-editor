@@ -28,10 +28,10 @@ Rules for this phase:
 3. `backend/src/lae/embed/cards.py`: vendor `lux_embed/linkedart.py` name/statement extraction. Add `build_card(record_or_sidecar_entity: dict, labels: dict) -> str` returning `preferred label | alt labels | scope note | broader chain labels`, which is the text that is embedded (spec 3.1).
 4. `backend/src/lae/embed/worker.py`: `lae embedder` CLI command. Loop: `SELECT ... FROM embedding_queue FOR UPDATE SKIP LOCKED LIMIT 256`, build cards, encode in one batch, upsert `entity_embeddings`, delete from the queue, all in one transaction. Also serve `POST /internal/embed` (`{"texts": [...]}` → `{"model_id", "vectors"}`) on an internal port for query-time encoding, with a warm model loaded at start.
 5. `backend/src/lae/embed/client.py`: `EmbedClient.encode_query(text) -> list[float]` calling `/internal/embed` with a 200 ms timeout; on timeout raise `EmbedUnavailable`.
-6. Add `embedder` to `deploy/docker-compose.yml` under profile `ai` with the model cache volume. Keep torch out of the `api` image: `backend/pyproject.toml` optional dependency group `embed = ["torch==…", "sentence-transformers==…"]` and a test `tests/test_import_boundaries.py` asserting `import lae.api` does not import `torch` (copy the pattern from `lux/qlever-middletier/tests/test_import_boundaries.py`).
+6. Add the `embedder` entry to `deploy/Procfile` (commented by default; `make run-ai` uses a Procfile variant that includes it) and `deploy/systemd/lae-embedder.service`, with the model cache directory set by `LAE_MODEL_CACHE`. Keep torch out of the `api` environment: `backend/pyproject.toml` optional dependency group `embed = ["torch==…", "sentence-transformers==…"]` and a test `tests/test_import_boundaries.py` asserting `import lae.api` does not import `torch` (copy the pattern from `lux/qlever-middletier/tests/test_import_boundaries.py`).
 7. `lae embedder --backfill`: enqueue every eligible `entity_labels` row.
 
-**Verify:** `uv run pytest tests/embed -q` (encoder mocked). Run `make up-ai`, `lae embedder --backfill`, and confirm `SELECT count(*) FROM entity_embeddings` equals the eligible `entity_labels` count. `curl /internal/embed` returns a 768-float vector in under 40 ms warm.
+**Verify:** `uv run pytest tests/embed -q` (encoder mocked). Start the embedder natively (`uv run --project backend --extra embed lae embedder`), run `lae embedder --backfill`, and confirm `SELECT count(*) FROM entity_embeddings` equals the eligible `entity_labels` count. `curl /internal/embed` returns a 768-float vector in under 40 ms warm.
 
 **Commit:** `feat(embed): entity_embeddings, queue trigger, embedder worker`
 
@@ -63,7 +63,7 @@ Rules for this phase:
 2. `backend/src/lae/sparql_service/parser.py`: vendor `lux/qlever-middletier/sparql_service/sparql.py` unchanged apart from imports (it parses QLever's `application/sparql-query` body, strips the appended `VALUES (?x) {…}` block, and rejects non-`vec:` triples with a 400).
 3. `backend/src/lae/sparql_service/service.py`: port `VectorService` from `sparql_service/app.py`. Replace the LMDB/USearch store with: graph-first mode = `SELECT uri, 1 - (embedding <=> :seed) AS score FROM entity_embeddings WHERE uri = ANY(:candidates)`; vector-first mode = HNSW top-K. Keep the `head.vars` exact-match rule and `application/sparql-results+json` output.
 4. Mount at `POST/GET /sparql/vector` in the `api` process. Enforce a 30 s internal timeout → HTTP 503 (QLever has no SERVICE timeout). Add `service-max-value-rows = 100000` to `deploy/Qleverfile` and document that above this QLever silently pushes nothing, so callers must use `vec:mode "constrained"` for large constraints.
-5. The URL QLever calls must be the address *as QLever sees it* (`http://api:8000/sparql/vector` inside compose). Add `LAE_VECTOR_SERVICE_URL` to `Settings`.
+5. The URL QLever calls must be the address *as QLever sees it* (for example `http://localhost:<api port>/sparql/vector` when QLever and the API run on the same host). Add `LAE_VECTOR_SERVICE_URL` to `Settings`.
 6. Add a YASGUI snippet file `frontend/src/search/yasgui-snippets.ts` with one `SERVICE <…/sparql/vector>` example (used in Phase 4).
 
 **Verify:** Vendored parser tests pass (`tests/sparql_service/`). From QLever: a query with `SERVICE <http://api:8000/sparql/vector> { ?c vec:similarTo "oil paint" ; vec:score ?s ; vec:topK 10 }` returns 10 rows; the same with a 5,000-IRI `VALUES` sibling returns scored rows only for those IRIs.
@@ -275,7 +275,7 @@ Rules for this phase:
 
 ## Exit Checklist
 
-- [ ] `entity_embeddings` populated for every eligible `entity_labels` row; `lae.api` image contains no torch.
+- [ ] `entity_embeddings` populated for every eligible `entity_labels` row; `import lae.api` loads no torch.
 - [ ] Hybrid autocomplete returns semantic-only hits with the badge; lexical fallback works with the embedder stopped.
 - [ ] `/sparql/vector` answers QLever `SERVICE` queries with and without pushed-down `VALUES`; decision record `docs/decisions/0016-sparql-vector-service.md` is marked Accepted.
 - [ ] Tier 1 and Tier 2 service accounts exist; every MCP tool call produces an `agent_audit_log` row; Pause All Agents blocks every tool within one request.

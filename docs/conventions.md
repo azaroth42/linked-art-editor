@@ -13,13 +13,13 @@ backend/            Python 3.12 service, package `lae` (src layout), managed wit
 frontend/           React 19 + TypeScript SPA, managed with pnpm
   src/app/ editor/ widgets/ crdt/ search/ reader/ i18n/ admin/ graph/ map/
 profiles/           ui/ shapes/ vocab/ context/ schema/   (data, validated in CI)
-deploy/             docker-compose.yml, Qleverfile, postgres/
+deploy/             Qleverfile, Procfile, systemd/, postgres/, README.md (native install)
 scripts/            One-off and operational scripts; spikes under scripts/spikes/
 tests/corpus/       Golden Linked Art corpus
 docs/               Everything in docs/README.md
 ```
 
-Processes (compose service names and `lae` CLI sub-commands are identical): `api`, `crdt-ws`, `sync-worker`, `scheduler`, `embedder`, `reconcile`, `llm`, `qlever`, `postgres`.
+Processes (Procfile entries, systemd unit names, and `lae` CLI sub-commands are identical): `api`, `crdt-ws`, `sync-worker`, `scheduler`, `embedder`, `reconcile`, `llm`, `qlever`, `postgres`.
 
 ## 2. Naming
 
@@ -40,14 +40,15 @@ Processes (compose service names and `lae` CLI sub-commands are identical): `api
 ## 4. Code rules
 
 - **Async everywhere in `api`, `crdt-ws`, and `sync-worker`.** Blocking work (pyld expansion, pyshacl, zstd) runs in `asyncio.to_thread` or a process pool.
-- **No network in unit tests.** The JSON-LD document loader only serves `profiles/context/`; tests that need QLever or Postgres are marked `integration` and run against the compose or native services.
+- **No network in unit tests.** The JSON-LD document loader only serves `profiles/context/`; tests that need QLever or Postgres are marked `integration` and run against the native PostgreSQL and QLever.
 - **Every endpoint has at least one test** that exercises the happy path and one permission failure.
 - **Every projection or RDF change reruns the corpus round-trip test.** It is the oracle.
 - **Structured output only.** Backend never returns English prose for diagnostics, diffs, notifications, or QA findings; it returns codes and parameters.
 - **Internal node IRIs never reach public serializations.** `strip_internal_iris` is applied in exactly one place per output path, and there is a test for each path.
 - **No `_label` in storage** except for unresolved references (spec §3.2).
 - **Lossless by default.** Unknown JSON-LD keys are preserved. If a widget does not understand a value, it must show it in the raw inspector, not drop it.
-- **Pins.** `litellm` is pinned to an exact version. `pycrdt` and `pycrdt-websocket` are pinned together. QLever is built from `/Users/rs2668/Development/lux/qlever-dev` at the commit recorded in `deploy/QLEVER_COMMIT`.
+- **Pins.** `litellm` is pinned to an exact version. `pycrdt` and `pycrdt-websocket` are pinned together. QLever is installed natively at the version recorded in `deploy/QLEVER_VERSION` (`/Users/rs2668/Development/lux/qlever-dev` is the reference source).
+- **No Docker or containers** anywhere: development, CI, and production install everything natively (ADR-0017).
 
 ## 5. Frontend rules
 
@@ -66,7 +67,7 @@ Processes (compose service names and `lae` CLI sub-commands are identical): `api
 | Unit (backend) | `backend/tests/` | every PR |
 | Corpus round-trip | `backend/tests/test_roundtrip.py` | every PR |
 | Property tests | `backend/tests/property/` | every PR (bounded examples), nightly (extended) |
-| Integration (Postgres, QLever) | marked `integration` | every PR via compose services |
+| Integration (Postgres, QLever) | marked `integration` | every PR, against PostgreSQL (and QLever from Phase 1) installed natively on the CI runner |
 | Frontend unit | `frontend/src/**/*.test.tsx` | every PR |
 | E2E + axe | `frontend/e2e/` | every PR |
 | Load / scale | `scripts/load/` | nightly, and at each phase exit |

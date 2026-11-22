@@ -25,7 +25,7 @@ Guide: `phases/phase-0-foundations.md`
 **Goal:** A buildable monorepo with CI, the core schema, and go/no-go answers on the load-bearing technology choices.
 
 ### Scaffolding
-- Monorepo layout: `backend/` (Python 3.12, `uv`, FastAPI), `frontend/` (TypeScript, React 19, Vite, `pnpm`), `profiles/` (UI Profiles, SHACL shapes, Value Set YAML), `deploy/` (docker-compose with PostgreSQL 16 + `pgvector`, QLever, embedder stub), `docs/`.
+- Monorepo layout: `backend/` (Python 3.12, `uv`, FastAPI), `frontend/` (TypeScript, React 19, Vite, `pnpm`), `profiles/` (UI Profiles, SHACL shapes, Value Set YAML), `deploy/` (native PostgreSQL 16+ with `pgvector` and QLever setup, Procfile, systemd units; no Docker), `docs/`.
 - CI from day one: `ruff`, `mypy`, `pytest`; `tsc`, `eslint` (including `eslint-plugin-i18next` no-literal-string), `vitest`, Playwright + `axe-core` smoke on a placeholder route; `LangMap` YAML schema check.
 - Alembic migrations with the Phase 1 core tables: `records`, `record_revisions`, `entity_labels`, `crdt_drafts`, `crdt_updates`, `outbox_events`, `users`, `roles`, `api_tokens`.
 - Golden corpus: every example from linked.art plus a sample of institutional records, stored as test fixtures.
@@ -37,7 +37,7 @@ Guide: `phases/phase-0-foundations.md`
 | S2 | **`pycrdt-websocket` load** | 30 simulated editors in 10 rooms: awareness fan-out, memory per room, reconnect, update persistence latency. | Yjs-wire-compatible sidecar (y-websocket / Hocuspocus) behind the room-manager interface. |
 | S3 | **Projection round-trip** | Golden corpus → Y.Doc → canonical JSON-LD is byte-identical after canonicalization, including array order via `_order`, unprofiled properties, and internal `/node/` IRI minting and stripping. | Redesign keyed-map rules before any UI depends on them. |
 | S4 | **SHACL latency** | `pyshacl` per-record time on a draft `HumanMadeObject` shape; compiled evaluator alternatives. | Narrow SHACL to a small rule set; implement the rest as JSON-Schema or Python rules. |
-| S5 | **Canvas Panel in React 19** | Web component embedding, Content State in/out, region selection, `sequence-panel` navigation, A/V fallback to Clover. | Clover for all media. |
+| S5 | **Canvas Panel in React 19** | Web component embedding, Content State in/out, region selection, `sequence-panel` navigation, A/V playback. | No alternate viewer (ADR-0012): record gaps for the owner in `docs/questions.md`. |
 | S6 | **Bulk bootstrap timing** | `COPY` + N-Triples export + `IndexBuilderMain` for 1M records; projected cost at 10M. | Tune expansion pipeline before Phase 1 load. |
 
 **Exit criteria:** CI green on all gates; all six spike reports written; migrations apply to an empty database; the golden corpus loads and round-trips in S3.

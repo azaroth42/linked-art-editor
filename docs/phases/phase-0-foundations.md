@@ -53,7 +53,9 @@ Rules for this phase:
      context/               Pinned Linked Art @context JSON files, one per version
      schema/                Linked Art JSON Schema (vendored from linked-art/json-validator)
    deploy/
-     docker-compose.yml
+     Qleverfile             QLever config (native)
+     Procfile               development process list
+     systemd/               production unit templates
      Qleverfile
      postgres/init.sql
    scripts/
@@ -62,7 +64,7 @@ Rules for this phase:
    ```
 2. `backend/pyproject.toml`: project name `lae`, `requires-python = ">=3.12"`, build backend `hatchling`, dependencies:
    `fastapi`, `uvicorn[standard]`, `pydantic>=2`, `pydantic-settings`, `sqlalchemy[asyncio]>=2`, `asyncpg`, `alembic`, `pycrdt`, `pycrdt-websocket`, `pyoxigraph`, `pyld`, `pyshacl`, `jsonschema`, `httpx[http2]`, `zstandard`, `uuid-utils` (for UUIDv7), `authlib`, `python-multipart`, `orjson`.
-   Dev dependencies: `pytest`, `pytest-asyncio`, `pytest-cov`, `ruff`, `mypy`, `hypothesis`, `testcontainers[postgres]`.
+   Dev dependencies: `pytest`, `pytest-asyncio`, `pytest-cov`, `ruff`, `mypy`, `hypothesis`. No Docker or `testcontainers`: tests use a native PostgreSQL via `LAE_TEST_DATABASE_URL`.
    Tooling: `[tool.ruff]` line-length 100, `select = ["E","F","I","B","UP","ASYNC"]`; `[tool.mypy]` `strict = true`, `plugins = ["pydantic.mypy"]`; `[tool.pytest.ini_options]` `asyncio_mode = "auto"`.
 3. Use `uv` for the backend: `cd backend && uv sync`. Commit `uv.lock`.
 4. `frontend/package.json` with `pnpm`: `react@19`, `react-dom@19`, `typescript`, `vite`, `@vitejs/plugin-react`, `@tanstack/react-query`, `yjs`, `y-websocket`, `react-i18next`, `i18next`, `i18next-icu`, `tailwindcss`, `@dnd-kit/core`, `vitest`, `@testing-library/react`, `playwright`, `@axe-core/playwright`, `eslint`, `typescript-eslint`, `eslint-plugin-i18next`, `eslint-plugin-jsx-a11y`.
@@ -86,7 +88,7 @@ All four must exit 0 on the empty skeleton (a trivial placeholder test in each i
 **Why:** The i18n and accessibility gates cannot be retrofitted; they start now.
 
 **Do:**
-1. Create `.github/workflows/ci.yml` with four jobs: `backend` (uv sync, ruff, mypy, pytest with a Postgres service container using the `pgvector/pgvector:pg16` image), `frontend` (pnpm install, lint, typecheck, vitest), `e2e` (build frontend, start a placeholder FastAPI app, Playwright + axe on `/`), `config` (validate every file under `profiles/` against the JSON schemas in Step 0.5).
+1. Create `.github/workflows/ci.yml` with four jobs: `backend` (uv sync, ruff, mypy, pytest against PostgreSQL 16 + `pgvector` installed natively on the runner with apt; no service containers or Docker images), `frontend` (pnpm install, lint, typecheck, vitest), `e2e` (build frontend, start a placeholder FastAPI app, Playwright + axe on `/`), `config` (validate every file under `profiles/` against the JSON schemas in Step 0.5).
 2. ESLint config must enable `i18next/no-literal-string` as an **error** for `.tsx` files (allow attributes `data-testid`, `className`, `href`, `src`, `type`).
 3. Add `frontend/src/i18n/index.ts` initialising `react-i18next` with `i18next-icu`, namespaces `common`, `editor`, `reader`, `graph`, `vocab_admin`, `errors`, `admin`, default `en`, and a `pseudo` locale that wraps every string with `[ ... ]` and expands it ~35% (use `i18next-pseudo` or a 20-line postProcessor).
 4. Add a single placeholder route rendering one translated string, and a Playwright test that loads it, runs `axe`, and asserts zero violations.
@@ -98,26 +100,26 @@ All four must exit 0 on the empty skeleton (a trivial placeholder test in each i
 
 ---
 
-## Step 0.3 — Local infrastructure (docker-compose)
+## Step 0.3 — Local infrastructure (native)
 
 **Why:** Every spike and every later phase needs Postgres, QLever, and the service processes running the same way.
 
-**Two supported setups.** Docker Compose is the reference setup and what CI uses. On the primary development machine, Postgres.app (with `vector` and `pg_trgm` bundled) and Homebrew `qlever` / `qlever-control` are already installed; `make up-native` must work against those using the same `LAE_*` environment variables. Both setups must pass the same verification. Homebrew QLever is a convenience for native runs; the reference binary is built from `/Users/rs2668/Development/lux/qlever-dev` (upstream master). Record which binary each spike used.
+**Native only.** The project uses no Docker or containers anywhere: not for development, CI, or production (ADR-0017). PostgreSQL 16+ with `pgvector`, and QLever, are installed natively; the `lae` processes run under a Procfile runner in development and systemd in production. On the primary development machine, Postgres.app (PostgreSQL 18 with `vector`, `pg_trgm`, `btree_gin`) and Homebrew `qlever` / `qlever-control` 0.6.0 (`qlever-index`, `qlever-server`, `qlever`) are already installed. `/Users/rs2668/Development/lux/qlever-dev` is the reference source for QLever. Record which QLever binary and version each spike used.
 
 **Do:**
-1. `deploy/docker-compose.yml` services:
-   - `postgres`: image `pgvector/pgvector:pg16`, port 5432, volume, `deploy/postgres/init.sql` creating extensions `vector`, `pg_trgm`, `btree_gin`.
-   - `qlever`: build from the local upstream checkout `/Users/rs2668/Development/lux/qlever-dev` (its `Dockerfile`; record the commit in `deploy/QLEVER_COMMIT`). Mount `deploy/Qleverfile` and an index volume. Server command must include `--persist-updates`. Expose 7010 **only on the internal network**; a second service `qlever-public` is a small read-only proxy (nginx or the FastAPI `/sparql` route built in Phase 2) and is the only thing that is exposed.
-   - `api`, `crdt-ws`, `sync-worker`, `scheduler`: all build from `backend/`, differ only in the command (`lae api`, `lae crdt-ws`, `lae sync-worker`, `lae scheduler`). Until those commands exist, they run `python -c "print('placeholder')"`.
-   - `embedder` and `llm`: defined but under a compose `profiles: [ai]` so they are optional.
-2. `deploy/Qleverfile`: copy the structure of `lux/qlever-middletier/files/Qleverfile`, keep `TEXT_INDEX = from_literals` and `ADD_HAS_WORD_TRIPLES = true`, set memory values for a developer laptop, name the index `lae`.
-3. `backend/src/lae/cli.py`: a `typer` or `argparse` CLI with sub-commands `api`, `crdt-ws`, `sync-worker`, `scheduler`, `migrate`, `bootstrap` (all placeholders that print their name and exit 0 for now).
-4. `backend/src/lae/settings.py`: a `pydantic-settings` `Settings` class with `database_url`, `qlever_url`, `qlever_update_url`, `base_uri` (default `http://localhost:8000/id/`), `context_version` (default `1`), `draft_ttl_days` (5). Load from env with prefix `LAE_`.
-5. `Makefile`: `up` = `docker compose -f deploy/docker-compose.yml up -d postgres qlever`, `down`, `logs`, and `up-native` = start QLever with `qlever start` from `deploy/` (reading `deploy/Qleverfile`) against a database created in the local Postgres.app (`createdb lae`); document `PATH` for Postgres.app binaries (`/Applications/Postgres.app/Contents/Versions/latest/bin`).
+1. `deploy/postgres/init.sql`: `CREATE EXTENSION IF NOT EXISTS` for `vector`, `pg_trgm`, `btree_gin`.
+2. `deploy/Qleverfile`: copy the structure of `lux/qlever-middletier/files/Qleverfile`; `SYSTEM = native`; keep `TEXT_INDEX = from_literals` and `ADD_HAS_WORD_TRIPLES = true`; server started with `--persist-updates`; memory sized for a developer laptop; index name `lae`. Port and index directory are overridable by environment variables. QLever binds only to localhost / the internal network; the only public SPARQL entry point is the FastAPI `/sparql` proxy built in Phase 2.
+3. `deploy/QLEVER_VERSION`: the QLever binary version verified with (e.g. Homebrew `qlever` 0.6.0_1 and `qlever-server --version` output) plus the `lux/qlever-dev` commit for reference.
+4. `deploy/Procfile`: one line per process: `api`, `crdt-ws`, `sync-worker`, `scheduler` (each `uv run --project backend lae <name>`); `embedder`, `reconcile`, `llm` present as commented later-phase entries. Add `honcho` as a backend dev dependency.
+5. `deploy/systemd/`: unit templates `lae-api.service`, `lae-crdt-ws.service`, `lae-sync-worker.service`, `lae-scheduler.service`, `qlever.service` (environment from `/etc/lae/lae.env`).
+6. `deploy/README.md`: native installation for macOS (Homebrew `qlever` + `qlever-control`; Postgres.app or Homebrew `postgresql` with `pgvector`) and Debian/Ubuntu (PGDG `postgresql-16` + `postgresql-16-pgvector`; QLever from its native packages or built from source), plus the Postgres.app `PATH` line (`/Applications/Postgres.app/Contents/Versions/latest/bin`).
+7. `backend/src/lae/cli.py`: a `typer` or `argparse` CLI with sub-commands `api`, `crdt-ws`, `sync-worker`, `scheduler`, `migrate`, `bootstrap` (all placeholders that print their name and exit 0 for now). These names are the Procfile and systemd process names.
+8. `backend/src/lae/settings.py`: a `pydantic-settings` `Settings` class with `database_url`, `qlever_url`, `qlever_update_url`, `base_uri` (default `http://localhost:8000/id/`), `context_version` (default `1`), `draft_ttl_days` (5). Load from env with prefix `LAE_`.
+9. `Makefile`: `up` creates the database (if missing) and its extensions in an already-running PostgreSQL and starts QLever with `qlever start` from `deploy/`; it never starts or stops PostgreSQL itself. `down` stops QLever. `run` runs `honcho start -f deploy/Procfile`. All ports, the database name, and the index directory are overridable (`PGHOST`, `PGPORT`, `LAE_DB`, `QLEVER_PORT`, `QLEVER_DIR`).
 
-**Verify:** `make up`; `psql` connects and `SELECT extname FROM pg_extension` lists `vector` and `pg_trgm`; `curl http://localhost:7010` (from inside the compose network) answers.
+**Verify:** `make up` (with your slot's overrides); `psql` connects and `SELECT extname FROM pg_extension` lists `vector`, `pg_trgm`, `btree_gin`; `curl http://localhost:$QLEVER_PORT` answers; `make run` starts the four placeholder processes and Ctrl-C stops them; `make down` stops QLever.
 
-**Commit:** `infra: docker-compose with postgres+pgvector, qlever (persist-updates), service placeholders`
+**Commit:** `infra: native PostgreSQL and QLever setup, Procfile, systemd units`
 
 ---
 
@@ -157,7 +159,7 @@ All four must exit 0 on the empty skeleton (a trivial placeholder test in each i
 2. Alembic: `backend/alembic.ini`, `backend/migrations/env.py` (async engine), `0001_core.py` generated from the models and then hand-checked.
 3. Add a trigger in the migration: `AFTER INSERT ON outbox_events` → `pg_notify('outbox', NEW.id::text)`.
 4. `lae migrate` runs `alembic upgrade head`.
-5. `backend/tests/conftest.py`: a session fixture that starts a Postgres testcontainer, runs migrations, and yields an async session. Also a `db_url` fixture reading `LAE_TEST_DATABASE_URL` if set (CI service container) so testcontainers is only used locally.
+5. `backend/tests/conftest.py`: a session fixture that reads `LAE_TEST_DATABASE_URL` (a native PostgreSQL; required), drops and recreates that database, applies `deploy/postgres/init.sql`, runs migrations, and yields an async session; the database is dropped at the end of the session.
 
 **Verify:** `uv run lae migrate` on a fresh database succeeds; `uv run alembic downgrade base && uv run alembic upgrade head` round-trips; `uv run pytest -q` passes with one test inserting and reading a `records` row.
 
@@ -171,14 +173,14 @@ All four must exit 0 on the empty skeleton (a trivial placeholder test in each i
 
 **Do:**
 1. Create `scripts/spikes/s1_qlever/`. Generate 10M synthetic triples (`scripts/spikes/s1_qlever/gen.py`: 100k subjects × ~100 triples each, including `rdfs:label` literals) into `s1.nt`.
-2. Build the index with the compose `qlever` service (`qlever index` via qlever-control, or `IndexBuilderMain` as in `lux/qlever-middletier/installing_qlever.md`). Record wall-clock and peak RSS.
+2. Build the index natively with `qlever index` (qlever-control, `deploy/Qleverfile`) or `qlever-index` directly, as in `lux/qlever-middletier/installing_qlever.md`. Record wall-clock and peak RSS.
 3. Start the server with `--persist-updates`. Run and time:
    - `INSERT DATA { <s> rdfs:label "zebra-crossing-xyz" }` with 100 triples.
    - `DELETE DATA` of the same.
    - `DELETE WHERE { <s> ?p ?o }` for one subject.
    - 1,000 sequential small updates; record p50/p95 latency and the `qlever_delta_triples` metric.
 4. Text freshness: after inserting a literal, run `?s ql:contains-word "zebra*"` (prefix) and `?s ql:has-word "zebra-crossing-xyz"`. Record whether each finds the new literal **without a rebuild**. The source in `qlever-dev/src/index/DeltaTriples.cpp` adds `ql:has-word` triples on update when the index was built with `ADD_HAS_WORD_TRIPLES = true`, so `has-word` is expected to work; the prefix case is the real question.
-5. Restart the container. Confirm the inserted triples are still present (persistence) and record restart time.
+5. Restart the QLever server process. Confirm the inserted triples are still present (persistence) and record restart time.
 6. SERVICE: run `scripts/spikes/s1_qlever/stub_service.py` (FastAPI, copy the request parser from `lux/qlever-middletier/sparql_service/sparql.py`) and issue a QLever query with `SERVICE <http://stub:8081/sparql> { ?x <urn:vec:score> ?score }` plus a `VALUES` sibling of 5,000 IRIs. Record whether VALUES were pushed down and the `service-max-value-rows` behaviour.
 7. Rebuild timing: rebuild the index from scratch while the old server keeps answering queries from a second directory; record the time. Extrapolate to 1B triples.
 8. Write `docs/spikes/S1-qlever.md` with a results table and a **GO / NO-GO** line per question, plus the chosen fallback where NO-GO.
@@ -245,7 +247,7 @@ All four must exit 0 on the empty skeleton (a trivial placeholder test in each i
 
 **Do:**
 1. In `frontend/`, add `@digirati/canvas-panel-web-components` (confirm the current package name on npm) and a page `src/spikes/CanvasPanelSpike.tsx` rendering `<canvas-panel>` for a public IIIF manifest.
-2. Prove: load by manifest + canvas id; set `region` programmatically; listen to a selection event and read back a region as `xywh`; load an `iiif-content` Content State; render `<sequence-panel>` for navigation; render a Clover viewer for an A/V manifest.
+2. Prove: load by manifest + canvas id; set `region` programmatically; listen to a selection event and read back a region as `xywh`; load an `iiif-content` Content State; render `<sequence-panel>` for navigation; load an IIIF A/V manifest in Canvas Panel and record whether it plays. Canvas Panel is the only viewer (ADR-0012): no Clover or Mirador. If a capability is missing, record the gap and add a `docs/questions.md` entry.
 3. Record bundle size impact and any React 19 custom-element prop issues.
 4. Write `docs/spikes/S5-canvas-panel.md` with GO / NO-GO.
 
