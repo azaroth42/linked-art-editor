@@ -1,14 +1,17 @@
 """Command-line entry point: ``lae <command>``.
 
 Sub-command names match the process names in conventions §1, the entries in ``deploy/Procfile``,
-and the ``deploy/systemd/lae-<name>.service`` units. Every command is a placeholder that prints
-its name and exits 0 until a later step wires it (``migrate`` in Step 0.5, the rest in Phase 1).
+and the ``deploy/systemd/lae-<name>.service`` units. ``migrate`` runs ``alembic upgrade head``
+against ``LAE_DATABASE_URL``; the other commands are placeholders that print their name and exit 0
+until Phase 1 wires them (each gets an entry in ``HANDLERS``).
 """
 
 from __future__ import annotations
 
 import argparse
-from collections.abc import Sequence
+from collections.abc import Callable, Sequence
+
+from lae.db import migrate
 
 COMMANDS: dict[str, str] = {
     "api": "Run the HTTP API server.",
@@ -29,10 +32,25 @@ def build_parser() -> argparse.ArgumentParser:
     return parser
 
 
+def run_migrate() -> int:
+    """``lae migrate``: apply every migration up to head."""
+    migrate.upgrade("head")
+    return 0
+
+
+HANDLERS: dict[str, Callable[[], int]] = {
+    "migrate": run_migrate,
+}
+"""Sub-commands that are implemented; the others are placeholders."""
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     """Parse ``argv`` and run the selected sub-command; return the exit code."""
     args = build_parser().parse_args(argv)
     command: str = args.command
+    handler = HANDLERS.get(command)
+    if handler is not None:
+        return handler()
     print(command)
     return 0
 

@@ -39,6 +39,7 @@ Design, decisions, and the implementation plan live in [`docs/`](docs/README.md)
 ```sh
 make setup    # uv sync --locked (backend) and corepack pnpm install --frozen-lockfile (frontend)
 make up       # create database `lae` + extensions if missing; build an empty QLever index if missing; start QLever on 7010
+(cd backend && uv run --env-file ../.env lae migrate)   # apply database migrations (alembic upgrade head)
 make run      # run the lae processes in deploy/Procfile (api, crdt-ws, sync-worker, scheduler) with honcho
 make logs     # follow the QLever server log
 make down     # stop QLever
@@ -77,8 +78,10 @@ cd frontend && corepack pnpm lint && corepack pnpm typecheck && corepack pnpm te
 ```
 
 Database tests use only `LAE_TEST_DATABASE_URL` (for example
-`postgresql+asyncpg://localhost:5432/lae_test`, a database with the extensions from
-`deploy/postgres/init.sql`); they are skipped when it is unset.
+`postgresql+asyncpg://localhost:5432/lae_test`) on a native PostgreSQL with pgvector. The test
+session drops and recreates that database (its name must end in `_test`), applies
+`deploy/postgres/init.sql` and the migrations, and drops it at the end. The tests are skipped when
+the variable is unset (under CI they fail).
 
 End-to-end tests (Playwright + axe) run against the production build:
 

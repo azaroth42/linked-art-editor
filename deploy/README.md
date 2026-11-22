@@ -185,7 +185,13 @@ The unit templates in `systemd/` assume this layout; adjust paths and the user i
    command-line argument, so local users can see it in the process list; run QLever on a host
    without untrusted local users.
 
-5. Build the (empty) index once, then install and start the units:
+5. Apply the database migrations (repeat after every update, before restarting the units):
+
+   ```sh
+   sudo -u lae sh -c 'set -a && . /etc/lae/lae.env && /opt/lae/backend/.venv/bin/lae migrate'
+   ```
+
+6. Build the (empty) index once, then install and start the units:
 
    ```sh
    sudo -u lae sh -c 'cd /var/lib/lae/qlever && set -a && . /etc/lae/lae.env && qlever --qleverfile /opt/lae/deploy/Qleverfile get-data && qlever --qleverfile /opt/lae/deploy/Qleverfile index'
