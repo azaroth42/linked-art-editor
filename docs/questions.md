@@ -189,6 +189,7 @@ Spike S6 (`docs/spikes/S6-bootstrap.md`) is a **GO**: 1M records bootstrap in 10
    Mac, and no stage needs more memory than it has". Not verified: a dedicated or production-like
    host (the Mac was shared with other agents and a backup job; Postgres ran with Postgres.app's
    stock settings). Confirm the window, or give the one that applies.
+   **Resolved (orchestrator under the owner's delegation, 2026-11-22; reversible):** the 8-hour single-machine window is accepted as the bulk-bootstrap target.
 2. **Carry a pyld patch?** Two expansion tunings were measured; both give byte-identical triples.
    The first, returning `"tag": "static"` from `lae.rdf.context.document_loader`, uses pyld's
    public loader contract (+32 %) and is simply recommended for Step 1.3. The second memoizes
@@ -196,3 +197,4 @@ Spike S6 (`docs/spikes/S6-bootstrap.md`) is a **GO**: 1M records bootstrap in 10
    (a further +42 %, 2.1× in total at 1M records). Decide whether Step 1.3 may carry that patch
    (with a corpus-wide equality test against unpatched pyld and the pyld version pinned exactly),
    whether it should be offered upstream to pyld instead, or neither.
+   **Resolved (orchestrator under the owner's delegation, 2026-11-22; reversible):** adopt the public-contract `"tag": "static"` loader change (Step 1.12 guide updated); do not carry the pyld monkeypatch now (maintenance risk for a +42 % bulk-only gain). Revisit, or offer it upstream, if bulk loads exceed the window.
