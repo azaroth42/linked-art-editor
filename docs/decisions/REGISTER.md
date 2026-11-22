@@ -2,7 +2,7 @@
 
 Every decision that an implementer might otherwise have to make again, in one place. **Status:** `locked` (changing it needs a human and an ADR), `fixed` (a tooling/naming choice made in the guides; change only with an ADR), `open` (not yet decided; see the named spike or step). "Source" points at the authoritative text.
 
-Decisions made during the November 2026 design review are also written up as ADRs `0001`–`0017` in this directory (ADR-0018 records the refinements found by Spike S3); the register links them.
+Decisions made during the November 2026 design review are also written up as ADRs `0001`–`0017` in this directory (ADR-0018 records the refinements found by Spike S3; ADR-0021 the ownership rule for embedded nodes that have their own ids); the register links them.
 
 ## A. Architecture and storage
 
@@ -14,12 +14,12 @@ Decisions made during the November 2026 design review are also written up as ADR
 | A4 | Validate and publish requests needing the live Y.Doc are routed from `api` to `crdt-ws` over an internal HTTP RPC (`/internal/...`, header `X-Internal-Token`). `crdt-ws` is a single process. | locked | spec §4.2; Phase 1 Step 1.8; ADR-0011 |
 | A5 | Single tenant per installation; fully open published data; no field-level redaction. | locked | spec §1, §8 |
 | A6 | Record ids are UUIDv7; public URIs are flat `/id/{uuidv7}`; no class-typed paths. | locked | spec §3.1 |
-| A7 | Embedded nodes get internal IRIs `<record_uri>/node/<uuidv7>`; stripped from public JSON-LD; visible in SPARQL results; `/id/{uuid}/node/{id}` 303-redirects to the record. | locked | spec §3.3; ADR-0003 |
+| A7 | Embedded nodes get internal IRIs `<record_uri>/node/<uuidv7>`; stripped from public JSON-LD; visible in SPARQL results; `/id/{uuid}/node/{id}` 303-redirects to the record. In RDF only, an embedded node that arrived with an `id` of its own gets the derived IRI `<record_uri>/node/<uuidv5(original id)>` and a `la:equivalent` triple to that id; the whole `<record_uri>/node/` namespace belongs to the record. | locked | spec §3.3; ADR-0003; ADR-0021 |
 | A8 | `records.data` is JSONB with TOAST `lz4`; revision N-Triples and JSON-LD snapshots are application-level zstd (level 9) `bytea`. | locked | spec §3.1; Phase 1 Step 1.3 |
 | A9 | Every edited revision stores canonical N-Triples (sorted, deduplicated lines) and a JSON-LD snapshot. Bulk-loaded records have no revision row until first edited. | locked | spec §3.1, §3.3 |
 | A10 | `entity_labels` (uri, type, BCP-47 `labels` JSONB, `default_label`, `metatype_uris[]`, `vocab_ids[]`, `source`, `status`, `usage_count`) is the single label lookup for local and sidecar entities; `_label` is transcluded at read time. | locked | spec §3.1, §3.2; Phase 1 Step 1.5; Phase 2 Step 2.1 |
 | A11 | `_label` is stripped at write time **except** for references whose target has no `entity_labels` row; those keep `_label` and raise an unresolved-reference QA finding. | locked | spec §3.2; ADR-0006 |
-| A12 | Foreign references are reduced to `{"id"}` before expansion so no `rdf:type` or label triples are emitted for subjects the record does not own. | locked | spec §3.3; Phase 1 Step 1.3 |
+| A12 | Foreign references are reduced to `{"id"}` before expansion so no `rdf:type` or label triples are emitted for subjects the record does not own. An embedded node with a foreign `id` is not a reference: its content is emitted under a derived node IRI (A7). Which is which is decided from the object alone by the rule in ADR-0021. | locked | spec §3.3; ADR-0021; Phase 1 Step 1.3 |
 | A13 | Sync uses revision-diff `DELETE DATA` / `INSERT DATA`. For the first edit of a bulk-loaded record whose bootstrap context/expander version differs from the current one, use `DELETE WHERE { <s> ?p ?o }` over owned subjects instead. | locked | spec §3.3; ADR-0007 |
 | A14 | QLever runs with `--persist-updates`; `sync_state.qlever_index_watermark` records the last applied outbox id; rebuilds are blue/green (snapshot at watermark, build in a new directory, replay, atomic swap, keep previous for rollback), triggered by delta-triple threshold or on demand, never by editor idleness. | locked | spec §3.3; Phase 2 Step 2.18; ADR-0002 |
 | A15 | QLever is installed natively (Homebrew on macOS; native packages or a source build from `lux/qlever-dev` on Linux) at the version in `deploy/QLEVER_VERSION`; Qleverfile uses `SYSTEM = native`, `TEXT_INDEX = from_literals` and `ADD_HAS_WORD_TRIPLES = true`. | fixed | reuse_map; Phase 0 Step 0.3 |
