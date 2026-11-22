@@ -1,0 +1,45 @@
+{
+  "probe": "rooms",
+  "count": 200,
+  "parts": 0,
+  "record_json_bytes": 557,
+  "cycles": [
+    {
+      "cycle": 0,
+      "open_all_s": 0.09,
+      "ydoc_update_bytes_per_room": 709,
+      "rss_mb": {
+        "baseline": 55.89,
+        "rooms_with_clients": 85.09,
+        "rooms_resident_no_clients": 85.83,
+        "after_evict_all": 85.84
+      },
+      "per_room_kb": {
+        "with_client": 149.5,
+        "resident_no_client": 153.3
+      },
+      "live_objects": {
+        "before": {
+          "YRoom": 0,
+          "Doc": 0,
+          "Awareness": 0
+        },
+        "with_rooms": {
+          "YRoom": 200,
+          "Doc": 200,
+          "Awareness": 200
+        },
+        "after_evict": {
+          "YRoom": 0,
+          "Doc": 0,
+          "Awareness": 0
+        }
+      },
+      "server_errors": {
+        "handled_exceptions": 0,
+        "log_errors": 0
+      },
+      "client_errors": []
+    }
+  ]
+}

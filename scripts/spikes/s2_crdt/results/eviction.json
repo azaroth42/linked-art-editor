@@ -1,0 +1,24 @@
+{
+  "probe": "eviction",
+  "before_eviction_b_sees_a_ms": 12.0,
+  "evict_with_clients": {
+    "evicted": "/ws/s2-probe-evict-1795377919",
+    "connected_clients_at_eviction": 2
+  },
+  "after_live_eviction_b_sees_a_ms": null,
+  "after_live_eviction_sockets_open": {
+    "a": true,
+    "b": true
+  },
+  "newcomer_after_live_eviction_sees_old_state_ms": null,
+  "zombie_peer_sees_newcomer_ms": null,
+  "reseed_by_reconnect_synced": true,
+  "fresh_client_after_reseed_sees_state_ms": 0.0,
+  "server_room_after_reseed": {
+    "clients": 2,
+    "update_bytes": 663,
+    "digest": "5145c249939faba0b441a191c260932263c85862da5d3ce5e60dbee654ce4d96"
+  },
+  "a_digest_equals_server": true,
+  "client_errors": []
+}
