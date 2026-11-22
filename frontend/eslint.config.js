@@ -46,8 +46,15 @@ export default tseslint.config(
     },
   },
   {
+    // Phase 0 spike pages are developer test harnesses: never routed from the app shell, never
+    // shown to users, deleted once their phase has used the result. Their labels are not
+    // translated. App code must not copy this exemption.
+    files: ["src/spikes/**/*.tsx"],
+    rules: { "i18next/no-literal-string": "off" },
+  },
+  {
     // Playwright tests and tool configs run in Node, not the browser.
-    files: ["e2e/**/*.ts", "*.config.{ts,js}"],
+    files: ["e2e/**/*.ts", "*.config.{ts,js}", "src/spikes/*.config.ts", "src/spikes/*.spec.ts"],
     languageOptions: { globals: globals.node },
   },
 );
