@@ -85,3 +85,23 @@ viewer (ADR-0012), these measured gaps become editor work or upstream fixes. Ple
    accepts a value claimed by any Value Set bound at that path, and leaves unclaimed values to the
    Other Classifications bucket (decision C5), would match the spec.
    **Resolved (orchestrator, 2026-11-22):** the spec is authoritative here and the Phase 2 guide was wrong. Step 2.1 now makes bindings unique on `(entity_class, property_path, vocabulary_id)`, and Step 2.2 checks a value only against the bindings that claim it (by membership or metatype), leaving unclaimed values to Other Classifications. Register entry C4 updated. The owner may override.
+
+## Step 0.8
+
+1. **Spike S3 is GO, but it refines locked register entries B2 and B3.** The draft projection
+   rules fail 17 of 244 corpus files when taken literally (integers come back from `pycrdt` as
+   floats; a reference repeated in one array is silently dropped). The rules that pass 244 of 244
+   are R1–R18 in `docs/spikes/S3-projection.md`; the changes to the locked wording are proposed in
+   `docs/decisions/0018-projection-rule-refinements-from-s3.md` (status Proposed). Please accept
+   or amend that ADR before Step 1.4 starts; the register was not edited.
+2. **Concurrent first insert into a property with no container.** If two clients each create the
+   container for a property that is absent, one client's first insert is lost (rule R14; this is
+   inherent to nested Y.Maps). Pre-creating empty containers for every array property in the
+   record's UI Profile removes it for profiled properties. Decide what Step 1.4 does for
+   unprofiled properties: accept the risk (it needs two clients adding the first value of the
+   same unprofiled property at the same moment), or route container creation through the server.
+3. **Records that repeat a reference in one array** (`tests/corpus/institutional/yuag-lin-176060.json`
+   and `yuag-lin-176699.json`, `classified_as`) round-trip unchanged. Should import or the QA
+   sweeper report these as a finding, or deduplicate them on import?
+4. **Not verified:** a live browser session over `y-websocket`. The cross-language check ran Yjs
+   13.6.33 under Node against `pycrdt` state offline (`docs/spikes/S3-projection.md` §4.4).
