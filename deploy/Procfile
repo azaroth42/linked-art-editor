@@ -1,0 +1,14 @@
+# Linked Art Editor processes. Each name is a `lae` CLI sub-command and has a matching
+# deploy/systemd/lae-<name>.service unit for production.
+#
+# Development: `make run` starts them with honcho from the repository root; LAE_* settings come
+# from the shell or from a `.env` file in the repository root. PostgreSQL and QLever are not
+# listed here: `make up` prepares and starts them.
+api: uv run --project backend lae api
+crdt-ws: uv run --project backend lae crdt-ws
+sync-worker: uv run --project backend lae sync-worker
+scheduler: uv run --project backend lae scheduler
+# Later phases (uncomment when the sub-command exists):
+# embedder: uv run --project backend lae embedder
+# reconcile: uv run --project backend lae reconcile
+# llm: uv run --project backend lae llm

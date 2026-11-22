@@ -1,0 +1,26 @@
+# Template unit for the `scheduler` process (`lae scheduler`): periodic jobs.
+# Run exactly one instance. Assumes the layout in deploy/README.md ("Production with systemd");
+# adjust the paths and user to your installation before installing.
+
+[Unit]
+Description=Linked Art Editor: scheduler (periodic jobs)
+Documentation=https://github.com/azaroth42/linked-art-editor/blob/main/deploy/README.md
+Wants=network-online.target
+After=network-online.target postgresql.service qlever.service
+
+[Service]
+Type=simple
+User=lae
+Group=lae
+WorkingDirectory=/opt/lae
+EnvironmentFile=/etc/lae/lae.env
+ExecStart=/opt/lae/backend/.venv/bin/lae scheduler
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

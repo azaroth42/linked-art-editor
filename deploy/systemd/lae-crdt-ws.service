@@ -1,0 +1,26 @@
+# Template unit for the `crdt-ws` process (`lae crdt-ws`): the CRDT WebSocket server.
+# Run exactly one instance (decision A4). Assumes the layout in deploy/README.md ("Production
+# with systemd"); adjust the paths and user to your installation before installing.
+
+[Unit]
+Description=Linked Art Editor: crdt-ws (CRDT WebSocket server)
+Documentation=https://github.com/azaroth42/linked-art-editor/blob/main/deploy/README.md
+Wants=network-online.target
+After=network-online.target postgresql.service
+
+[Service]
+Type=simple
+User=lae
+Group=lae
+WorkingDirectory=/opt/lae
+EnvironmentFile=/etc/lae/lae.env
+ExecStart=/opt/lae/backend/.venv/bin/lae crdt-ws
+Restart=on-failure
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

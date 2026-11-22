@@ -1,0 +1,14 @@
+# QLever version this repository was verified with (Phase 0 Step 0.3, 2026-11-22).
+# QLever runs natively (deploy/README.md). Update this file whenever a different binary is
+# verified, and record in each spike report which binary the spike used.
+
+# Binary used for verification (macOS arm64, Homebrew tap qlever-dev/qlever)
+homebrew_formula      = qlever 0.6.0_1 (https://packages.qlever.dev/mac/qlever_0.6.0-1_macos_arm64.tar.gz)
+qlever_server_version = qlever-server v0.6.0
+qlever_index_version  = qlever-index v0.6.0
+binary_git_hash       = 6c5861a6526d7d7ae77735d09339ee0825f0c001 (server log: "QLever server v0.6.0, compiled on Mon Aug 24 22:29:09 CEST 2026 using git hash 6c5861a")
+qlever_control        = qlever-control 0.6.0 (`qlever --version`: qlever 0.6.0)
+
+# Source checkout kept for reference (upstream https://github.com/ad-freiburg/qlever, master).
+# The binary above is 480 commits behind this commit.
+source_commit         = ba7b74ccb00993efe9d4ca4d5a539426379493ab (2026-11-21, "Store the triples of updates as `qlm::vector` (#3957)")
