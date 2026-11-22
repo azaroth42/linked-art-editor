@@ -10,8 +10,15 @@ an installation:
 | `lae` processes: `api`, `crdt-ws`, `sync-worker`, `scheduler` | `make run` (honcho with `deploy/Procfile`) | `systemd/lae-<name>.service` |
 
 Later phases add `embedder`, `reconcile`, and `llm` (commented out in `Procfile` until their
-`lae` sub-commands exist). Until Phase 1 the `lae` sub-commands are placeholders that print their
-name and exit 0, so `make run` starts all four and honcho stops when the first one exits.
+`lae` sub-commands exist). `lae api` serves the HTTP API on `LAE_API_HOST:LAE_API_PORT` (default
+`127.0.0.1:8000`). `crdt-ws`, `sync-worker`, and `scheduler` are built in Phase 1 Steps 1.8, 1.11,
+and 1.15; until then each prints the step that builds it and exits with status 3, so honcho stops
+`make run` at once. Run `uv run --project backend lae api` on its own in the meantime.
+
+Every `lae` process writes JSON log lines to stdout (journald in production), with `request_id`
+on every line of an HTTP request; `LAE_LOG_LEVEL` sets the level (default `info`). Probes:
+`GET /health/live` is always 200; `GET /health/ready` is 200 when PostgreSQL and (if
+`LAE_QLEVER_URL` is set) QLever answer, else 503 with the failing components in `failing`.
 
 ## Files
 
@@ -170,6 +177,7 @@ The unit templates in `systemd/` assume this layout; adjust paths and the user i
    `0640`, owner `root`, group `lae`):
 
    ```sh
+   LAE_ENV=production
    # Unix socket with peer authentication (Debian default); or give `lae` a password and use TCP.
    LAE_DATABASE_URL=postgresql+asyncpg://lae@/lae?host=/var/run/postgresql
    LAE_QLEVER_URL=http://localhost:7010
