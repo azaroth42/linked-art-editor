@@ -215,6 +215,8 @@ Spike S6 (`docs/spikes/S6-bootstrap.md`) is a **GO**: 1M records bootstrap in 10
    cleanly from editorial publish rights". The seed follows the guide. If the spec sentence
    means the System Admin *role* must not publish, a later migration can drop the editorial
    permissions from it (ADR-0020). Please confirm.
+   **Resolved (orchestrator under the owner's delegation, 2026-11-22; reversible):** the spec wins. Migration 0003 restricts System Admin to `manage_vocabularies`, `manage_roles`, `manage_users`, `manage_backups`, `manage_system`, `view_analytics`; people who also edit hold Editor too. Step 1.7 guide corrected; Step 1.8's migration becomes 0004.
 3. **Vocabulary Admin is seeded with `manage_vocabularies` only.** The spec names the role but
    not its permissions; roles are additive, so a vocabulary admin who also edits records needs
    Editor too (ADR-0020). No decision needed unless you want the role to include editing.
+   **Resolved (orchestrator under the owner's delegation, 2026-11-22; reversible):** kept as `manage_vocabularies` only.
