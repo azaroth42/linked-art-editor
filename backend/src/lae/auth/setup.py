@@ -1,8 +1,9 @@
-"""Install authentication on an application: settings checks, session cookie, OIDC client.
+"""Install authentication on an application: settings checks, session cookie, login providers.
 
 ``lae.app.create_app`` calls :func:`install_auth`. It raises :class:`AuthConfigError`, and so the
 ``api`` process refuses to start, when ``LAE_DEV_USER`` is set with ``LAE_ENV=production`` or is
-malformed, when ``LAE_OIDC_ISSUER`` is set without ``LAE_OIDC_CLIENT_ID``, or when
+malformed, when ``LAE_OIDC_ISSUER`` is set without ``LAE_OIDC_CLIENT_ID``, when only one of
+``LAE_GITHUB_CLIENT_ID`` and ``LAE_GITHUB_CLIENT_SECRET`` is set, or when
 ``LAE_SESSION_SECRET`` is missing in ``staging`` or ``production``. In ``development`` and
 ``test`` a missing session secret is replaced by a random one per process (sessions then end
 when the process restarts, and ``crdt-ws`` cannot read them; set the secret to share sessions).
@@ -18,7 +19,9 @@ from fastapi import FastAPI
 from starlette.middleware.sessions import SessionMiddleware
 
 from lae.auth.dev import init_dev_state, parse_dev_user
-from lae.auth.oidc import SESSION_COOKIE, SESSION_MAX_AGE_SECONDS, create_oidc_client
+from lae.auth.github import create_github_provider
+from lae.auth.oidc import SESSION_COOKIE, SESSION_MAX_AGE_SECONDS, create_oidc_provider
+from lae.auth.providers import LoginProvider
 from lae.logging import get_logger
 from lae.settings import Settings
 
@@ -46,6 +49,11 @@ def check_auth_settings(settings: Settings) -> None:
             raise AuthConfigError(str(exc)) from exc
     if settings.oidc_issuer and not settings.oidc_client_id:
         raise AuthConfigError("LAE_OIDC_ISSUER is set but LAE_OIDC_CLIENT_ID is not")
+    github_secret = settings.github_client_secret
+    if bool(settings.github_client_id) != bool(github_secret and github_secret.get_secret_value()):
+        raise AuthConfigError(
+            "GitHub login needs both LAE_GITHUB_CLIENT_ID and LAE_GITHUB_CLIENT_SECRET"
+        )
     if settings.session_secret is None and settings.env in SECRET_REQUIRED_ENVS:
         raise AuthConfigError(f"LAE_SESSION_SECRET is required when LAE_ENV={settings.env}")
 
@@ -58,10 +66,21 @@ def session_secret(settings: Settings) -> str:
     return secrets.token_urlsafe(32)
 
 
+def create_login_providers(
+    settings: Settings, http_transport: httpx.AsyncBaseTransport | None = None
+) -> dict[str, LoginProvider]:
+    """The enabled sign-in providers by id: OIDC, then GitHub; the first is the default."""
+    candidates = (
+        create_oidc_provider(settings, http_transport),
+        create_github_provider(settings, http_transport),
+    )
+    return {provider.id: provider for provider in candidates if provider is not None}
+
+
 def install_auth(
     app: FastAPI, settings: Settings, http_transport: httpx.AsyncBaseTransport | None = None
 ) -> None:
-    """Check the settings, add the session middleware, and create the OIDC client."""
+    """Check the settings, add the session middleware, and create the login providers."""
     check_auth_settings(settings)
     app.add_middleware(
         SessionMiddleware,
@@ -71,7 +90,7 @@ def install_auth(
         same_site="lax",
         https_only=settings.env != "development",
     )
-    app.state.oidc_client = create_oidc_client(settings, http_transport)
+    app.state.login_providers = create_login_providers(settings, http_transport)
     init_dev_state(app.state)
     if settings.dev_user:
         logger.warning("dev_user_active", dev_user=settings.dev_user)

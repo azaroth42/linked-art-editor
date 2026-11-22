@@ -1,11 +1,14 @@
-"""Test harness for ``lae.auth``: an in-process fake OIDC provider, the app, and DB helpers.
+"""Test harness for ``lae.auth``: in-process fake OIDC and GitHub providers, the app, DB helpers.
 
 There is no identity provider on the development machine or in CI, so ``FakeOIDCProvider``
 plays one over ``httpx.MockTransport`` (no network): discovery document, JWKS, and a token
 endpoint that checks the client secret, the redirect URI, and the PKCE verifier, and returns an
-RS256-signed ID token carrying the nonce from the authorization request. ``create_app`` passes
-the transport to Authlib, so the real login code runs end to end. A manual login against a real
-IdP is recorded as not performed in ``docs/questions.md`` (Step 1.7).
+RS256-signed ID token carrying the nonce from the authorization request. ``FakeGitHub`` plays
+GitHub the same way: the authorization step, the token endpoint (``client_secret_post``, PKCE,
+and errors as GitHub sends them, HTTP 200 with an ``error`` field), and the REST API's
+``/user``, ``/user/emails``, and ``/user/memberships/orgs/{org}``. ``create_app`` passes the
+transport to Authlib, so the real login code runs end to end. A manual login against a real IdP
+is recorded as not performed in ``docs/questions.md`` (Step 1.7).
 
 ``serve_app`` runs the application (with its lifespan) plus ``protected_router``, a router that
 exists only in tests so that 401/403 can be checked before Step 1.6 adds ``/api/records``. Its
@@ -49,6 +52,12 @@ SESSION_SECRET = "test-session-secret"
 AUTHORIZATION_ENDPOINT = f"{ISSUER}/protocol/openid-connect/auth"
 TOKEN_ENDPOINT = f"{ISSUER}/protocol/openid-connect/token"
 JWKS_URI = f"{ISSUER}/protocol/openid-connect/certs"
+
+GITHUB_CLIENT_ID = "Ov23liTestClient"
+GITHUB_CLIENT_SECRET = "github-client-secret"
+GITHUB_AUTHORIZE_URL = "https://github.com/login/oauth/authorize"
+GITHUB_TOKEN_URL = "https://github.com/login/oauth/access_token"
+GITHUB_HOSTS = frozenset({"github.com", "api.github.com"})
 
 
 @cache
@@ -176,6 +185,144 @@ class FakeOIDCProvider:
         )
 
 
+@dataclass
+class GitHubUser:
+    """An account at the fake GitHub."""
+
+    id: int
+    login: str
+    name: str | None = None
+    emails: list[dict[str, Any]] = field(default_factory=list)
+    """``/user/emails`` entries: ``{email, primary, verified, visibility}``."""
+    orgs: dict[str, str] = field(default_factory=dict)
+    """Organization login → membership state (``active`` or ``pending``)."""
+
+
+@dataclass
+class GitHubGrant:
+    """An authorization code the fake GitHub issued."""
+
+    redirect_uri: str
+    code_challenge: str
+    scope: str
+    user: GitHubUser
+
+
+@dataclass
+class FakeGitHub:
+    """GitHub's OAuth endpoints and REST API answering ``httpx`` requests in-process."""
+
+    grants: dict[str, GitHubGrant] = field(default_factory=dict)
+    tokens: dict[str, GitHubUser] = field(default_factory=dict)
+    requests: list[httpx.Request] = field(default_factory=list)
+    down: bool = False
+    """When true, every request fails as if GitHub were unreachable."""
+    token_status: int | None = None
+    """When set, the token endpoint answers with this HTTP status and no token."""
+    api_status: int | None = None
+    """When set, the REST API answers every request with this HTTP status."""
+
+    def authorize(self, location: str, user: GitHubUser) -> tuple[str, str]:
+        """Play ``user`` approving the app at ``location``; return ``(code, state)``."""
+        url = httpx.URL(location)
+        assert str(url.copy_with(query=None)) == GITHUB_AUTHORIZE_URL
+        params = url.params
+        assert params["response_type"] == "code"
+        assert params["client_id"] == GITHUB_CLIENT_ID
+        assert params["code_challenge_method"] == "S256"
+        assert len(params["code_challenge"]) == 43
+        code = secrets.token_urlsafe(16)
+        self.grants[code] = GitHubGrant(
+            redirect_uri=params["redirect_uri"],
+            code_challenge=params["code_challenge"],
+            scope=params["scope"],
+            user=user,
+        )
+        return code, params["state"]
+
+    def handle(self, request: httpx.Request) -> httpx.Response:
+        """The ``httpx.MockTransport`` handler for ``github.com`` and ``api.github.com``."""
+        self.requests.append(request)
+        if self.down:
+            raise httpx.ConnectError("GitHub unreachable", request=request)
+        url = str(request.url.copy_with(query=None))
+        if url == GITHUB_TOKEN_URL and request.method == "POST":
+            return self.token(request)
+        if request.url.host == "api.github.com" and request.method == "GET":
+            return self.api(request)
+        return httpx.Response(404, json={"message": "Not Found"})
+
+    def token(self, request: httpx.Request) -> httpx.Response:
+        if self.token_status is not None:
+            return httpx.Response(self.token_status, text="unavailable")
+        # GitHub answers form-encoded unless asked for JSON, and reports errors with HTTP 200.
+        assert request.headers.get("accept") == "application/json"
+        form = {key: values[0] for key, values in parse_qs(request.content.decode()).items()}
+        if (
+            form.get("client_id") != GITHUB_CLIENT_ID
+            or form.get("client_secret") != GITHUB_CLIENT_SECRET
+        ):
+            return httpx.Response(200, json={"error": "incorrect_client_credentials"})
+        grant = self.grants.pop(form.get("code", ""), None)
+        if grant is None:
+            return httpx.Response(200, json={"error": "bad_verification_code"})
+        if form.get("redirect_uri") != grant.redirect_uri:
+            return httpx.Response(200, json={"error": "redirect_uri_mismatch"})
+        verifier = form.get("code_verifier", "")
+        challenge = (
+            base64.urlsafe_b64encode(hashlib.sha256(verifier.encode()).digest())
+            .rstrip(b"=")
+            .decode()
+        )
+        if challenge != grant.code_challenge:
+            return httpx.Response(200, json={"error": "bad_verification_code"})
+        access_token = f"gho_{secrets.token_urlsafe(24)}"
+        self.tokens[access_token] = grant.user
+        return httpx.Response(
+            200,
+            json={"access_token": access_token, "token_type": "bearer", "scope": grant.scope},
+        )
+
+    def api(self, request: httpx.Request) -> httpx.Response:
+        assert request.headers.get("accept") == "application/vnd.github+json"
+        if self.api_status is not None:
+            return httpx.Response(self.api_status, json={"message": "Server Error"})
+        scheme, _, access_token = request.headers.get("authorization", "").partition(" ")
+        user = self.tokens.get(access_token) if scheme.lower() == "bearer" else None
+        if user is None:
+            return httpx.Response(401, json={"message": "Bad credentials"})
+        path = request.url.path
+        if path == "/user":
+            return httpx.Response(
+                200, json={"id": user.id, "login": user.login, "name": user.name, "email": None}
+            )
+        if path == "/user/emails":
+            return httpx.Response(200, json=user.emails)
+        prefix = "/user/memberships/orgs/"
+        if path.startswith(prefix):
+            org = path.removeprefix(prefix).casefold()
+            states = {name.casefold(): state for name, state in user.orgs.items()}
+            if org not in states:
+                return httpx.Response(404, json={"message": "Not Found"})
+            return httpx.Response(
+                200, json={"state": states[org], "role": "member", "organization": {"login": org}}
+            )
+        return httpx.Response(404, json={"message": "Not Found"})
+
+    def api_paths(self) -> list[str]:
+        """Paths of the REST API requests made so far, in order."""
+        return [r.url.path for r in self.requests if r.url.host == "api.github.com"]
+
+
+def github_settings(**overrides: Any) -> dict[str, Any]:
+    """Settings overrides that enable GitHub login against ``FakeGitHub``."""
+    return {
+        "github_client_id": GITHUB_CLIENT_ID,
+        "github_client_secret": GITHUB_CLIENT_SECRET,
+        **overrides,
+    }
+
+
 protected_router = APIRouter(prefix="/test", tags=["test"])
 """Routes that exist only in tests, standing in for Step 1.6's protected endpoints."""
 
@@ -237,13 +384,27 @@ class Served:
 
 @asynccontextmanager
 async def serve_app(
-    database_url: str, idp: FakeOIDCProvider | None = None, **overrides: Any
+    database_url: str,
+    idp: FakeOIDCProvider | None = None,
+    *,
+    github: FakeGitHub | None = None,
+    **overrides: Any,
 ) -> AsyncIterator[Served]:
-    """Run ``create_app`` (plus ``protected_router``) with its lifespan; yield app and client."""
+    """Run ``create_app`` (plus ``protected_router``) with its lifespan; yield app and client.
+
+    Outgoing requests to GitHub go to ``github`` (a fresh ``FakeGitHub`` if omitted), every
+    other one to ``idp``.
+    """
     provider = idp or FakeOIDCProvider()
+    fake_github = github or FakeGitHub()
+
+    def handle(request: httpx.Request) -> httpx.Response:
+        if request.url.host in GITHUB_HOSTS:
+            return fake_github.handle(request)
+        return provider.handle(request)
+
     app = create_app(
-        make_settings(database_url, **overrides),
-        http_transport=httpx.MockTransport(provider.handle),
+        make_settings(database_url, **overrides), http_transport=httpx.MockTransport(handle)
     )
     app.include_router(protected_router)
     async with app.router.lifespan_context(app):

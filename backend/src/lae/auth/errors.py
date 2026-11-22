@@ -30,7 +30,7 @@ TOKEN_NEEDS_SESSION: Final = "LAE-AUTH-005"
 """403: tokens are created from a signed-in session (or the dev user), not with another token."""
 
 LOGIN_NOT_CONFIGURED: Final = "LAE-AUTH-006"
-"""503: ``LAE_OIDC_ISSUER`` is not set, so there is no login."""
+"""503: no sign-in provider is configured (neither ``LAE_OIDC_ISSUER`` nor GitHub)."""
 
 LOGIN_FAILED: Final = "LAE-AUTH-007"
 """400: the login callback was rejected; param ``error`` (an OAuth 2.0 error code)."""
@@ -44,6 +44,12 @@ ACCOUNT_INACTIVE: Final = "LAE-AUTH-009"
 TOKEN_NOT_FOUND: Final = "LAE-AUTH-010"
 """404: no token with this id belongs to the caller."""
 
+UNKNOWN_PROVIDER: Final = "LAE-AUTH-011"
+"""404: no enabled sign-in provider has this id; param ``provider``."""
+
+ACCOUNT_NOT_ALLOWED: Final = "LAE-AUTH-012"
+"""403: the provider's account is not on the server's allowlist; param ``provider``."""
+
 AUTH_CODES: Final = (
     PERMISSION_DENIED,
     NOT_AUTHENTICATED,
@@ -55,6 +61,8 @@ AUTH_CODES: Final = (
     IDP_UNAVAILABLE,
     ACCOUNT_INACTIVE,
     TOKEN_NOT_FOUND,
+    UNKNOWN_PROVIDER,
+    ACCOUNT_NOT_ALLOWED,
 )
 """Every code this package emits."""
 

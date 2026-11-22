@@ -44,6 +44,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/auth/providers": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Providers
+         * @description The enabled sign-in providers, the default one first (empty when none is configured).
+         */
+        get: operations["providers_auth_providers_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/auth/login": {
         parameters: {
             query?: never;
@@ -53,9 +73,29 @@ export interface paths {
         };
         /**
          * Login
-         * @description Redirect to the identity provider; after the callback, go to ``next`` (default ``/``).
+         * @description Redirect to the default provider; after the callback, go to ``next`` (default ``/``).
          */
         get: operations["login_auth_login_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/login/{provider}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Provider Login
+         * @description Redirect to ``provider``; after its callback, go to ``next`` (default ``/``).
+         */
+        get: operations["provider_login_auth_login__provider__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -73,9 +113,29 @@ export interface paths {
         };
         /**
          * Auth Callback
-         * @description Finish the login: exchange the code, validate the ID token, upsert the user, sign in.
+         * @description Finish a login with the default provider (the OIDC provider's redirect URI).
          */
         get: operations["auth_callback_auth_callback_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/callback/{provider}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Auth Provider Callback
+         * @description Finish a login with ``provider``: exchange the code, upsert the user, sign them in.
+         */
+        get: operations["auth_provider_callback_auth_callback__provider__get"];
         put?: never;
         post?: never;
         delete?: never;
@@ -342,6 +402,16 @@ export interface components {
             permissions: string[];
         };
         /**
+         * ProviderInfo
+         * @description One entry of ``GET /auth/providers``.
+         */
+        ProviderInfo: {
+            /** Id */
+            id: string;
+            /** Display Name */
+            display_name: string;
+        };
+        /**
          * ReadyStatus
          * @description Body of ``GET /health/ready``: overall status, failing components, every component.
          */
@@ -543,6 +613,26 @@ export interface operations {
             };
         };
     };
+    providers_auth_providers_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ProviderInfo"][];
+                };
+            };
+        };
+    };
     login_auth_login_get: {
         parameters: {
             query?: {
@@ -550,6 +640,39 @@ export interface operations {
             };
             header?: never;
             path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    provider_login_auth_login__provider__get: {
+        parameters: {
+            query?: {
+                next?: string | null;
+            };
+            header?: never;
+            path: {
+                provider: string;
+            };
             cookie?: never;
         };
         requestBody?: never;
@@ -590,6 +713,37 @@ export interface operations {
                 };
                 content: {
                     "application/json": unknown;
+                };
+            };
+        };
+    };
+    auth_provider_callback_auth_callback__provider__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": unknown;
+                };
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
                 };
             };
         };

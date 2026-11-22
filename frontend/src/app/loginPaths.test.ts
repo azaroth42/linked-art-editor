@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { loginPageUrl, oidcLoginUrl, safeNext } from "./loginPaths.ts";
+import { loginPageUrl, providerLoginUrl, safeNext } from "./loginPaths.ts";
 
 describe("safeNext", () => {
   it.each(["/", "/edit/abc", "/records/abc/history?x=1#top"])("keeps the local path %j", (path) => {
@@ -33,9 +33,13 @@ describe("loginPageUrl", () => {
   });
 });
 
-describe("oidcLoginUrl", () => {
-  it("starts the API's login with a safe next", () => {
-    expect(oidcLoginUrl("/edit/abc")).toBe("/auth/login?next=%2Fedit%2Fabc");
-    expect(oidcLoginUrl("//evil.example")).toBe("/auth/login?next=%2F");
+describe("providerLoginUrl", () => {
+  it("starts the API's login with the provider and a safe next", () => {
+    expect(providerLoginUrl("github", "/edit/abc")).toBe("/auth/login/github?next=%2Fedit%2Fabc");
+    expect(providerLoginUrl("oidc", "//evil.example")).toBe("/auth/login/oidc?next=%2F");
+  });
+
+  it("escapes the provider id", () => {
+    expect(providerLoginUrl("a/b?c", "/")).toBe("/auth/login/a%2Fb%3Fc?next=%2F");
   });
 });

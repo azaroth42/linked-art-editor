@@ -204,6 +204,12 @@ The unit templates in `systemd/` assume this layout; adjust paths and the user i
    LAE_OIDC_ISSUER=https://<your IdP>/realms/<realm>
    LAE_OIDC_CLIENT_ID=<client id>
    LAE_OIDC_CLIENT_SECRET=<client secret>
+   # And/or GitHub (docs/dev-setup.md §3); callback URL https://<your host>/auth/callback/github.
+   # Without an allowlist any GitHub user can sign in (as Viewer).
+   # LAE_GITHUB_CLIENT_ID=<OAuth App client id>
+   # LAE_GITHUB_CLIENT_SECRET=<OAuth App client secret>
+   # LAE_GITHUB_ALLOWED_ORGS=<organization>
+   # LAE_GITHUB_ALLOWED_USERS=<login>,<login>
    # Never set LAE_DEV_USER here: `lae api` refuses to start with it in production.
    ```
 

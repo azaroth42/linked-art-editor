@@ -3,8 +3,11 @@
 /** The SPA's sign-in page. */
 export const LOGIN_PATH = "/login";
 
-/** The API endpoint that redirects to the identity provider (`GET /auth/login?next=`). */
-export const OIDC_LOGIN_PATH = "/auth/login";
+/** The API endpoints that redirect to an identity provider (`GET /auth/login/{provider}`). */
+export const AUTH_LOGIN_PATH = "/auth/login";
+
+/** Provider ids whose button label is translated (`login.provider.<id>` in `common`). */
+export const KNOWN_PROVIDERS: ReadonlySet<string> = new Set(["oidc", "github"]);
 
 /**
  * `value` if it is a same-origin absolute path other than the login page, else `/`. Anything
@@ -32,7 +35,8 @@ export function loginPageUrl(next: string): string {
     : `${LOGIN_PATH}?${new URLSearchParams({ next: target }).toString()}`;
 }
 
-/** The API URL that starts the OpenID Connect login and returns to `next` afterwards. */
-export function oidcLoginUrl(next: string): string {
-  return `${OIDC_LOGIN_PATH}?${new URLSearchParams({ next: safeNext(next) }).toString()}`;
+/** The API URL that starts signing in with `provider` and returns to `next` afterwards. */
+export function providerLoginUrl(provider: string, next: string): string {
+  const query = new URLSearchParams({ next: safeNext(next) }).toString();
+  return `${AUTH_LOGIN_PATH}/${encodeURIComponent(provider)}?${query}`;
 }

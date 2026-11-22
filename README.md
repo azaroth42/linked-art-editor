@@ -48,8 +48,9 @@ make down     # stop QLever
 `make up` never starts or stops PostgreSQL; it must already be running (Postgres.app,
 `brew services`, or `systemctl`). It prints the `LAE_*` settings for the `lae` processes; put
 them in a `.env` file in the repository root (not committed), which `make run` loads.
-To sign in, set `LAE_DEV_USER=you@example.org:Editor` there, or configure an OpenID Connect
-provider; [`docs/dev-setup.md`](docs/dev-setup.md) covers both and Personal Access Tokens.
+To sign in, set `LAE_DEV_USER=you@example.org:Editor` there, or configure GitHub login or an
+OpenID Connect provider; [`docs/dev-setup.md`](docs/dev-setup.md) covers each and Personal
+Access Tokens.
 
 Ports, database name, and index directory are overridable, e.g.
 `make up LAE_DB=lae_i3 QLEVER_PORT=7003 QLEVER_DIR=/tmp/lae-i3/qlever` and

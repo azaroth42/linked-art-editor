@@ -222,6 +222,15 @@ Spike S6 (`docs/spikes/S6-bootstrap.md`) is a **GO**: 1M records bootstrap in 10
    not its permissions; roles are additive, so a vocabulary admin who also edits records needs
    Editor too (ADR-0020). No decision needed unless you want the role to include editing.
    **Resolved (orchestrator under the owner's delegation, 2026-11-22; reversible):** kept as `manage_vocabularies` only.
+4. **Not verified: a real GitHub login (follow-up adding GitHub login, ADR-0026).** By
+   instruction no OAuth App was created and no login against github.com was attempted. The flow
+   (redirect with `state` and PKCE `S256`, code exchange with `client_secret_post`, `/user`,
+   `/user/emails`, `/user/memberships/orgs/{org}`, user upsert, session) is tested end to end
+   against an in-process fake GitHub (`backend/tests/auth/test_github.py`), including forged
+   state, a rejected code, a wrong PKCE verifier or client secret, an unverified primary
+   address, allowlist rejection, and a failing token endpoint or API. A real `lae api` was
+   checked to redirect to `github.com/login/oauth/authorize` with the expected parameters. The
+   owner's steps are in `docs/dev-setup.md` §3; please sign in once and note the date here.
 
 ## Step 1.3
 
