@@ -87,6 +87,8 @@ viewer (ADR-0012), these measured gaps become editor work or upstream fixes. Ple
    `SPIKE_S5_CHROME=1` selects branded Chrome. The spike tests load public `iiif.io` resources, so they
    are not wired into CI.
 
+**Acknowledged (owner, 2026-11-22):** all four gaps accepted. Step 2.12 builds accessible, translated A/V controls on `mediaActions` and applies `#t=` itself; the editor keeps the wrapper workarounds from the spike report section 8 for the four defects (no `pnpm patch` for now); region selection gets numeric x/y/w/h fields and "use current view" as the keyboard path; A/V tests stay macOS/branded-Chrome only.
+
 ## Step 0.12
 
 1. **One Value Set per `(class, path)`, or several?** Spec §7.2 binds Gender, Occupation, and
