@@ -61,7 +61,7 @@ the step's follow-up issue.
    `LAE-RULE-001`, comparing ISO 8601 values with signed years. Please confirm that BCE dates must
    be supported, so that Step 1.9 also accepts signed years in the `date-time` format check
    (for example with a custom format checker) rather than inheriting the RFC 3339 limit.
-   **Resolved (orchestrator under the owner's delegation, 2026-11-22; reversible):** BCE dates must be supported (antiquities). Step 1.9 accepts signed years in `date-time` with a custom format checker, compares `TimeSpan` bounds in the Python rule `LAE-RULE-001`, and keeps `xsd:dateTime` datatype and ordering checks out of SHACL. The schema's RFC 3339 limit is listed for upstream in `docs/upstream/README.md`.
+   **Resolved (orchestrator under the owner's delegation, 2026-11-22; reversible):** BCE dates must be supported (antiquities). Step 1.9 accepts signed years in `date-time` with a custom format checker, compares `TimeSpan` bounds in the Python rule `LAE-RULE-001`, and keeps `xsd:dateTime` datatype and ordering checks out of SHACL. The schema's RFC 3339 limit is listed for upstream in `docs/upstream/README.md`. **Confirmed by the owner, 2026-11-22.**
 
 ## Step 0.10
 
@@ -173,7 +173,7 @@ persistence, `SERVICE`, and rebuilds. Decision F9 needs a human to acknowledge t
    prefixes); it builds natively on this Mac in about 3 minutes with one compiler flag (spike
    report section 8). Decide whether to keep 0.6.0 until a newer Homebrew release, or pin a source
    build.
-   **Resolved (orchestrator under the owner's delegation, 2026-11-22; reversible):** keep the Homebrew QLever 0.6.0 pin (`6c5861a`) for development and CI because it is reproducible; the overlay is needed for prefix search on either binary. Revisit when Homebrew ships a release at or after `d417fa76`, or if index-build time matters before then (master builds about 2–3× faster). CI jobs that need QLever install it the same way (Homebrew on a macOS runner) unless a native Linux package of the same version is available.
+   **Resolved (orchestrator under the owner's delegation, 2026-11-22; reversible):** keep the Homebrew QLever 0.6.0 pin (`6c5861a`) for development and CI because it is reproducible; the overlay is needed for prefix search on either binary. Revisit when Homebrew ships a release at or after `d417fa76`, or if index-build time matters before then (master builds about 2–3× faster). CI jobs that need QLever install it the same way (Homebrew on a macOS runner) unless a native Linux package of the same version is available. **Confirmed by the owner, 2026-11-22.**
 3. **QLever's built-in rebuild cannot be used while text search is.** `cmd=rebuild-index` (and
    `--rebuild-index-strategy automatic`) folds the delta into a new index in 2 s at 11M triples,
    but drops the text index: `ql:contains-word` returns nothing afterwards, on both binaries, and
@@ -191,7 +191,7 @@ Spike S6 (`docs/spikes/S6-bootstrap.md`) is a **GO**: 1M records bootstrap in 10
    Mac, and no stage needs more memory than it has". Not verified: a dedicated or production-like
    host (the Mac was shared with other agents and a backup job; Postgres ran with Postgres.app's
    stock settings). Confirm the window, or give the one that applies.
-   **Resolved (orchestrator under the owner's delegation, 2026-11-22; reversible):** the 8-hour single-machine window is accepted as the bulk-bootstrap target.
+   **Resolved (orchestrator under the owner's delegation, 2026-11-22; reversible):** the 8-hour single-machine window is accepted as the bulk-bootstrap target. **Confirmed by the owner, 2026-11-22.**
 2. **Carry a pyld patch?** Two expansion tunings were measured; both give byte-identical triples.
    The first, returning `"tag": "static"` from `lae.rdf.context.document_loader`, uses pyld's
    public loader contract (+32 %) and is simply recommended for Step 1.3. The second memoizes
@@ -217,7 +217,7 @@ Spike S6 (`docs/spikes/S6-bootstrap.md`) is a **GO**: 1M records bootstrap in 10
    cleanly from editorial publish rights". The seed follows the guide. If the spec sentence
    means the System Admin *role* must not publish, a later migration can drop the editorial
    permissions from it (ADR-0020). Please confirm.
-   **Resolved (orchestrator under the owner's delegation, 2026-11-22; reversible):** the spec wins. Migration 0003 restricts System Admin to `manage_vocabularies`, `manage_roles`, `manage_users`, `manage_backups`, `manage_system`, `view_analytics`; people who also edit hold Editor too. Step 1.7 guide corrected; Step 1.8's migration becomes 0004.
+   **Resolved (orchestrator under the owner's delegation, 2026-11-22; reversible):** the spec wins. Migration 0003 restricts System Admin to `manage_vocabularies`, `manage_roles`, `manage_users`, `manage_backups`, `manage_system`, `view_analytics`; people who also edit hold Editor too. Step 1.7 guide corrected; Step 1.8's migration becomes 0004. **Confirmed by the owner, 2026-11-22.**
 3. **Vocabulary Admin is seeded with `manage_vocabularies` only.** The spec names the role but
    not its permissions; roles are additive, so a vocabulary admin who also edits records needs
    Editor too (ADR-0020). No decision needed unless you want the role to include editing.
