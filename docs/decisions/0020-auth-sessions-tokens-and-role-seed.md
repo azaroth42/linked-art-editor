@@ -14,3 +14,5 @@ Step 1.7 asks for OIDC login with "a signed session cookie", PATs, `ROLE_PERMISS
 
 ## Consequences
 Signing in needs no extra table, and suspension is immediate. Sessions cannot be listed or revoked one by one until Phase 4 adds a revocation cut-off. Changing a role's permissions needs a new migration (or the Phase 4 role editor), and every later phase's permission checks find their roles already seeded. Scripts that want a new token must use a signed-in session or the CLI that Phase 3 adds for service accounts.
+
+*Amended 2026-11-22 (orchestrator, per spec §8.2):* System Admin no longer holds editorial permissions; migration 0003 restricts it to the administrative permissions. See `docs/questions.md` Step 1.7.

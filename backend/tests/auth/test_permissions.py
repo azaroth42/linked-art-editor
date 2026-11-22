@@ -71,7 +71,15 @@ def test_roles_are_those_of_spec_10_4_with_the_specified_permissions() -> None:
         "unmerge",
         "protect",
     }
-    assert ROLE_PERMISSIONS["System Admin"] == set(SPEC_PERMISSIONS)
+    assert ROLE_PERMISSIONS["System Admin"] == {
+        "manage_vocabularies",
+        "manage_roles",
+        "manage_users",
+        "manage_backups",
+        "manage_system",
+        "view_analytics",
+    }
+    assert not ROLE_PERMISSIONS["System Admin"] & ROLE_PERMISSIONS["Editor"]
     assert ROLE_PERMISSIONS["Tier 1 Agent"] == {"edit_draft", "propose_merge"}
     assert ROLE_PERMISSIONS["Tier 2 Agent"] == {"review_proposal", "approve_merge_scoped"}
     assert ROLE_PERMISSIONS["Vocabulary Admin"] == {"manage_vocabularies"}
@@ -149,13 +157,19 @@ async def test_role_changes_apply_from_the_next_request(
     assert both.status_code == 403
 
 
-async def test_system_admin_holds_every_permission(db_url: str, db_engine: AsyncEngine) -> None:
+async def test_system_admin_holds_only_administrative_permissions(
+    db_url: str, db_engine: AsyncEngine
+) -> None:
+    """Spec §8.2: administrative permissions are separate from editorial publish rights."""
     user_id = await create_user(db_engine, "System Admin")
     token, _ = await create_token(db_engine, user_id, *SPEC_PERMISSIONS)
     async with serve_app(db_url) as served:
         me = await served.client.get("/auth/me", headers=bearer(token))
+        publish = await served.client.post("/test/publish", headers=bearer(token))
     assert me.json()["roles"] == ["System Admin"]
-    assert me.json()["permissions"] == sorted(SPEC_PERMISSIONS)
+    assert me.json()["permissions"] == sorted(ROLE_PERMISSIONS["System Admin"])
+    assert "publish" not in me.json()["permissions"]
+    assert publish.status_code == 403
 
 
 async def test_permissions_are_read_once_per_request(db_url: str, db_engine: AsyncEngine) -> None:

@@ -60,11 +60,22 @@ ROLE_PERMISSIONS: Final[dict[str, frozenset[str]]] = {
     "Collaborator": frozenset({"edit_draft"}),
     "Editor": frozenset({"edit_draft", "publish", "delete", "merge", "unmerge", "protect"}),
     "Vocabulary Admin": frozenset({"manage_vocabularies"}),
-    "System Admin": frozenset(ALL_PERMISSIONS),
+    # Spec §8.2: administrative permissions are separate from editorial rights (migration 0003).
+    "System Admin": frozenset(
+        {
+            "manage_vocabularies",
+            "manage_roles",
+            "manage_users",
+            "manage_backups",
+            "manage_system",
+            "view_analytics",
+        }
+    ),
     "Tier 1 Agent": frozenset({"edit_draft", "propose_merge"}),
     "Tier 2 Agent": frozenset({"review_proposal", "approve_merge_scoped"}),
 }
-"""The roles of spec §10.4 with the permissions of spec §8.2 and Step 1.7 (seeded by ``0002``)."""
+"""The roles of spec §10.4 with the permissions of spec §8.2 (seeded by ``0002``, System Admin
+restricted to administrative permissions by ``0003``)."""
 
 DEFAULT_ROLE: Final = "Viewer"
 """Role given to a user who signs in for the first time (and to any user left without a role)."""
