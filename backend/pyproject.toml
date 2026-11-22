@@ -60,12 +60,12 @@ markers = [
 
 [dependency-groups]
 dev = [
+    "honcho>=2.0.0",
     "hypothesis>=6.170.17",
     "mypy>=2.4.1",
     "pytest>=9.2.0",
     "pytest-asyncio>=1.5.0",
     "pytest-cov>=7.1.0",
     "ruff>=0.17.6",
-    "testcontainers[postgres]>=4.15.0",
     "types-jsonschema>=4.26.0.20261006",
 ]

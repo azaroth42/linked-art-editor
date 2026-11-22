@@ -1,0 +1,39 @@
+# Template unit for the QLever SPARQL server, started through qlever-control with
+# deploy/Qleverfile (SYSTEM = native, --persist-updates). The index must already exist in
+# WorkingDirectory: build it once with `qlever get-data && qlever index` (empty index) or with
+# `lae bootstrap build-index` (Phase 1). Assumes the layout in deploy/README.md ("Production
+# with systemd"); adjust the paths, user, and the `qlever` path (`command -v qlever`).
+#
+# /etc/lae/lae.env supplies QLEVER_PORT and LAE_QLEVER_ACCESS_TOKEN, which the Qleverfile
+# reads. qlever-server listens on all interfaces (QLever has no bind option), so close the port
+# to everything but the lae hosts with a host firewall (conventions §9); public SPARQL goes
+# through the api's read-only /sparql proxy. The server log is lae.server-log.txt in
+# WorkingDirectory. Note that qlever-server receives the access token as a command-line
+# argument, so it is visible to local users in the process list.
+
+[Unit]
+Description=QLever SPARQL server for the Linked Art Editor
+Documentation=https://github.com/azaroth42/linked-art-editor/blob/main/deploy/README.md
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=lae
+Group=lae
+WorkingDirectory=/var/lib/lae/qlever
+EnvironmentFile=/etc/lae/lae.env
+ExecStart=/usr/bin/qlever --qleverfile /opt/lae/deploy/Qleverfile start --run-in-foreground
+# qlever-control shuts the server down on Ctrl-C.
+KillSignal=SIGINT
+TimeoutStopSec=60
+Restart=on-failure
+RestartSec=5
+LimitNOFILE=1048576
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=true
+
+[Install]
+WantedBy=multi-user.target

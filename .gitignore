@@ -233,3 +233,6 @@ playwright-report/
 test-results/
 blob-report/
 playwright/.cache/
+
+# Local QLever index created by `make up` (LAE_QLEVER_DIR default)
+deploy/data/

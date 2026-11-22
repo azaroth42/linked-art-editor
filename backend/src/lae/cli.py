@@ -1,7 +1,8 @@
 """Command-line entry point: ``lae <command>``.
 
-Sub-command names match the process names in conventions §1 and the compose service names.
-Every command is a placeholder until Step 0.3 and later steps wire it.
+Sub-command names match the process names in conventions §1, the entries in ``deploy/Procfile``,
+and the ``deploy/systemd/lae-<name>.service`` units. Every command is a placeholder that prints
+its name and exits 0 until a later step wires it (``migrate`` in Step 0.5, the rest in Phase 1).
 """
 
 from __future__ import annotations

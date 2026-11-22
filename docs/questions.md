@@ -3,6 +3,23 @@
 Questions raised while implementing guide steps. Each section names the step; answer inline or in
 the step's follow-up issue.
 
+## Step 0.3
+
+1. **Not verified: Linux and systemd.** `deploy/systemd/*.service` and the Debian/Ubuntu install
+   steps in `deploy/README.md` were written but not run: the development machine is macOS, with
+   no Linux host or systemd. What was verified on macOS: `make up` / `make run` / `make down`, and
+   that `qlever start --run-in-foreground` (what `qlever.service` runs) shuts the server down on
+   `SIGINT` (`KillSignal=SIGINT`). Please run the production steps once on a Debian/Ubuntu host.
+2. **QLever cannot bind to localhost only.** The guide says QLever binds only to localhost / the
+   internal network, but `qlever-server` listens on `0.0.0.0`, hard-coded in
+   `src/engine/Server.cpp` (also in the current `lux/qlever-dev` master); there is no option. The
+   port has to be closed with a host firewall; `deploy/README.md` and `qlever.service` say so.
+   Decide whether that is acceptable or whether an upstream bind option should be requested.
+3. **Verified binary is older than the reference source.** Homebrew `qlever` 0.6.0_1 is built
+   from git `6c5861a` (2026-08-13), 480 commits behind the `lux/qlever-dev` checkout `ba7b74c`
+   (2026-11-21). Both are recorded in `deploy/QLEVER_VERSION`. Decide whether Spike S1 must use a
+   source build at the newer commit.
+
 ## Step 0.4
 
 1. **Institutional records are not from `lux.collections.yale.edu`.** Every plain `GET` to LUX
