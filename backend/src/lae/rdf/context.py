@@ -54,8 +54,18 @@ def load_context(version: int) -> dict[str, Any]:
     return data
 
 
+STATIC_TAG: Final = "static"
+"""pyld's cache tag for a remote document that never changes (see ``document_loader``)."""
+
+
 def document_loader(url: str, options: Mapping[str, Any] | None = None) -> dict[str, Any]:
-    """pyld document loader that serves only pinned contexts and raises for any other URL."""
+    """pyld document loader that serves only pinned contexts and raises for any other URL.
+
+    The remote document is tagged ``static``: pyld keeps a resolved remote context in its shared,
+    cross-document cache only for that tag, and otherwise reloads, re-resolves and
+    re-canonicalizes the whole context for every document it processes (+32 % expansion
+    throughput in Spike S6). A pinned context file never changes while a process runs.
+    """
     version = CONTEXT_URLS.get(url)
     if version is None:
         raise UnpinnedContextError(
@@ -66,4 +76,5 @@ def document_loader(url: str, options: Mapping[str, Any] | None = None) -> dict[
         "contextUrl": None,
         "documentUrl": url,
         "document": load_context(version),
+        "tag": STATIC_TAG,
     }

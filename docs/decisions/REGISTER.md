@@ -2,7 +2,7 @@
 
 Every decision that an implementer might otherwise have to make again, in one place. **Status:** `locked` (changing it needs a human and an ADR), `fixed` (a tooling/naming choice made in the guides; change only with an ADR), `open` (not yet decided; see the named spike or step). "Source" points at the authoritative text.
 
-Decisions made during the November 2026 design review are also written up as ADRs `0001`–`0017` in this directory (ADR-0018 records the refinements found by Spike S3; ADR-0021 the ownership rule for embedded nodes that have their own ids); the register links them.
+Decisions made during the November 2026 design review are also written up as ADRs `0001`–`0017` in this directory (ADR-0018 records the refinements found by Spike S3; ADR-0021 the ownership rule for embedded nodes that have their own ids; ADR-0024 the URIs of bulk-loaded records); the register links them.
 
 ## A. Architecture and storage
 
@@ -13,7 +13,7 @@ Decisions made during the November 2026 design review are also written up as ADR
 | A3 | Processes: `api`, `crdt-ws`, `sync-worker`, `scheduler`, `embedder`, `reconcile`, `llm`, `qlever`, `postgres`. Same names for Procfile entries, systemd units, and `lae` CLI sub-commands. | locked | spec §4.2; conventions §1; ADR-0011 |
 | A4 | Validate and publish requests needing the live Y.Doc are routed from `api` to `crdt-ws` over an internal HTTP RPC (`/internal/...`, header `X-Internal-Token`). `crdt-ws` is a single process. | locked | spec §4.2; Phase 1 Step 1.8; ADR-0011 |
 | A5 | Single tenant per installation; fully open published data; no field-level redaction. | locked | spec §1, §8 |
-| A6 | Record ids are UUIDv7; public URIs are flat `/id/{uuidv7}`; no class-typed paths. | locked | spec §3.1 |
+| A6 | Record ids are UUIDv7; public URIs are flat `/id/{uuidv7}`; no class-typed paths. A record bulk-loaded with a URI from elsewhere keeps that URI as `records.uri` and gets a UUIDv7 `id` (ADR-0024, owner to confirm). | locked | spec §3.1; ADR-0024 |
 | A7 | Embedded nodes get internal IRIs `<record_uri>/node/<uuidv7>`; stripped from public JSON-LD; visible in SPARQL results; `/id/{uuid}/node/{id}` 303-redirects to the record. In RDF only, an embedded node that arrived with an `id` of its own gets the derived IRI `<record_uri>/node/<uuidv5(original id)>` and a `la:equivalent` triple to that id; the whole `<record_uri>/node/` namespace belongs to the record. | locked | spec §3.3; ADR-0003; ADR-0021 |
 | A8 | `records.data` is JSONB with TOAST `lz4`; revision N-Triples and JSON-LD snapshots are application-level zstd (level 9) `bytea`. | locked | spec §3.1; Phase 1 Step 1.3 |
 | A9 | Every edited revision stores canonical N-Triples (sorted, deduplicated lines) and a JSON-LD snapshot. Bulk-loaded records have no revision row until first edited. | locked | spec §3.1, §3.3 |

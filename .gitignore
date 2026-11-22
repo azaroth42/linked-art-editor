@@ -255,3 +255,6 @@ playwright/.cache/
 
 # Local QLever index created by `make up` (LAE_QLEVER_DIR default)
 deploy/data/
+
+# Default failure reports of `lae bootstrap` (written to the current directory)
+bootstrap-*-report.jsonl

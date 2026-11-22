@@ -309,3 +309,34 @@ Spike S6 (`docs/spikes/S6-bootstrap.md`) is a **GO**: 1M records bootstrap in 10
    of a record whose current version has no revision row, insert that version's row (zstd
    JSON-LD of the previous `records.data` and its N-Triples) in the same transaction.
    `lae.api.records.load_version` already serves such a row.
+
+## Step 1.12
+
+`lae bootstrap` (load, export-nt, build-index, aat-labels) is built and was run at 1M records
+(`docs/spikes/S6-bootstrap.md`, "Phase 1 actual"). Points for a human:
+
+1. **Records that keep a URI from elsewhere (ADR-0024).** The spec does not say what a bulk load
+   does with records whose `id` is not `<base_uri><uuid>`; the whole golden corpus is such records.
+   They keep their URI as `records.uri` and get a UUIDv7 `records.id`; nothing is re-minted or
+   rewritten. Confirm, or ask for re-minting (a second pass that rewrites references and keeps the
+   source URI as `equivalent`). Consequence for Phase 2 Step 2.7: `owner_of` does not recognise
+   these records' node IRIs.
+2. **JSON Schema skips a large share of real-looking data.** The load validates with JSON Schema
+   only and skips failures, as the guide says: 60 of the 244 corpus records (`KNOWN_FAILURES.md`)
+   and 37 % of the 1M S6 synthetic records (370,825), whose templates inherit the corpus failures
+   (references without `id`, entities embedded in `about`, `@context` on nested nodes, cardinality
+   drift). Each is listed in the report with its errors. Is skip-and-report what a migration
+   should do, or should a later step offer to load such records anyway (with a QA finding), so
+   that nothing from a source is left out?
+3. **Records in Postgres but not in QLever.** Expansion rejects values it cannot write
+   (`lae.rdf` raises instead of repairing): 14 of the 629,163 loaded synthetic records have a
+   year-only or `c. 1850` `xsd:dateTime` and were left out of the export (reported,
+   `LAE-BOOT-007`); Spike S6 padded year-only dates instead. They stay in `records` and cannot be
+   published until fixed, and the nightly consistency audit will flag them. Confirm, or ask for
+   year-only dates to be padded at load as S6 did, or for the load to reject such records too
+   (it would have to expand every record twice).
+4. **No stub normalization at load.** Publish strips `_label` from references whose target has an
+   `entity_labels` row (`normalize_refs`, spec §3.2); the bulk load does not, because a single
+   streaming pass does not know every target yet. Labels are transcluded on read either way, so
+   stored `_label`s are only stale copies until the record is first published. Say if a
+   post-load normalization pass is wanted.
