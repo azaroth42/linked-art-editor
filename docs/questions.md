@@ -220,3 +220,49 @@ Spike S6 (`docs/spikes/S6-bootstrap.md`) is a **GO**: 1M records bootstrap in 10
    not its permissions; roles are additive, so a vocabulary admin who also edits records needs
    Editor too (ADR-0020). No decision needed unless you want the role to include editing.
    **Resolved (orchestrator under the owner's delegation, 2026-11-22; reversible):** kept as `manage_vocabularies` only.
+
+## Step 1.3
+
+1. **Embedded nodes that carry their own `id`: decided, ADR-0021.** As first written, Step 1.3
+   reduced every object with a foreign `id` to `{"id": uri}`, so an embedded `Name`, `Identifier`,
+   `Production`, `TimeSpan`, `Dimension` or statement that an institution had given an IRI was
+   not indexed beyond the link. The reviewer changed this: such a node is emitted, in RDF only,
+   under the derived node IRI `<record_uri>/node/<uuidv5(original id)>` with a `la:equivalent`
+   triple to its original id; `records.data` keeps the original id; references are unchanged.
+   Of the 205 corpus objects with a foreign `id` and more than `type` / `_label`, 3 are embedded
+   `Name`s and are now indexed; 202 are references and still emit only the link.
+   **Resolved (critical-step reviewer under the owner's delegation, 2026-11-22; reversible):**
+   ADR-0021. Rob Sanderson may override, in particular the two class lists and the choice of
+   `la:equivalent` as the linking predicate.
+2. **Inline meta-types on concept references are not indexed from records. Phase 2 must harvest
+   them.** `{"id": aat:300435424, "type": "Type", "classified_as": [{"id": aat:300418049}]}`
+   emits `<node> crm:P2_has_type <aat:300435424>` and nothing about the concept: the concept owns
+   its meta-type (183 such references in the corpus, and the same for `notation` on a `Language`
+   or `Currency`, 18). So the triple `<aat:300435424> crm:P2_has_type <aat:300418049>` is in
+   QLever only if the concept's own record or a sidecar graph says it. Rule-backed Value Set
+   membership (Phase 2 Step 2.1, `rule.metatype_uris`) must therefore harvest inline meta-types
+   from published records, as LUX's `reference_manager.walk_for_refs` does, into
+   `entity_labels.metatype_uris` (or into the sidecar graphs), and must not rely on the default
+   graph alone. A note is in the Step 2.1 guide text. No decision needed unless the owner
+   prefers the sidecar graphs to `entity_labels` as the place to put them.
+3. **Expansion rejects what pyld would silently change.** Not a question; for the record. pyld
+   drops a triple whose IRI contains a forbidden character or any Unicode white space (U+00A0,
+   U+2028, …), resolves a relative `id` or an undefined `type` against
+   `http://example.org/base/`, and writes `INF` for an overflowing number. `expand_to_ntriples`
+   raises `InvalidIRIError` / `InvalidLiteralError` in each case, and for an `xsd:dateTime` that
+   is not a full date-time (`"1642"`, `"1642-01-01"`), and `ExpansionError` for an `@context` on
+   any node below the root, so a publish (Step 1.10) must be ready to report these as validation
+   failures. Rejecting, not repairing, is deliberate: a repaired `id` would no longer be the one
+   in `records.data`; repair belongs in import. Signed BCE years are accepted. No corpus record
+   is rejected.
+4. **QLever decodes `\uXXXX` in an update before it tokenizes, even after an escaped
+   backslash.** Found by the review's run against Homebrew QLever 0.6.0: a literal whose text
+   contains a backslash followed by `u0041` made `INSERT DATA` fail with HTTP 400, and one with
+   `u0022` would have stored a different literal than the index build does. Canonical lines now
+   write a `u`/`U` that follows a backslash as `\u0075`/`\u0055`, which N-Triples and SPARQL
+   read alike (verified: index build and update give the same literal back). The vendored
+   `lae.sparql.terms.string_literal` still has the upstream behaviour: user text containing a
+   backslash followed by `u` and four hex digits gives a query QLever rejects or reads
+   differently (it cannot end the string, so it is not an injection). Phase 2 Step 2.2, which
+   builds queries from user input with it, should apply the same escape, and the fix should go
+   upstream to `lux/qlever-middletier`. No decision needed.
