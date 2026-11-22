@@ -85,3 +85,50 @@ viewer (ADR-0012), these measured gaps become editor work or upstream fixes. Ple
    accepts a value claimed by any Value Set bound at that path, and leaves unclaimed values to the
    Other Classifications bucket (decision C5), would match the spec.
    **Resolved (orchestrator, 2026-11-22):** the spec is authoritative here and the Phase 2 guide was wrong. Step 2.1 now makes bindings unique on `(entity_class, property_path, vocabulary_id)`, and Step 2.2 checks a value only against the bindings that claim it (by membership or metatype), leaving unclaimed values to Other Classifications. Register entry C4 updated. The owner may override.
+
+## Step 0.8
+
+1. **ADR-0018 was accepted by the reviewer, not by the owner.** Spike S3 is GO. The draft
+   projection rules fail 17 of 244 corpus files when taken literally, and lose one client's work
+   when two clients add the first value of the same property at once. The rules that pass are
+   R1–R19 in `docs/spikes/S3-projection.md`. They refine the wording of locked register entries
+   B2 and B3; `docs/decisions/0018-projection-rule-refinements-from-s3.md` records the changes,
+   and the independent larger-model reviewer (Claude Fable 5.2) set it to Accepted under the
+   owner's delegation and updated B2 and B3 to cite it. The one change of substance to confirm:
+   **an array is no longer a `Y.Map` of its own.** Its items are entries in the map of the object
+   that has the property, keyed by `[property, item key]` (item key = internal node IRI or target
+   URI, as before). Everything else in B2 and B3 stands. Step 1.4 proceeds on this basis; say so
+   if you want a different layout.
+   **Resolved (reviewer, 2026-11-22):** accepted as above. The owner may override.
+2. **Concurrent first insert into a property with no values: closed.** The first version of the
+   spike lost one client's entry when two clients each created the array, and proposed
+   pre-creating containers for profiled properties only. With rule R6 there is nothing to create,
+   so every first insert is kept for every property, profiled or not, at any depth (tested with
+   two and three Python replicas and with a JavaScript Yjs client against a Python client on all
+   245 test documents). No decision is needed.
+3. **Single-valued properties stay last-writer-wins. Is that what you want for nodes?** If two
+   clients each create the value of a single-valued property at the same moment (each adds
+   `timespan` to an activity that has none, or each creates `produced_by` on a new object), the
+   record converges on one client's whole value and the other's is replaced, including anything
+   added inside it. It is never a mixture. This follows from "single-valued" and from spec §4.2
+   ("scalar fields use LWW"), and the window is the network round-trip of a live session, so the
+   rules keep it (R14). The alternative is to keep both values and project the property as a
+   two-element array, which the validator would then report for a person to resolve. That costs
+   a merge step in the UI and is not in any phase guide. Please confirm that last-writer-wins is
+   acceptable, in particular for a person and an agent filling in `produced_by` on a new record
+   at the same time (Phase 3).
+4. **Records that repeat a reference in one array are preserved, not deduplicated.**
+   `tests/corpus/institutional/yuag-lin-176060.json` and `yuag-lin-176699.json` have
+   `aat:300027221` twice in `classified_as`. The lossless principle (spec §1; decision C5,
+   "never dropped") means both occurrences must survive a round-trip, and the reviewer confirmed
+   that they do: rule R7 keys the second occurrence `<id> #2`, both project at their original
+   positions (`test_duplicate_reference_is_preserved_with_suffixed_key`), and both files are in
+   the 244 of 244. Editing operations never create a duplicate (adding a reference that is
+   already present is a no-op). Still open, and not blocking: should the QA sweeper report an
+   imported duplicate as a finding?
+5. **`Text` positions differ between the libraries.** `pycrdt` counts UTF-8 bytes and Yjs counts
+   UTF-16 code units, and `pycrdt` does not reject an offset inside a character. Rule R19 makes
+   the operations API count code points and convert. No decision is needed; this is recorded
+   because Phase 3 MCP tools that edit text ranges inherit it.
+6. **Not verified:** a live browser session over `y-websocket`. The cross-language check ran Yjs
+   13.6.33 under Node against `pycrdt` state offline (`docs/spikes/S3-projection.md` §4.4).

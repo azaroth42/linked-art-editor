@@ -73,6 +73,8 @@ Rules for this phase:
 
 **Why:** The spike proved the rules; this is the production implementation with tests.
 
+The specification is rules R1–R19 of `docs/spikes/S3-projection.md` (ADR-0018), and it overrides the shorthand in the list below wherever they differ. In particular an array is not a `Map` of its own: its items are entries in the map of the object that has the property, keyed by `[property, item key]` (R6), and nothing is pre-created for a property without values (R14).
+
 **Do:**
 1. `lae/projection/rules.py`: constants `TEXT_CONTENT_TYPES = {"Name", "Identifier", "LinguisticObject"}`, `ROOT_MAP = "record"`, `ORDER_KEY = "_order"`, and `is_reference(obj) -> bool` (has `id`, and no keys beyond `id`, `type`, `_label`).
 2. `lae/projection/hydrate.py`: `assign_node_iris(jsonld, record_uri) -> dict` (adds `id` to every embedded node lacking one, recursively, never to references) and `hydrate(jsonld, record_uri) -> pycrdt.Doc` implementing the S3 rules exactly (keyed `Map`s for node arrays and reference arrays with `_order`, `Text` for `content` on the three content types, scalars as values, unknown keys preserved verbatim).

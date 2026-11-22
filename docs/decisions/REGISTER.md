@@ -2,7 +2,7 @@
 
 Every decision that an implementer might otherwise have to make again, in one place. **Status:** `locked` (changing it needs a human and an ADR), `fixed` (a tooling/naming choice made in the guides; change only with an ADR), `open` (not yet decided; see the named spike or step). "Source" points at the authoritative text.
 
-Decisions made during the November 2026 design review are also written up as ADRs `0001`–`0017` in this directory; the register links them.
+Decisions made during the November 2026 design review are also written up as ADRs `0001`–`0017` in this directory (ADR-0018 records the refinements found by Spike S3); the register links them.
 
 ## A. Architecture and storage
 
@@ -34,8 +34,8 @@ Decisions made during the November 2026 design review are also written up as ADR
 | ID | Decision | Status | Source |
 | :-- | :-- | :-- | :-- |
 | B1 | Yjs in the browser, `pycrdt` + `pycrdt-websocket` on the server, behind a `RoomManager` Protocol so a Yjs-wire-compatible sidecar is a fallback. | locked | spec §4.2; Phase 1 Step 1.8 |
-| B2 | Root `Doc` has one `Map` named `record`; arrays of nodes become `Map`s keyed by internal node IRI; arrays of references become `Map`s keyed by target URI; `content` on `Name`, `Identifier`, `LinguisticObject` is `Text`; other scalars are plain values; unknown keys are preserved verbatim. | locked | spec §4.2; Phase 0 Step 0.8; Phase 1 Step 1.4 |
-| B3 | Every keyed entry carries a fractional-index `_order` (floats; initial values 0.0, 1.0, …; inserts take midpoints); projection sorts by `_order` then key; `_order` never appears in JSON-LD. | locked | spec §4.2; ADR-0005 |
+| B2 | Root `Doc` has one `Map` named `record`; array items are keyed map entries, never positions in a `Y.Array`: items that are nodes are keyed by internal node IRI and items that are references by target URI, each stored in the `Map` of the object that has the property under the key `[property, item key]` (no separate `Map` per array, so concurrent first inserts are all kept; repeats within one array get a ` #n` suffix and are preserved); `content` on `Name`, `Identifier`, `LinguisticObject` is `Text`; other scalars are plain values, with numbers and untyped JSON kept exact by the `_json` encoding; unknown keys are preserved verbatim. The exact rules are R1–R19 of `docs/spikes/S3-projection.md`. | locked | spec §4.2; ADR-0018; `docs/spikes/S3-projection.md`; Phase 1 Step 1.4 |
+| B3 | Every keyed entry carries a fractional-index `_order` (floats; initial values 0.0, 1.0, …; inserts take midpoints; an exhausted gap or a tie renumbers that property's entries); projection sorts by `_order` then entry key in Unicode code-point order; `_order` never appears in JSON-LD. | locked | spec §4.2; ADR-0005; ADR-0018 (rules R12, R13) |
 | B4 | One shared live draft per record; Collaborators (`edit_draft`) co-edit; only Editors (`publish`) publish or discard. | locked | spec §4.3 |
 | B5 | Every incoming CRDT update is persisted to `crdt_updates` **before** broadcast; compaction into `crdt_drafts.state` every 200 updates or on eviction; rooms evict after 10 minutes idle. | fixed | Phase 1 Step 1.8 |
 | B6 | `records.draft_epoch` increments on every publish; a client with an older epoch is closed with WebSocket code `4409` reason `stale-epoch`; v1 rebase modal is a per-change Apply/Discard list (no automatic three-way merge). | locked | spec §4.2; Phase 1 Step 1.17; Phase 4 Step 4.15 |
