@@ -23,6 +23,8 @@ D = f'<{S}> <https://example.org/q> "5"^^<http://www.w3.org/2001/XMLSchema#integ
 NASTY = (
     'quote " backslash \\ tab \t newline \n return \r nul \x00 bell \x07 del \x7f '
     "} ; DROP ALL ; <x>"
+    # Text that looks like a SPARQL codepoint escape (see lae.rdf.canonical).
+    " \\u0041 \\u0022 \\U0001F600 \\\\u005C "
 )
 
 

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+import re
+
 import pyoxigraph as ox
 import pytest
 import zstandard
@@ -66,6 +68,14 @@ def test_parse_round_trip() -> None:
         '<https://example.org/a> <https://example.org/p> "\\u0022" .',
         '<https://example.org/a> <https://example.org/p> "\\u000A" .',
         '<https://example.org/a> <https://example.org/p> "\\x41" .',
+        # A raw u or U after an escaped backslash: SPARQL would decode it first.
+        '<https://example.org/a> <https://example.org/p> "\\\\u0041" .',
+        '<https://example.org/a> <https://example.org/p> "\\\\U00000041" .',
+        '<https://example.org/a> <https://example.org/p> "\\\\u" .',
+        # The codepoint escape of u or U anywhere else.
+        '<https://example.org/a> <https://example.org/p> "\\u0075" .',
+        '<https://example.org/a> <https://example.org/p> "x\\u0055" .',
+        '<https://example.org/a> <https://example.org/p> "\\\\\\u0041" .',
         '<https://example.org/a> <https://example.org/p> "x"@EN .',
         "<https://example.org/a b> <https://example.org/p> <https://example.org/b> .",
         f"{A} {A}",
@@ -96,6 +106,42 @@ def test_parse_rejects_documents_it_did_not_write(data: bytes) -> None:
 def test_lone_surrogate_cannot_be_written() -> None:
     with pytest.raises(ValueError):
         canonical_ntriples(['<https://example.org/a> <https://example.org/p> "\ud800" .'])
+
+
+@pytest.mark.parametrize(
+    ("value", "escaped"),
+    [
+        ("\\u0041", "\\\\\\u00750041"),
+        ("\\U0001F600", "\\\\\\u00550001F600"),
+        ("\\\\u0022", "\\\\\\\\\\u00750022"),
+        ("C:\\users\\Ursula", "C:\\\\\\u0075sers\\\\\\u0055rsula"),
+        ("\\\x01", "\\\\\\u0001"),
+        ("\\n u", "\\\\n u"),
+    ],
+)
+def test_u_after_a_backslash_is_written_as_a_codepoint_escape(value: str, escaped: str) -> None:
+    """So that SPARQL's codepoint pre-pass and N-Triples read the same literal."""
+    assert escape_literal(value) == escaped
+    line = f'<https://example.org/a> <https://example.org/p> "{escaped}" .'
+    assert is_canonical_line(line)
+    (triple,) = ox.parse(canonical_ntriples([line]), format=ox.RdfFormat.N_TRIPLES)
+    assert triple.object.value == value
+
+
+@given(st.text(alphabet=st.sampled_from(list('uU0241ACn\\"') + ["\x01"])))
+def test_escaped_literal_survives_a_sparql_codepoint_pre_pass(value: str) -> None:
+    """Replace codepoint escapes with no regard to a preceding backslash, as QLever does."""
+    escaped = escape_literal(value)
+    decoded = re.sub(
+        r"\\u([0-9A-Fa-f]{4})|\\U([0-9A-Fa-f]{8})",
+        lambda m: chr(int(m[1] or m[2], 16)),
+        escaped,
+    )
+    # After the pre-pass the string body tokenizes as a SPARQL string and unescapes to the value.
+    assert re.fullmatch(r'(?:[^"\\\n\r]|\\[tbnrf"\\])*', decoded)
+    named = {"t": "\t", "b": "\b", "n": "\n", "r": "\r", "f": "\f"}
+    unescaped = re.sub(r"\\(.)", lambda m: named.get(m[1], m[1]), decoded, flags=re.DOTALL)
+    assert unescaped == value
 
 
 @given(st.text())

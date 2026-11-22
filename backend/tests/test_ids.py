@@ -5,11 +5,13 @@ from __future__ import annotations
 import re
 import time
 from collections.abc import Iterator
-from uuid import UUID, uuid4
+from uuid import NAMESPACE_URL, UUID, uuid4, uuid5
 
 import pytest
 
 from lae.ids import (
+    derived_node_iri,
+    is_derived_node_iri,
     is_internal_node_iri,
     new_uuid7,
     node_iri,
@@ -203,3 +205,37 @@ def test_owner_of_uses_the_configured_base(configured_base: str) -> None:
 def test_owner_of_rejects_non_local_iris(iri: str) -> None:
     with pytest.raises(ValueError, match="not a local record URI"):
         owner_of(iri, base_uri=BASE)
+
+
+# Derived node IRIs (ADR-0021): RDF-only subjects for embedded nodes with an id of their own.
+
+FOREIGN_ID = "https://museum.example.org/name/1"
+
+
+def test_derived_node_iri_is_a_pure_function_in_the_records_node_namespace() -> None:
+    derived = derived_node_iri(RECORD, FOREIGN_ID)
+    assert derived == derived_node_iri(RECORD, FOREIGN_ID)
+    assert derived == f"{RECORD}/node/{uuid5(NAMESPACE_URL, FOREIGN_ID)}"
+    assert derived != derived_node_iri(RECORD, FOREIGN_ID + "0")
+    other = derived_node_iri(f"{BASE}{uuid4()}", FOREIGN_ID)
+    assert other != derived
+    assert other.rsplit("/", 1)[1] == derived.rsplit("/", 1)[1]
+
+
+def test_derived_and_internal_node_iris_are_told_apart() -> None:
+    derived = derived_node_iri(RECORD, FOREIGN_ID)
+    assert is_derived_node_iri(derived, RECORD)
+    assert not is_internal_node_iri(derived, RECORD)
+    assert not is_internal_node_iri(derived, base_uri=BASE)
+    assert not is_derived_node_iri(NODE, RECORD)
+    assert not is_derived_node_iri(RECORD, RECORD)
+    assert not is_derived_node_iri(derived, f"{BASE}{uuid4()}")
+    assert not is_derived_node_iri(f"{RECORD}/node/{uuid4()}", RECORD)
+    assert not is_derived_node_iri(derived.upper(), RECORD)
+    assert not is_derived_node_iri(None, RECORD)
+
+
+def test_a_derived_node_iri_resolves_to_its_record() -> None:
+    derived = derived_node_iri(RECORD, FOREIGN_ID)
+    assert owner_of(derived, base_uri=BASE) == RECORD
+    assert record_id_from_uri(derived, base_uri=BASE) == RECORD_ID

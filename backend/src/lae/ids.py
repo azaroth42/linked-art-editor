@@ -6,6 +6,12 @@ the record (ADR-0003). URIs are compared as strings, so only the canonical form 
 a lower-case hyphenated UUID (``str(UUID)``), optionally followed by ``/node/`` and a canonical
 UUIDv7, and nothing else.
 
+A second kind of IRI lives in the same ``<record_uri>/node/`` namespace, in RDF only: the
+*derived node IRI* ``<record_uri>/node/<uuidv5(original id)>`` that expansion gives an embedded
+node which came with an ``id`` of its own from somewhere else (ADR-0021). It never appears in
+JSON-LD, so ``is_internal_node_iri`` stays UUIDv7-only; ``owner_of`` and ``record_id_from_uri``
+accept both, because both turn up in SPARQL results.
+
 ``base_uri`` defaults to ``Settings.base_uri`` from ``get_settings()``; code that holds its own
 ``Settings`` (the API, through ``get_app_settings``) passes ``base_uri=settings.base_uri``.
 """
@@ -13,7 +19,7 @@ UUIDv7, and nothing else.
 from __future__ import annotations
 
 from typing import Final
-from uuid import UUID
+from uuid import NAMESPACE_URL, UUID, uuid5
 
 from uuid_utils.compat import uuid7
 
@@ -24,6 +30,11 @@ NODE_PATH: Final = "/node/"
 
 NODE_UUID_VERSION: Final = 7
 """UUID version of node ids; anything else after ``/node/`` is not an internal node IRI."""
+
+DERIVED_NODE_UUID_VERSION: Final = 5
+"""UUID version of derived node ids (ADR-0021): name-based, so equal input gives an equal IRI."""
+
+_NODE_VERSIONS: Final = (NODE_UUID_VERSION, DERIVED_NODE_UUID_VERSION)
 
 
 def new_uuid7() -> UUID:
@@ -36,19 +47,22 @@ def _base(base_uri: str | None) -> str:
     return get_settings().base_uri if base_uri is None else base_uri
 
 
-def _canonical_uuid(text: str, version: int | None = None) -> UUID | None:
-    """Parse ``text`` if it is exactly ``str(UUID)`` (of ``version``, when given); else ``None``."""
+def _canonical_uuid(text: str, versions: tuple[int, ...] | None = None) -> UUID | None:
+    """Parse ``text`` if it is exactly ``str(UUID)`` (of one of ``versions``); else ``None``."""
     try:
         value = UUID(text)
     except ValueError:
         return None
-    if str(value) != text or (version is not None and value.version != version):
+    if str(value) != text or (versions is not None and value.version not in versions):
         return None
     return value
 
 
 def _split_local(iri: str, base_uri: str | None) -> tuple[UUID, UUID | None] | None:
-    """Split a local record URI or node IRI into ``(record_id, node_id | None)``; else ``None``."""
+    """Split a local record URI or node IRI into ``(record_id, node_id | None)``; else ``None``.
+
+    The node id may be an internal (UUIDv7) or a derived (UUIDv5) one.
+    """
     base = _base(base_uri)
     if not iri.startswith(base):
         return None
@@ -58,7 +72,7 @@ def _split_local(iri: str, base_uri: str | None) -> tuple[UUID, UUID | None] | N
         return None
     if not separator:
         return record_id, None
-    node_id = _canonical_uuid(node_part, NODE_UUID_VERSION)
+    node_id = _canonical_uuid(node_part, _NODE_VERSIONS)
     if node_id is None:
         return None
     return record_id, node_id
@@ -70,7 +84,10 @@ def record_uri(record_id: UUID, *, base_uri: str | None = None) -> str:
 
 
 def record_id_from_uri(uri: str, *, base_uri: str | None = None) -> UUID | None:
-    """Return the record id of a local record URI or of one of its node IRIs; else ``None``."""
+    """Return the record id of a local record URI or of one of its node IRIs; else ``None``.
+
+    Internal and derived node IRIs both count.
+    """
     parts = _split_local(uri, base_uri)
     return None if parts is None else parts[0]
 
@@ -94,14 +111,38 @@ def is_internal_node_iri(
         prefix = record_uri + NODE_PATH
         return (
             iri.startswith(prefix)
-            and _canonical_uuid(iri[len(prefix) :], NODE_UUID_VERSION) is not None
+            and _canonical_uuid(iri[len(prefix) :], (NODE_UUID_VERSION,)) is not None
         )
     parts = _split_local(iri, base_uri)
-    return parts is not None and parts[1] is not None
+    return parts is not None and parts[1] is not None and parts[1].version == NODE_UUID_VERSION
+
+
+def derived_node_iri(record_uri: str, original_id: str) -> str:
+    """Return ``<record_uri>/node/<uuidv5(original_id)>``, the derived node IRI (ADR-0021).
+
+    Expansion uses it, in RDF only, as the subject of an embedded node whose own ``id`` is
+    ``original_id``, an IRI outside the record's namespace. It is a pure function of its two
+    arguments, so re-expanding a record gives the same subjects, and two records that embed a
+    node with the same ``original_id`` get two different subjects.
+    """
+    return f"{record_uri}{NODE_PATH}{uuid5(NAMESPACE_URL, original_id)}"
+
+
+def is_derived_node_iri(iri: object, record_uri: str) -> bool:
+    """True if ``iri`` is ``<record_uri>/node/<uuidv5>``: a derived node IRI of that record."""
+    if not isinstance(iri, str):
+        return False
+    prefix = record_uri + NODE_PATH
+    return (
+        iri.startswith(prefix)
+        and _canonical_uuid(iri[len(prefix) :], (DERIVED_NODE_UUID_VERSION,)) is not None
+    )
 
 
 def owner_of(iri: str, *, base_uri: str | None = None) -> str:
     """Return the URI of the local record that owns ``iri`` (a node IRI or the record URI itself).
+
+    Internal and derived node IRIs both count.
 
     Raises ``ValueError`` if ``iri`` is neither a local record URI nor one of its node IRIs.
     """
