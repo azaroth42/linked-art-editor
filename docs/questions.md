@@ -349,3 +349,84 @@ Spike S6 (`docs/spikes/S6-bootstrap.md`) is a **GO**: 1M records bootstrap in 10
    streaming pass does not know every target yet. Labels are transcluded on read either way, so
    stored `_label`s are only stale copies until the record is first published. Say if a
    post-load normalization pass is wanted.
+
+## Step 1.9
+
+1. **How is an EDTF string marked in a `TimeSpan`?** The guide asks for a rule on "EDTF syntax in
+   `identified_by` of a `TimeSpan`" (`LAE-RULE-002`), but nothing says which of a `TimeSpan`'s
+   names is EDTF, and its ordinary names are free-text display labels ("ca. 1642", "1503-1506").
+   The rule therefore checks only a `Name` or `Identifier` classified as
+   `http://id.loc.gov/datatypes/edtf` (the Library of Congress EDTF datatype; AAT has no concept
+   for EDTF), and reports invalid syntax as a warning. No corpus record has such a name, and
+   until Step 1.18's `EdtfWidget` writes that classification the rule never fires. Please
+   confirm the marker, or name another (ADR-0025, item 4). "Valid EDTF" means what edtf.js
+   4.12.0 `parse()` accepts (the parser the editor will use), which is not quite the Library of
+   Congress text: it also takes a century (`19`), a decade (`198`) and `02-29` in any year, and
+   refuses a qualified season (`2001-21~`). Say if the specification should win instead; then
+   client and server will disagree on those strings.
+2. **OWNER DECISION NEEDED: records whose embedded nodes have their own ids cannot be
+   published.** Two accepted decisions meet here. ADR-0021 says an embedded node that arrives
+   with an `id` of its own (institutional data mints IRIs for a `Name`, an `Identifier`, a
+   `TimeSpan`, a `Dimension`) is part of the record: it is indexed, and `records.data` keeps
+   that `id` so the round trip is lossless. Decision C1 says the vendored Linked Art JSON
+   Schema is the first gate, and that schema does not allow an `id` on `Name`, `Identifier`,
+   `TimeSpan` or `Dimension` (`additionalProperties`; it does allow one on a `Production`).
+   Internal node IRIs (`<record>/node/<uuidv7>`) are stripped before the schema runs; an id
+   from elsewhere is not, because it is part of the record. So this, from
+   `tests/corpus/linkedart/object-3.json`,
+
+   ```json
+   "identified_by": [{"id": "https://linked.art/example/Name/0", "type": "Name", "content": "Hacha"}]
+   ```
+
+   gives `LAE-SCHEMA-anyOf` at `/identified_by/0` with `params.cause` =
+   `{"code": "LAE-SCHEMA-additionalProperties", "path": "/identified_by/0"}` (on a `TimeSpan`
+   or a `Dimension` the code is `LAE-SCHEMA-additionalProperties` directly); without the `id`
+   the same `Name` is valid. `validate` stops at schema violations, so `POST /api/validate`
+   reports the record as not publishable and Step 1.10 will refuse it; `lae bootstrap load`
+   applies the same schema and reports it as schema-invalid instead of loading it. Three corpus
+   files are affected (`object-3.json`, `object-nightwatch-43.json`, `person-rembrandt-4.json`,
+   all in `KNOWN_FAILURES.md`). So ADR-0021's case, a record whose `Name`s, `Identifier`s,
+   `TimeSpan`s or `Dimension`s carry institutional IRIs, is indexed correctly by expansion but
+   can neither be loaded nor published. The choices:
+   (a) keep the gate as it is: such data has to drop those ids before it comes in, and
+   ADR-0021 then matters only for the classes the schema lets carry an `id`;
+   (b) before the schema runs, also strip the `id` of every node that expansion treats as
+   embedded (`lae.rdf.expand._is_embedded`), in `validate_schema` and in bulk load, which
+   loosens the gate relative to the upstream schema by exactly that property;
+   (c) change the schema upstream to allow `id` on these classes and re-vendor.
+   Nothing was changed in Step 1.9 or its review: (b) and (c) alter what "passes the Linked
+   Art schema" means, which is the owner's to decide. SHACL and the rules already handle such
+   nodes (their diagnostics point at the right JSON path;
+   `test_paths_through_embedded_nodes_with_their_own_ids`).
+3. **`POST /api/records/{id}/draft/validate` has no draft source yet.** Step 1.8 was not on main,
+   so the endpoint reads the draft through the `DraftSnapshotSource` protocol
+   (`lae.api.validation`) from `app.state.draft_snapshot_source`, and answers 503
+   `LAE-VALID-001` while that is unset. Step 1.8 or 1.10 must set it to the `CrdtWsClient` in
+   `create_app` (its `snapshot(record_id)` returning an object with `jsonld`, or `None` /
+   `LookupError` when there is no draft). Not verified: the endpoint against a real `crdt-ws`.
+4. **Codes added beyond the guide's list:** `LAE-RULE-005` (invalid `TimeSpan` bound),
+   `LAE-RDF-001` to `-005` (expansion failures), `LAE-SHACL-000` (SHACL could not run),
+   `LAE-SCHEMA-ref` / `-recordType` / `-false`, `LAE-VALID-001` / `-002` (the draft endpoint).
+   ADR-0025 gives the reasons. No decision needed unless the names should differ.
+5. **Not verified: the 50 ms budget on CI or production hardware.** On the development Mac the
+   whole pipeline takes 2.7 ms at p50 and 11.2 ms at p95 over the 184 schema-valid corpus
+   records (max 23 ms), one run, other agents sharing the machine. The budget
+   is a logged threshold, as S4 recommends, not a test assertion. (The reviewer measured 2.5 /
+   10.5 / 21.5 ms on the same machine, three runs.)
+6. **`lae.rdf.sanitize.VALID_DATETIME` accepts digits of any script** (review finding). The
+   pattern is vendored unchanged from the LUX pipeline (`mapper2.py`) and uses `\d`, which in
+   Python also matches Arabic-Indic, fullwidth and other Unicode digits, so
+   `"\u0661\u0666\u0664\u0662-01-01T00:00:00Z"` passes `clean_datetime` and would be written as an
+   `xsd:dateTime` literal. Validation now refuses such a value (`LAE-SCHEMA-format`, with its
+   path), so nothing of the kind can be published. RDF expansion on its own (`expand_to_ntriples`,
+   which uses `clean_datetime`) still accepts it. The vendored file was left as it is because its header
+   promises upstream behaviour; the one-line fix is `[0-9]` for `\d` (or `re.ASCII`), here and
+   in LUX. Please say whether to apply it here.
+7. **`entity_labels.type` is `Type` for every AAT concept** (review finding, fixed in
+   validation). `lae bootstrap aat-labels` cannot know whether a concept is used as a
+   `Material`, a `Language` or a `MeasurementUnit`, so validation now lets a reference's declared
+   subclass of `Type` stand when the registry says only `Type` (ADR-0025, item 5). Before the
+   fix every `made_of` and every `Name` `language` pointing at AAT was a violation as soon as
+   the AAT labels were loaded. Phase 2 Value Sets are the real check of which concept may be
+   used where.

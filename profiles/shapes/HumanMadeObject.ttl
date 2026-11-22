@@ -1,22 +1,14 @@
 # SHACL shapes for HumanMadeObject records.
 #
-# Written for Spike S4 (Phase 0, Step 0.9: docs/spikes/S4-shacl.md); Phase 1 Step 1.9 loads every
-# profiles/shapes/*.ttl into one shapes graph. Each constraint follows the Linked Art model
-# documentation (linked.art/docs/model/object/ and model/base/), cited per shape.
+# Written for Spike S4 (Phase 0, Step 0.9: docs/spikes/S4-shacl.md) and adopted by Phase 1
+# Step 1.9, which loads every profiles/shapes/*.ttl into one shapes graph. Each constraint follows
+# the Linked Art model documentation (linked.art/docs/model/object/ and model/base/), cited per
+# shape. The conventions, the lae:code annotation and the SPARQL prefix declarations (laes:) are
+# in common.ttl and profiles/shapes/README.md.
 #
-# Conventions (see profiles/shapes/README.md):
-# - Every shape that has a target carries exactly one lae:code ("LAE-SHACL-NNN"), the diagnostic
-#   code and i18n key. The anonymous members of sh:or lists have no target and never appear as
-#   sh:sourceShape in a report, so they carry no code.
-# - sh:Violation blocks publishing; sh:Warning is publishable with acknowledgement (spec §5).
-# - Shapes use SHACL Core and SHACL-SPARQL only, so pyshacl runs them with advanced=False.
-# - The data graph is one record's expansion plus an rdf:type triple per referenced entity
-#   (Step 1.9), so referenced objects are HumanMadeObjects too. Value-class constraints are
-#   vacuous for such references. The "must have a Name" constraint exempts them explicitly: a node
-#   with no property other than rdf:type and rdfs:label is a reference, not a description.
-# - Cross-node conditions are SHACL-SPARQL rather than sh:or over sh:closed or qualified shapes:
-#   pyshacl builds and discards a full result for every failing sh:or member, which Spike S4
-#   measured as the most expensive construct (docs/spikes/S4-shacl.md, "Shape formulation").
+# LAE-SHACL-009 and LAE-SHACL-010 (TimeSpan bounds are xsd:dateTime, and in order) were removed
+# in Step 1.9: they are the Python rules LAE-RULE-005 and LAE-RULE-001 now, because rdflib cannot
+# represent years before 1. The two codes are retired and must not be reused.
 
 @prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
 @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
@@ -27,23 +19,6 @@
 @prefix aat:  <http://vocab.getty.edu/aat/> .
 @prefix lae:  <urn:lae:ns:> .
 @prefix laes: <urn:lae:shape:> .
-
-# --------------------------------------------------------------------------------------------
-# Annotation vocabulary and SPARQL prefix declarations
-# --------------------------------------------------------------------------------------------
-
-lae:code
-    a owl:AnnotationProperty ;
-    rdfs:label "LAE diagnostic code"@en ;
-    rdfs:comment "Structured diagnostic code (LAE-<AREA>-<NNN>) reported for every result of this shape; also the i18n key under the errors namespace."@en .
-
-laes:
-    a owl:Ontology ;
-    rdfs:label "Linked Art Editor SHACL shapes"@en ;
-    sh:declare [ sh:prefix "rdf" ; sh:namespace "http://www.w3.org/1999/02/22-rdf-syntax-ns#"^^xsd:anyURI ] ;
-    sh:declare [ sh:prefix "rdfs" ; sh:namespace "http://www.w3.org/2000/01/rdf-schema#"^^xsd:anyURI ] ;
-    sh:declare [ sh:prefix "crm" ; sh:namespace "http://www.cidoc-crm.org/cidoc-crm/"^^xsd:anyURI ] ;
-    sh:declare [ sh:prefix "aat" ; sh:namespace "http://vocab.getty.edu/aat/"^^xsd:anyURI ] .
 
 # --------------------------------------------------------------------------------------------
 # Names (model/base "Names"; model/object)
@@ -62,7 +37,7 @@ laes:HumanMadeObject-name
         sh:message "An object should have at least one Name in identified_by."@en ;
         sh:prefixes laes: ;
         sh:select """
-            SELECT $this
+            SELECT $this (crm:P1_is_identified_by AS ?path)
             WHERE {
                 FILTER NOT EXISTS {
                     $this crm:P1_is_identified_by ?name .
@@ -88,7 +63,7 @@ laes:HumanMadeObject-primary-name
         sh:message "One of the object's Names should be classified as Primary Name (aat:300404670)."@en ;
         sh:prefixes laes: ;
         sh:select """
-            SELECT $this
+            SELECT $this (crm:P1_is_identified_by AS ?path)
             WHERE {
                 FILTER EXISTS {
                     $this crm:P1_is_identified_by ?name .
@@ -115,7 +90,7 @@ laes:HumanMadeObject-primary-name-per-language
         sh:message "The object has more than one Primary Name in the same language ({?language})."@en ;
         sh:prefixes laes: ;
         sh:select """
-            SELECT DISTINCT $this ?language
+            SELECT DISTINCT $this (crm:P1_is_identified_by AS ?path) ?language
             WHERE {
                 $this crm:P1_is_identified_by ?first, ?second .
                 FILTER (?first != ?second)
@@ -197,37 +172,3 @@ laes:Dimension-unit
     sh:maxCount 1 ;
     sh:class crm:E58_Measurement_Unit ;
     sh:message "A Dimension should have one unit that is a MeasurementUnit."@en .
-
-# --------------------------------------------------------------------------------------------
-# Time-spans (model/base "Time Span Details")
-#
-# Both shapes are correct for valid xsd:dateTime values, but pyshacl 0.40.2 aborts validation
-# with a TypeError in sh:lessThanOrEquals when a bound is ill-typed or a BCE year, and rdflib
-# cannot represent BCE datetimes at all. docs/spikes/S4-shacl.md recommends moving both checks to
-# the Python rule engine (LAE-RULE-001, Phase 1 Step 1.9).
-# --------------------------------------------------------------------------------------------
-
-# 9. "The datestamps must be fully qualified ... This is the xsd:dateTime profile of ISO8601."
-laes:TimeSpan-datetime
-    a sh:PropertyShape ;
-    lae:code "LAE-SHACL-009" ;
-    sh:targetObjectsOf crm:P4_has_time-span ;
-    sh:path [
-        sh:alternativePath (
-            crm:P82a_begin_of_the_begin
-            crm:P81a_end_of_the_begin
-            crm:P81b_begin_of_the_end
-            crm:P82b_end_of_the_end
-        )
-    ] ;
-    sh:datatype xsd:dateTime ;
-    sh:message "TimeSpan bounds must be valid xsd:dateTime values."@en .
-
-# 10. The span runs from begin_of_the_begin to end_of_the_end, so the first cannot be later.
-laes:TimeSpan-order
-    a sh:PropertyShape ;
-    lae:code "LAE-SHACL-010" ;
-    sh:targetObjectsOf crm:P4_has_time-span ;
-    sh:path crm:P82a_begin_of_the_begin ;
-    sh:lessThanOrEquals crm:P82b_end_of_the_end ;
-    sh:message "begin_of_the_begin must not be later than end_of_the_end."@en .

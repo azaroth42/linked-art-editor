@@ -1,0 +1,110 @@
+# SHACL shapes for the nodes every record class embeds: Name, Identifier, TimeSpan.
+#
+# This file also holds what all shape files share: the lae:code annotation property and the
+# SPARQL prefix declarations on laes: (other files say `sh:prefixes laes:`). Phase 1 Step 1.9
+# loads every profiles/shapes/*.ttl into one shapes graph, so they are declared once, here.
+#
+# Conventions (see profiles/shapes/README.md):
+# - Every shape that has a target is an IRI and carries exactly one lae:code ("LAE-SHACL-NNN"),
+#   the diagnostic code and i18n key. The anonymous members of sh:or lists have no target and
+#   never appear as sh:sourceShape in a report, so they carry no code.
+# - sh:Violation blocks publishing; sh:Warning is publishable with acknowledgement (spec §5).
+# - Shapes use SHACL Core and SHACL-SPARQL only, so pyshacl runs them with advanced=False.
+# - The data graph is one record's expansion plus an rdf:type triple per referenced entity, so a
+#   referenced object is a crm:E22_Human-Made_Object too. The validator drops every result whose
+#   focus node is not a node of the record, so a shape cannot fail on a reference; a "must have"
+#   shape still exempts nodes that have nothing but a type and a label, for a new draft.
+# - Cross-node conditions are SHACL-SPARQL rather than sh:or over sh:closed or qualified shapes:
+#   pyshacl builds and discards a full result for every failing sh:or member, which Spike S4
+#   measured as the most expensive construct (docs/spikes/S4-shacl.md, "Shape formulation").
+# - A SHACL-SPARQL constraint binds ?path to the property it is about, so that the diagnostic
+#   points at that property and not only at the node.
+# - No xsd:dateTime checks: TimeSpan bounds are validated and compared by the Python rules
+#   LAE-RULE-005 and LAE-RULE-001 (rdflib cannot represent years before 1).
+
+@prefix rdf:  <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+@prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+@prefix owl:  <http://www.w3.org/2002/07/owl#> .
+@prefix xsd:  <http://www.w3.org/2001/XMLSchema#> .
+@prefix sh:   <http://www.w3.org/ns/shacl#> .
+@prefix crm:  <http://www.cidoc-crm.org/cidoc-crm/> .
+@prefix aat:  <http://vocab.getty.edu/aat/> .
+@prefix lae:  <urn:lae:ns:> .
+@prefix laes: <urn:lae:shape:> .
+
+# --------------------------------------------------------------------------------------------
+# Annotation vocabulary and SPARQL prefix declarations
+# --------------------------------------------------------------------------------------------
+
+lae:code
+    a owl:AnnotationProperty ;
+    rdfs:label "LAE diagnostic code"@en ;
+    rdfs:comment "Structured diagnostic code (LAE-<AREA>-<NNN>) reported for every result of this shape; also the i18n key under the errors namespace."@en .
+
+laes:
+    a owl:Ontology ;
+    rdfs:label "Linked Art Editor SHACL shapes"@en ;
+    sh:declare [ sh:prefix "rdf" ; sh:namespace "http://www.w3.org/1999/02/22-rdf-syntax-ns#"^^xsd:anyURI ] ;
+    sh:declare [ sh:prefix "rdfs" ; sh:namespace "http://www.w3.org/2000/01/rdf-schema#"^^xsd:anyURI ] ;
+    sh:declare [ sh:prefix "crm" ; sh:namespace "http://www.cidoc-crm.org/cidoc-crm/"^^xsd:anyURI ] ;
+    sh:declare [ sh:prefix "aat" ; sh:namespace "http://vocab.getty.edu/aat/"^^xsd:anyURI ] .
+
+# --------------------------------------------------------------------------------------------
+# Names and identifiers (model/base "Names", "Identifiers")
+# --------------------------------------------------------------------------------------------
+
+# 11. A Name is its text: exactly one `content`. (An empty string is the rule LAE-RULE-003.)
+laes:Name-content
+    a sh:PropertyShape ;
+    lae:code "LAE-SHACL-011" ;
+    sh:targetClass crm:E33_E41_Linguistic_Appellation ;
+    sh:path crm:P190_has_symbolic_content ;
+    sh:minCount 1 ;
+    sh:maxCount 1 ;
+    sh:message "A Name must have exactly one content value."@en .
+
+# 12. "The language of the name is given using the language property": a Language.
+laes:Name-language
+    a sh:PropertyShape ;
+    lae:code "LAE-SHACL-012" ;
+    sh:targetClass crm:E33_E41_Linguistic_Appellation ;
+    sh:path crm:P72_has_language ;
+    sh:class crm:E56_Language ;
+    sh:message "The language of a Name must refer to a Language."@en .
+
+# 13. An Identifier is its value: exactly one `content`.
+laes:Identifier-content
+    a sh:PropertyShape ;
+    lae:code "LAE-SHACL-013" ;
+    sh:targetClass crm:E42_Identifier ;
+    sh:path crm:P190_has_symbolic_content ;
+    sh:minCount 1 ;
+    sh:maxCount 1 ;
+    sh:message "An Identifier must have exactly one content value."@en .
+
+# --------------------------------------------------------------------------------------------
+# Time-spans (model/base "Time Span Details")
+# --------------------------------------------------------------------------------------------
+
+# 14. "The minimum information for a TimeSpan is the earliest possible beginning and the latest
+#     possible end": begin_of_the_begin and end_of_the_end. A warning: a span that is open at one
+#     end (a living person's activity, "after 1650") is legitimate.
+laes:TimeSpan-bounds
+    a sh:NodeShape ;
+    lae:code "LAE-SHACL-014" ;
+    sh:targetClass crm:E52_Time-Span ;
+    sh:severity sh:Warning ;
+    sh:sparql [
+        a sh:SPARQLConstraint ;
+        sh:message "A TimeSpan should have both begin_of_the_begin and end_of_the_end."@en ;
+        sh:prefixes laes: ;
+        sh:select """
+            SELECT $this
+            WHERE {
+                FILTER (
+                    NOT EXISTS { $this crm:P82a_begin_of_the_begin ?begin }
+                    || NOT EXISTS { $this crm:P82b_end_of_the_end ?end }
+                )
+            }
+            """ ;
+    ] .

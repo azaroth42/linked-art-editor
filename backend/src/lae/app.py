@@ -152,6 +152,11 @@ def create_app(
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+        # Validation's schemas and shapes are loaded now, so that a broken file under profiles/
+        # stops the start instead of failing the first validation (Step 1.9).
+        from lae.validation import warm_up
+
+        await asyncio.to_thread(warm_up)
         engine = create_engine(settings.database_url)
         http_client = httpx.AsyncClient(timeout=HTTP_TIMEOUT_SECONDS, transport=http_transport)
         app.state.engine = engine

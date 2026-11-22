@@ -1,0 +1,369 @@
+{
+  "description": "Cases for profiles/shapes/*.ttl. Each case applies 'set' operations (JSON Pointer, value; null removes the key) to a copy of bases[base]. 'expect' lists every SHACL diagnostic the case must produce as [lae:code, severity, JSON Pointer]. 'referenced_types' (optional) plays entity_labels.type. Every base is schema-valid and produces no diagnostic.",
+  "bases": {
+    "HumanMadeObject": {
+      "@context": "https://linked.art/ns/v1/linked-art.json",
+      "id": "https://example.org/object/1",
+      "type": "HumanMadeObject",
+      "_label": "Test Painting",
+      "identified_by": [
+        {
+          "type": "Name",
+          "content": "Test Painting",
+          "classified_as": [
+            {"id": "http://vocab.getty.edu/aat/300404670", "type": "Type", "_label": "Primary Name"}
+          ],
+          "language": [
+            {"id": "http://vocab.getty.edu/aat/300388277", "type": "Language", "_label": "English"}
+          ]
+        },
+        {
+          "type": "Name",
+          "content": "Tableau d'essai",
+          "classified_as": [
+            {"id": "http://vocab.getty.edu/aat/300404670", "type": "Type", "_label": "Primary Name"}
+          ],
+          "language": [
+            {"id": "http://vocab.getty.edu/aat/300388306", "type": "Language", "_label": "French"}
+          ]
+        },
+        {"type": "Identifier", "content": "1990.1"}
+      ],
+      "made_of": [
+        {"id": "http://vocab.getty.edu/aat/300015050", "type": "Material", "_label": "oil paint"}
+      ],
+      "dimension": [
+        {
+          "type": "Dimension",
+          "value": 50.5,
+          "unit": {"id": "http://vocab.getty.edu/aat/300379098", "type": "MeasurementUnit", "_label": "centimeters"},
+          "classified_as": [
+            {"id": "http://vocab.getty.edu/aat/300055644", "type": "Type", "_label": "height"}
+          ]
+        }
+      ],
+      "produced_by": {
+        "type": "Production",
+        "timespan": {
+          "type": "TimeSpan",
+          "begin_of_the_begin": "1642-01-01T00:00:00Z",
+          "end_of_the_end": "1642-12-31T23:59:59Z"
+        },
+        "part": [
+          {
+            "type": "Production",
+            "carried_out_by": [
+              {"id": "https://example.org/person/1", "type": "Person", "_label": "Artist"}
+            ]
+          }
+        ]
+      },
+      "part_of": {"id": "https://example.org/object/0", "type": "HumanMadeObject", "_label": "Parent object"}
+    },
+    "Person": {
+      "@context": "https://linked.art/ns/v1/linked-art.json",
+      "id": "https://example.org/person/1",
+      "type": "Person",
+      "_label": "Test Person",
+      "identified_by": [{"type": "Name", "content": "Test Person"}],
+      "born": {
+        "type": "Birth",
+        "timespan": {
+          "type": "TimeSpan",
+          "begin_of_the_begin": "1606-07-15T00:00:00Z",
+          "end_of_the_end": "1606-07-15T23:59:59Z"
+        }
+      },
+      "died": {
+        "type": "Death",
+        "timespan": {
+          "type": "TimeSpan",
+          "begin_of_the_begin": "1669-10-04T00:00:00Z",
+          "end_of_the_end": "1669-10-04T23:59:59Z"
+        }
+      }
+    },
+    "Place": {
+      "@context": "https://linked.art/ns/v1/linked-art.json",
+      "id": "https://example.org/place/1",
+      "type": "Place",
+      "_label": "Test Place",
+      "identified_by": [{"type": "Name", "content": "Test Place"}],
+      "part_of": [{"id": "https://example.org/place/0", "type": "Place", "_label": "Larger place"}]
+    },
+    "Type": {
+      "@context": "https://linked.art/ns/v1/linked-art.json",
+      "id": "https://example.org/concept/1",
+      "type": "Type",
+      "_label": "Test Concept",
+      "identified_by": [{"type": "Name", "content": "Test Concept"}],
+      "broader": [{"id": "https://example.org/concept/0", "type": "Type", "_label": "Broader concept"}]
+    }
+  },
+  "cases": [
+    {"name": "object-valid", "base": "HumanMadeObject", "set": [], "expect": []},
+    {
+      "name": "object-no-name",
+      "base": "HumanMadeObject",
+      "set": [["/identified_by", [{"type": "Identifier", "content": "1990.1"}]]],
+      "expect": [["LAE-SHACL-001", "warning", "/identified_by"]]
+    },
+    {
+      "name": "object-no-identified_by-at-all",
+      "base": "HumanMadeObject",
+      "set": [["/identified_by", null]],
+      "expect": [["LAE-SHACL-001", "warning", "/identified_by"]]
+    },
+    {
+      "name": "object-no-primary-name",
+      "base": "HumanMadeObject",
+      "set": [["/identified_by/0/classified_as", null], ["/identified_by/1/classified_as", null]],
+      "expect": [["LAE-SHACL-002", "warning", "/identified_by"]]
+    },
+    {
+      "name": "object-two-primary-names-same-language",
+      "base": "HumanMadeObject",
+      "set": [
+        [
+          "/identified_by/1/language",
+          [{"id": "http://vocab.getty.edu/aat/300388277", "type": "Language", "_label": "English"}]
+        ]
+      ],
+      "expect": [["LAE-SHACL-003", "warning", "/identified_by"]]
+    },
+    {
+      "name": "object-two-primary-names-no-language",
+      "base": "HumanMadeObject",
+      "set": [["/identified_by/0/language", null], ["/identified_by/1/language", null]],
+      "expect": [["LAE-SHACL-003", "warning", "/identified_by"]]
+    },
+    {
+      "name": "object-produced_by-not-a-production",
+      "base": "HumanMadeObject",
+      "set": [["/produced_by/type", "Activity"]],
+      "expect": [["LAE-SHACL-004", "violation", "/produced_by"]]
+    },
+    {
+      "name": "object-two-productions",
+      "base": "HumanMadeObject",
+      "set": [["/produced_by", [{"type": "Production"}, {"type": "Production"}]]],
+      "expect": [["LAE-SHACL-004", "violation", "/produced_by"]]
+    },
+    {
+      "name": "object-production-part-carried-out-by-a-place",
+      "base": "HumanMadeObject",
+      "set": [
+        [
+          "/produced_by/part/0/carried_out_by",
+          [
+            {"id": "https://example.org/person/1", "type": "Person", "_label": "Artist"},
+            {"id": "https://example.org/place/1", "type": "Place", "_label": "Somewhere"}
+          ]
+        ]
+      ],
+      "expect": [["LAE-SHACL-005", "violation", "/produced_by/part/0/carried_out_by/1"]]
+    },
+    {
+      "name": "object-production-carried-out-by-a-place",
+      "base": "HumanMadeObject",
+      "set": [
+        [
+          "/produced_by/carried_out_by",
+          [{"id": "https://example.org/place/1", "type": "Place", "_label": "Somewhere"}]
+        ]
+      ],
+      "expect": [["LAE-SHACL-005", "violation", "/produced_by/carried_out_by/0"]]
+    },
+    {
+      "name": "object-made_of-not-a-material",
+      "base": "HumanMadeObject",
+      "set": [
+        [
+          "/made_of",
+          [
+            {"id": "http://vocab.getty.edu/aat/300015050", "type": "Material", "_label": "oil paint"},
+            {"id": "http://vocab.getty.edu/aat/300033618", "type": "Type", "_label": "paintings"}
+          ]
+        ]
+      ],
+      "expect": [["LAE-SHACL-006", "violation", "/made_of/1"]]
+    },
+    {
+      "name": "object-made_of-reference-without-a-type",
+      "base": "HumanMadeObject",
+      "set": [["/made_of", [{"id": "http://vocab.getty.edu/aat/300015050"}]]],
+      "expect": [["LAE-SHACL-006", "violation", "/made_of/0"]]
+    },
+    {
+      "name": "object-made_of-is-a-place-according-to-entity_labels",
+      "base": "HumanMadeObject",
+      "set": [],
+      "referenced_types": {"http://vocab.getty.edu/aat/300015050": "Place"},
+      "expect": [["LAE-SHACL-006", "violation", "/made_of/0"]]
+    },
+    {
+      "name": "object-made_of-is-only-a-type-in-entity_labels-and-declared-a-material",
+      "base": "HumanMadeObject",
+      "set": [],
+      "referenced_types": {"http://vocab.getty.edu/aat/300015050": "Type"},
+      "expect": []
+    },
+    {
+      "name": "object-made_of-is-a-material-according-to-entity_labels",
+      "base": "HumanMadeObject",
+      "set": [
+        ["/made_of", [{"id": "http://vocab.getty.edu/aat/300015050", "type": "Type", "_label": "oil paint"}]]
+      ],
+      "referenced_types": {"http://vocab.getty.edu/aat/300015050": "Material"},
+      "expect": []
+    },
+    {
+      "name": "object-dimension-value-not-numeric",
+      "base": "HumanMadeObject",
+      "set": [["/dimension/0/value", "50.5 cm"]],
+      "expect": [["LAE-SHACL-007", "violation", "/dimension/0/value"]]
+    },
+    {
+      "name": "object-dimension-without-value",
+      "base": "HumanMadeObject",
+      "set": [["/dimension/0/value", null]],
+      "expect": [["LAE-SHACL-007", "violation", "/dimension/0/value"]]
+    },
+    {
+      "name": "object-dimension-with-its-own-id-value-not-numeric",
+      "base": "HumanMadeObject",
+      "set": [
+        ["/dimension/0/id", "https://example.org/dimension/1"],
+        ["/dimension/0/value", "50.5 cm"]
+      ],
+      "expect": [["LAE-SHACL-007", "violation", "/dimension/0/value"]]
+    },
+    {
+      "name": "object-dimension-without-unit",
+      "base": "HumanMadeObject",
+      "set": [["/dimension/0/unit", null]],
+      "expect": [["LAE-SHACL-008", "warning", "/dimension/0/unit"]]
+    },
+    {
+      "name": "object-dimension-unit-not-a-unit",
+      "base": "HumanMadeObject",
+      "set": [
+        ["/dimension/0/unit", {"id": "http://vocab.getty.edu/aat/300379098", "type": "Type", "_label": "centimeters"}]
+      ],
+      "expect": [["LAE-SHACL-008", "warning", "/dimension/0/unit"]]
+    },
+    {
+      "name": "object-name-without-content",
+      "base": "HumanMadeObject",
+      "set": [["/identified_by/1/content", null]],
+      "expect": [["LAE-SHACL-011", "violation", "/identified_by/1/content"]]
+    },
+    {
+      "name": "object-name-with-its-own-id-without-content",
+      "base": "HumanMadeObject",
+      "set": [
+        ["/identified_by/1/id", "https://example.org/name/1"],
+        ["/identified_by/1/content", null]
+      ],
+      "expect": [["LAE-SHACL-011", "violation", "/identified_by/1/content"]]
+    },
+    {
+      "name": "object-name-language-not-a-language",
+      "base": "HumanMadeObject",
+      "set": [
+        [
+          "/identified_by/0/language",
+          [{"id": "http://vocab.getty.edu/aat/300388277", "type": "Type", "_label": "English"}]
+        ]
+      ],
+      "expect": [["LAE-SHACL-012", "violation", "/identified_by/0/language/0"]]
+    },
+    {
+      "name": "object-identifier-without-content",
+      "base": "HumanMadeObject",
+      "set": [["/identified_by/2/content", null]],
+      "expect": [["LAE-SHACL-013", "violation", "/identified_by/2/content"]]
+    },
+    {
+      "name": "object-timespan-without-an-end",
+      "base": "HumanMadeObject",
+      "set": [["/produced_by/timespan/end_of_the_end", null]],
+      "expect": [["LAE-SHACL-014", "warning", "/produced_by/timespan"]]
+    },
+    {
+      "name": "object-bce-timespan",
+      "base": "HumanMadeObject",
+      "set": [
+        ["/produced_by/timespan/begin_of_the_begin", "-0500-01-01T00:00:00Z"],
+        ["/produced_by/timespan/end_of_the_end", "-0400-12-31T23:59:59Z"]
+      ],
+      "expect": []
+    },
+    {"name": "person-valid", "base": "Person", "set": [], "expect": []},
+    {
+      "name": "person-no-name",
+      "base": "Person",
+      "set": [["/identified_by", null]],
+      "expect": [["LAE-SHACL-015", "warning", "/identified_by"]]
+    },
+    {
+      "name": "person-only-type-and-label",
+      "base": "Person",
+      "set": [["/identified_by", null], ["/born", null], ["/died", null]],
+      "expect": []
+    },
+    {
+      "name": "person-born-not-a-birth",
+      "base": "Person",
+      "set": [["/born/type", "Death"]],
+      "expect": [["LAE-SHACL-016", "violation", "/born"]]
+    },
+    {
+      "name": "person-died-not-a-death",
+      "base": "Person",
+      "set": [["/died/type", "Birth"]],
+      "expect": [["LAE-SHACL-017", "violation", "/died"]]
+    },
+    {"name": "place-valid", "base": "Place", "set": [], "expect": []},
+    {
+      "name": "place-no-name",
+      "base": "Place",
+      "set": [["/identified_by", [{"type": "Identifier", "content": "P1"}]]],
+      "expect": [["LAE-SHACL-018", "warning", "/identified_by"]]
+    },
+    {
+      "name": "place-part-of-a-person",
+      "base": "Place",
+      "set": [["/part_of", [{"id": "https://example.org/person/1", "type": "Person", "_label": "Artist"}]]],
+      "expect": [["LAE-SHACL-019", "violation", "/part_of/0"]]
+    },
+    {"name": "type-valid", "base": "Type", "set": [], "expect": []},
+    {
+      "name": "type-no-name",
+      "base": "Type",
+      "set": [["/identified_by", null]],
+      "expect": [["LAE-SHACL-020", "warning", "/identified_by"]]
+    },
+    {
+      "name": "type-broader-a-material",
+      "base": "Type",
+      "set": [["/broader", [{"id": "http://vocab.getty.edu/aat/300015050", "type": "Material", "_label": "oil paint"}]]],
+      "expect": []
+    },
+    {
+      "name": "type-broader-a-place",
+      "base": "Type",
+      "set": [["/broader", [{"id": "https://example.org/place/1", "type": "Place", "_label": "Somewhere"}]]],
+      "expect": [["LAE-SHACL-021", "violation", "/broader/0"]]
+    },
+    {
+      "name": "type-part_of-a-place-is-broader-under-the-scoped-context",
+      "base": "Type",
+      "set": [
+        ["/broader", null],
+        ["/part_of", [{"id": "https://example.org/place/1", "type": "Place", "_label": "Somewhere"}]]
+      ],
+      "expect": [["LAE-SHACL-021", "violation", "/part_of/0"]]
+    }
+  ]
+}
