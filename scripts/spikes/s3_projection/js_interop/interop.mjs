@@ -22,20 +22,34 @@ function compareCodePoints(a, b) {
   }
 }
 
-const entryOrder = (e) =>
-  e instanceof Y.Map && typeof e.get(ORDER) === "number" && !Number.isNaN(e.get(ORDER))
-    ? e.get(ORDER)
-    : null;
+// Rule R6: a map key that starts with "[" is the JSON text of [property] or [property, itemKey].
+const entryKey = (prop, itemKey) => JSON.stringify([prop, itemKey]);
 
-function isContainer(m) {
-  for (const v of m.values()) if (entryOrder(v) === null) return false;
-  return true;
+function parseKey(key) {
+  if (!key.startsWith("[")) return [key, null];
+  let parts = null;
+  try { parts = JSON.parse(key); } catch { /* reported below */ }
+  if (Array.isArray(parts) && (parts.length === 1 || parts.length === 2)
+      && parts.every((p) => typeof p === "string")) {
+    return [parts[0], parts.length === 2 ? parts[1] : null];
+  }
+  throw new Error("malformed map key " + key);
 }
 
-function sortedEntries(container) {
-  return [...container.entries()].sort(
-    (x, y) => entryOrder(x[1]) - entryOrder(y[1]) || compareCodePoints(x[0], y[0]),
-  );
+function entryOrder(key, e) {
+  const order = e instanceof Y.Map ? e.get(ORDER) : undefined;
+  if (typeof order !== "number" || Number.isNaN(order)) throw new Error("no _order on " + key);
+  return order;
+}
+
+const sortEntries = (entries) =>
+  entries.sort((x, y) => entryOrder(...x) - entryOrder(...y) || compareCodePoints(x[0], y[0]));
+
+function sortedEntries(parent, prop) {
+  return sortEntries([...parent.entries()].filter(([k]) => {
+    const [p, item] = parseKey(k);
+    return item !== null && p === prop;
+  }));
 }
 
 function decodePlain(v) {
@@ -46,23 +60,33 @@ function decodePlain(v) {
   return v;
 }
 
+// `out[k] = v` would set the prototype for the key "__proto__" instead of storing it.
+const put = (out, k, v) =>
+  Object.defineProperty(out, k, { value: v, enumerable: true, writable: true, configurable: true });
+
 function projectObject(m) {
   const out = {};
+  const arrays = new Map();
   for (const [k, v] of m.entries()) {
-    if (k === ORDER) continue;
-    const p = projectValue(v);
-    if (p !== undefined) out[k] = p;
+    const [prop, item] = parseKey(k);
+    if (item !== null) {
+      if (!arrays.has(prop)) arrays.set(prop, []);
+      arrays.get(prop).push([k, v]);
+    } else if (k !== ORDER && k !== VALUE) {
+      put(out, prop, projectValue(v));
+    }
+  }
+  // Entries win over a single value stored for the same property (rule R11).
+  for (const [prop, entries] of arrays) {
+    put(out, prop, sortEntries(entries).map(([, e]) =>
+      e.has(VALUE) ? decodePlain(e.get(VALUE)) : projectObject(e)));
   }
   return out;
 }
 
 function projectValue(v) {
   if (v instanceof Y.Text) return v.toString();
-  if (v instanceof Y.Map) {
-    if (!isContainer(v)) return projectObject(v);
-    if (v.size === 0) return undefined;
-    return sortedEntries(v).map(([, e]) => (e.has(VALUE) ? decodePlain(e.get(VALUE)) : projectObject(e)));
-  }
+  if (v instanceof Y.Map) return projectObject(v);
   return decodePlain(v);
 }
 
@@ -75,37 +99,53 @@ function orderBetween(before, after) {
   return ok && Number.isFinite(c) ? c : null;
 }
 
+function nameEntry(id, content, order) {
+  const entry = new Y.Map();
+  entry.set("id", id);
+  entry.set("type", "Name");
+  entry.set("content", new Y.Text(content));
+  entry.set("value", 34); // a JS number: integral, so it must project as an integer
+  entry.set(ORDER, order);
+  return entry;
+}
+
 const b64 = (s) => new Uint8Array(Buffer.from(s, "base64"));
+const toB64 = (u) => Buffer.from(u).toString("base64");
 const fixtures = JSON.parse(readFileSync(process.argv[2], "utf8"));
 const results = [];
-for (const f of fixtures) {
+for (const f of fixtures.documents) {
   const doc = new Y.Doc();
   Y.applyUpdate(doc, b64(f.update));
   const record = doc.getMap("record");
   const projected = projectObject(record);
   // Yjs re-encodes every value from its own in-memory form.
-  const reencoded = Buffer.from(Y.encodeStateAsUpdate(doc)).toString("base64");
+  const reencoded = toB64(Y.encodeStateAsUpdate(doc));
 
   // Insert a Name at position 1 of identified_by with the shared midpoint arithmetic.
   let insert = null;
-  const names = record.get("identified_by");
-  if (names instanceof Y.Map && names.size >= 2) {
+  const names = sortedEntries(record, "identified_by");
+  if (names.length >= 2) {
     const before = Y.encodeStateVector(doc);
-    const sorted = sortedEntries(names);
-    const order = orderBetween(entryOrder(sorted[0][1]), entryOrder(sorted[1][1]));
-    const key = f.record_uri + "/node/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f";
-    const entry = new Y.Map();
-    entry.set("id", key);
-    entry.set("type", "Name");
-    entry.set("content", new Y.Text("from JS \u{1F600}"));
-    entry.set("value", 34); // a JS number: integral, so it must project as an integer
-    entry.set(ORDER, order);
-    names.set(key, entry);
-    insert = { order, update: Buffer.from(Y.encodeStateAsUpdate(doc, before)).toString("base64") };
+    const order = orderBetween(entryOrder(...names[0]), entryOrder(...names[1]));
+    const id = f.record_uri + "/node/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f";
+    record.set(entryKey("identified_by", id), nameEntry(id, "from JS \u{1F600}", order));
+    insert = { order, update: toB64(Y.encodeStateAsUpdate(doc, before)) };
   }
-  results.push({ name: f.name, projected, reencoded, insert });
+
+  // First insert into a property that does not exist, concurrently with a Python client that
+  // does the same (its update is in the fixture). No container is created (rule R14).
+  const before = Y.encodeStateVector(doc);
+  if (sortedEntries(record, fixtures.first_prop).length !== 0) throw new Error("not absent");
+  const id = f.record_uri + "/node/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e60";
+  record.set(entryKey(fixtures.first_prop, id), nameEntry(id, "first from JS", orderBetween(null, null)));
+  const first = { update: toB64(Y.encodeStateAsUpdate(doc, before)) };
+  Y.applyUpdate(doc, b64(f.python_first));
+  const merged = projectObject(record);
+
+  results.push({ name: f.name, projected, reencoded, insert, first, merged });
 }
 
 const tie = ["\u{1F600}", "～", "a", "b"].sort(compareCodePoints);
-writeFileSync(process.argv[3], JSON.stringify({ yjs: "13", results, tie }));
+const keys = fixtures.key_parts.map(([prop, item]) => entryKey(prop, item));
+writeFileSync(process.argv[3], JSON.stringify({ yjs: "13", results, tie, keys }));
 console.log(`processed ${results.length} documents`);

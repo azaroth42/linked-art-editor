@@ -17,11 +17,13 @@ from s3_projection.projection import (
     ProjectionError,
     assign_node_iris,
     canonical_json,
+    entry_key,
     hydrate,
-    is_container,
+    insert_entry,
     is_internal_node_iri,
     is_reference,
     order_between,
+    parse_key,
     project,
     sorted_entries,
     strip_internal_iris,
@@ -49,6 +51,11 @@ def corpus(name: str) -> dict[str, Any]:
     return load_record(CORPUS_DIR / name)
 
 
+def item_keys(parent: Map, prop: str) -> list[str]:
+    """The item keys (the second part of each entry key) of one array property, in order."""
+    return [parse_key(k)[1] or "" for k, _ in sorted_entries(parent, prop)]
+
+
 # --- embedded nodes that already carry an id ---
 
 
@@ -58,10 +65,10 @@ def test_embedded_node_with_id_is_keyed_by_it_and_never_minted_over() -> None:
     source = record["classified_as"]
     with_id = [n for n in source if "id" in n and not is_reference(n)]
     assert with_id, "corpus example changed"
-    container = root(doc)["classified_as"]
     for node in with_id:
-        assert container[node["id"]]["id"] == node["id"]
-    assert not any(is_internal_node_iri(k, record["id"]) for k in container.keys())
+        assert root(doc)[entry_key("classified_as", node["id"])]["id"] == node["id"]
+    keys = item_keys(root(doc), "classified_as")
+    assert not any(is_internal_node_iri(k, record["id"]) for k in keys)
 
 
 def test_embedded_node_without_id_gets_internal_iri_kept_by_project() -> None:
@@ -119,9 +126,12 @@ def test_duplicate_reference_is_preserved_with_suffixed_key() -> None:
     dup = AAT + "300027221"
     assert ids.count(dup) == 2, "corpus example changed"
     doc = assert_roundtrips(record)
-    keys = set(root(doc)["classified_as"].keys())
-    assert {dup, dup + " #2"} <= keys
-    assert len(keys) == len(ids)
+    keys = item_keys(root(doc), "classified_as")
+    assert {dup, dup + " #2"} <= set(keys)
+    assert len(set(keys)) == len(ids)
+    # Both occurrences are in the projection, at their original positions.
+    assert [item["id"] for item in project(doc)["classified_as"]] == ids
+    assert entry_key("classified_as", dup + " #2") in root(doc)
 
 
 def test_duplicate_scalars_nodes_and_colliding_suffixes_are_preserved() -> None:
@@ -134,7 +144,7 @@ def test_duplicate_scalars_nodes_and_colliding_suffixes_are_preserved() -> None:
         "refs": [{"id": "x #2"}, {"id": "x"}, {"id": "x"}, {"id": "x #2"}],
     }
     doc = assert_roundtrips(record)
-    assert set(root(doc)["notation"].keys()) == {
+    assert set(item_keys(root(doc), "notation")) == {
         "=s:a #2",
         "=s:a",
         "=s:a #3",
@@ -147,7 +157,18 @@ def test_duplicate_scalars_nodes_and_colliding_suffixes_are_preserved() -> None:
         "=z",
         "=z #2",
     }
-    assert set(root(doc)["refs"].keys()) == {"x #2", "x", "x #3", "x #2 #2"}
+    assert item_keys(root(doc), "refs") == ["x #2", "x", "x #3", "x #2 #2"]
+
+
+def test_insert_is_a_noop_only_for_the_same_item_not_for_a_suffix_collision() -> None:
+    record = {"id": URI, "type": "Person", "notation": ["x", "x"]}
+    doc = hydrate(record)
+    assert item_keys(root(doc), "notation") == ["=s:x", "=s:x #2"]
+    # The string "x #2" has base key "=s:x #2", which the duplicate of "x" already holds.
+    insert_entry(doc, root(doc), "notation", "x #2", record_uri=URI)
+    assert project(doc)["notation"] == ["x", "x", "x #2"]
+    insert_entry(doc, root(doc), "notation", "x", record_uri=URI)  # present: no-op
+    assert project(doc)["notation"] == ["x", "x", "x #2"]
 
 
 # --- mixed arrays, scalars, plain objects ---
@@ -158,7 +179,8 @@ def test_array_mixing_references_and_embedded_nodes() -> None:
     kinds = {is_reference(item) for item in record["member_of"]}
     assert kinds == {True, False}, "corpus example changed"
     doc = assert_roundtrips(record)
-    assert is_container(root(doc)["member_of"])
+    assert len(sorted_entries(root(doc), "member_of")) == len(record["member_of"])
+    assert "member_of" not in root(doc)  # no container: the entries are keys of the parent map
 
 
 def test_arrays_of_scalars_plain_objects_and_nested_arrays() -> None:
@@ -171,8 +193,8 @@ def test_arrays_of_scalars_plain_objects_and_nested_arrays() -> None:
         "mixed": ["s", {"id": AAT + "1"}, {"type": "Name", "content": "n"}, {"k": 1}, 2, None],
     }
     doc = assert_roundtrips(record)
-    notation = root(doc)["notation"]
-    assert notation["=s:a"][VALUE_KEY] == "a" and notation["=s:a"][ORDER_KEY] == 1.0
+    entry = root(doc)[entry_key("notation", "=s:a")]
+    assert entry[VALUE_KEY] == "a" and entry[ORDER_KEY] == 1.0
     # Nothing inside an opaque value gets an internal IRI.
     assert project(doc)["nested"] == record["nested"]
 
@@ -287,9 +309,24 @@ def test_content_is_text_only_on_the_three_types() -> None:
     }
     doc = assert_roundtrips(record)
     assert isinstance(root(doc)["content"], Text)
-    entries = [e for _, e in sorted_entries(root(doc)["identified_by"])]
+    entries = [e for _, e in sorted_entries(root(doc), "identified_by")]
     assert [isinstance(e.get("content"), Text) for e in entries] == [True, True] + [False] * 4
     assert isinstance(entries[5]["value"], str)
+
+
+def test_pycrdt_text_offsets_are_utf8_bytes() -> None:
+    """The reason for rule R19: pycrdt counts UTF-8 bytes, Yjs counts UTF-16 code units."""
+    doc = hydrate({"id": URI, "type": "Name", "content": "é\U0001f600z"})
+    text = root(doc)["content"]
+    assert len(str(text)) == 3 and len(text) == 7
+    # Code-point position 2 (before "z") is byte offset 6 in pycrdt and offset 3 in Yjs.
+    prefix = str(text)[:2]
+    assert len(prefix.encode("utf-8")) == 6 and len(prefix.encode("utf-16-le")) // 2 == 3
+    text.insert(len(prefix.encode("utf-8")), "|")
+    assert project(doc)["content"] == "é\U0001f600|z"
+    # An offset inside a character is not an error: the text silently lands somewhere else.
+    text.insert(1, "!")
+    assert project(doc)["content"] not in ("é!\U0001f600|z", "é\U0001f600|z")
 
 
 # --- _label, empty arrays, key order ---
@@ -304,15 +341,86 @@ def test_label_on_embedded_nodes_and_references_is_preserved() -> None:
     assert out["classified_as"][0]["_label"] == record["classified_as"][0]["_label"]
 
 
-def test_empty_array_roundtrips_and_empty_container_is_omitted() -> None:
+def test_empty_array_roundtrips_and_an_emptied_array_is_omitted() -> None:
     record = {"id": URI, "type": "Person", "identified_by": [], "part": [{"type": "Name"}]}
     doc = assert_roundtrips(record)
     assert root(doc)["identified_by"] == {JSON_KEY: "[]"}
-    # A container whose last entry was removed, or one created empty, projects to no key at all.
-    part = root(doc)["part"]
-    del part[next(iter(part.keys()))]
-    root(doc)["classified_as"] = Map()
+    # An array whose last entry was removed projects to no key at all.
+    ((key, _),) = sorted_entries(root(doc), "part")
+    del root(doc)[key]
     assert project(doc) == {"id": URI, "type": "Person", "identified_by": []}
+    # The first insert into an empty source array replaces the marker.
+    insert_entry(doc, root(doc), "identified_by", {"id": AAT + "1"}, record_uri=URI)
+    assert "identified_by" not in root(doc)
+    assert project(doc)["identified_by"] == [{"id": AAT + "1"}]
+
+
+# --- map keys (R6) ---
+
+
+def test_array_entries_are_keys_of_the_parent_map() -> None:
+    record = {
+        "id": URI,
+        "type": "Person",
+        "identified_by": [{"id": "https://example.org/n", "type": "Name", "part": [{"id": "p"}]}],
+        "timespan": {"type": "TimeSpan", "identified_by": [{"id": AAT + "1"}]},
+    }
+    doc = assert_roundtrips(record)
+    keys = set(root(doc).keys())
+    assert keys == {"id", "type", '["identified_by","https://example.org/n"]', "timespan"}
+    name = root(doc)['["identified_by","https://example.org/n"]']
+    assert set(name.keys()) == {"id", "type", '["part","p"]', ORDER_KEY}
+    assert f'["identified_by","{AAT}1"]' in root(doc)["timespan"]
+    # No shared map anywhere holds only entries: there is no container to create concurrently.
+    assert isinstance(root(doc)["timespan"], Map) and ORDER_KEY not in root(doc)["timespan"]
+
+
+@pytest.mark.parametrize(
+    "key",
+    ["[", "[]", '["a"]', '["a","b"]', "[x", "a[0]", 'q"\\\n\t\u0001\u007f\u2028', "\U0001f600"],
+)
+def test_keys_that_look_like_entry_keys_roundtrip(key: str) -> None:
+    record = {
+        "id": URI,
+        "type": "Person",
+        key: "single",
+        "nested": {"type": "Name", key: [{"id": key}, key, {"type": "Name", key: 1}]},
+    }
+    doc = assert_roundtrips(record)
+    assert parse_key(entry_key(key, key)) == (key, key)
+    stored = [k for k in root(doc).keys() if parse_key(k) == (key, None)]
+    assert len(stored) == 1
+    assert (stored[0] == key) == (not key.startswith("["))
+
+
+def test_entry_key_text_is_json_stringify_compatible() -> None:
+    assert entry_key("classified_as", AAT + "1") == f'["classified_as","{AAT}1"]'
+    assert entry_key('a"b\\', "\n\u0001\u007f\u2028é\U0001f600") == (
+        '["a\\"b\\\\","\\n\\u0001\u007f\u2028é\U0001f600"]'
+    )
+
+
+@pytest.mark.parametrize("key", ["[", "[1]", '["a",1]', '["a","b","c"]', "[]", '{"a":1}x', "[x"])
+def test_a_malformed_map_key_fails_projection(key: str) -> None:
+    doc = hydrate({"id": URI, "type": "Person"})
+    root(doc)[key] = "written by a faulty client"
+    if key.startswith("["):
+        with pytest.raises(ProjectionError) as info:
+            project(doc)
+        assert info.value.code == "LAE-PROJ-005"
+    else:
+        assert project(doc)[key] == "written by a faulty client"
+
+
+def test_insert_into_a_single_valued_property_is_rejected() -> None:
+    doc = hydrate({"id": URI, "type": "Activity", "timespan": {"type": "TimeSpan"}})
+    with pytest.raises(ProjectionError) as info:
+        insert_entry(doc, root(doc), "timespan", {"type": "TimeSpan"}, record_uri=URI)
+    assert info.value.code == "LAE-PROJ-006"
+    for reserved in ("_order", "_value", "@context"):
+        with pytest.raises(ProjectionError) as info:
+            insert_entry(doc, root(doc), reserved, "x", record_uri=URI)
+        assert info.value.code == "LAE-PROJ-001"
 
 
 def test_key_order_is_irrelevant_and_array_order_is_exact() -> None:
@@ -326,11 +434,10 @@ def test_key_order_is_irrelevant_and_array_order_is_exact() -> None:
 
 def test_sort_is_by_order_then_key_in_code_point_order() -> None:
     doc = hydrate({"id": URI, "type": "Person", "p": [{"id": "b"}]})
-    p = root(doc)["p"]
     # U+FF5E sorts before U+1F600 by code point but after it by UTF-16 code unit (JS default).
     for key in ["\U0001f600", "～", "a"]:
-        p[key] = Map({"id": key, ORDER_KEY: 0.0})
-    assert [k for k, _ in sorted_entries(p)] == ["a", "b", "～", "\U0001f600"]
+        root(doc)[entry_key("p", key)] = Map({"id": key, ORDER_KEY: 0.0})
+    assert item_keys(root(doc), "p") == ["a", "b", "～", "\U0001f600"]
 
 
 # --- invalid input ---

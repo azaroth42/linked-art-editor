@@ -24,10 +24,10 @@ from s3_projection.projection import (  # noqa: E402
     VALUE_KEY,
     canonical_json,
     hydrate,
-    is_container,
     is_internal_node_iri,
     is_node,
     is_reference,
+    parse_key,
     project,
     strip_internal_iris,
 )
@@ -38,18 +38,20 @@ def count_doc(value: Any, uri: str, stats: Counter[str]) -> None:
     if isinstance(value, Text):
         stats["Text values"] += 1
     elif isinstance(value, Map):
-        if is_container(value):
-            stats["array containers"] += 1
-            stats["array entries"] += len(value)
-            stats["entries with a suffixed (duplicate) key"] += sum(
-                1 for k, e in value.items() if e.get("id", k) != k and VALUE_KEY not in e
-            )
-        else:
+        if VALUE_KEY not in value:
             stats["node/reference maps"] += 1
             if is_internal_node_iri(value.get("id"), uri):
                 stats["internal node IRIs minted"] += 1
-        for child in value.values():
+        arrays: set[str] = set()
+        for key, child in value.items():
+            prop, item_key = parse_key(key)
+            if item_key is not None:
+                arrays.add(prop)
+                stats["array entries"] += 1
+                if VALUE_KEY not in child and child.get("id") != item_key:
+                    stats["entries with a suffixed (duplicate) key"] += 1
             count_doc(child, uri, stats)
+        stats["arrays (properties with entries)"] += len(arrays)
     elif isinstance(value, dict) and JSON_KEY in value:
         stats["_json-encoded values"] += 1
 

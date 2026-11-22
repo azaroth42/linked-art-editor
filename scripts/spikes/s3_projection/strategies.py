@@ -49,6 +49,8 @@ ids = st.one_of(
             "https://example.org/id/a #2",
             "_:b0",
             "=s:x",
+            "[",
+            '["a","b"]',
             "type",
             "_order",
             "",
@@ -66,9 +68,11 @@ numbers = st.one_of(
 scalars = st.one_of(
     text, st.sampled_from(["x", "x #2", "true", "1"]), numbers, st.booleans(), st.none()
 )
-keys = st.one_of(st.sampled_from(ARRAY_PROPS + SINGLE_PROPS + SCALAR_PROPS), text).filter(
-    lambda k: k not in RESERVED_KEYS and k not in {"id", "type", "@context"}
-)
+# Keys that start with "[" share a prefix with entry keys and must be escaped (rule R6).
+KEY_LIKE = ["[", "[]", '["a"]', '["identified_by","x"]']
+keys = st.one_of(
+    st.sampled_from(ARRAY_PROPS + SINGLE_PROPS + SCALAR_PROPS), st.sampled_from(KEY_LIKE), text
+).filter(lambda k: k not in RESERVED_KEYS and k not in {"id", "type", "@context"})
 
 # Arbitrary JSON, including objects that carry reserved keys or `type` deep inside (opaque).
 any_json = st.recursive(

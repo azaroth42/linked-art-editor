@@ -21,6 +21,8 @@ ORDER_KEY: Final = "_order"
 VALUE_KEY: Final = "_value"
 JSON_KEY: Final = "_json"
 RESERVED_KEYS: Final = frozenset({ORDER_KEY, VALUE_KEY})
+ENTRY_KEY_PREFIX: Final = "["
+EMPTY_ARRAY: Final = {JSON_KEY: "[]"}
 TEXT_CONTENT_TYPES: Final = frozenset({"Name", "Identifier", "LinguisticObject"})
 REFERENCE_KEYS: Final = frozenset({"id", "type", "_label"})
 OPAQUE_KEYS: Final = frozenset({"@context"})
@@ -167,6 +169,38 @@ def value_key(value: Any) -> str:
     return "=j:" + json_text(value)
 
 
+def property_key(prop: str) -> str:
+    """Map key of a single-valued property: the JSON key, escaped only if it starts with ``[``."""
+    return _key_text([prop]) if prop.startswith(ENTRY_KEY_PREFIX) else prop
+
+
+def entry_key(prop: str, item_key: str) -> str:
+    """Map key of one array item of property ``prop``: the JSON text of ``[prop, item_key]``."""
+    return _key_text([prop, item_key])
+
+
+def _key_text(parts: list[str]) -> str:
+    # Identical to JavaScript's JSON.stringify(parts) for well-formed Unicode strings.
+    return json.dumps(parts, ensure_ascii=False, separators=(",", ":"))
+
+
+def parse_key(key: str) -> tuple[str, str | None]:
+    """``(property, item key)`` of a map key; the item key is ``None`` for a property key."""
+    if not key.startswith(ENTRY_KEY_PREFIX):
+        return key, None
+    try:
+        parts = json.loads(key)
+    except ValueError:
+        parts = None
+    if (
+        isinstance(parts, list)
+        and len(parts) in (1, 2)
+        and all(isinstance(part, str) for part in parts)
+    ):
+        return (parts[0], None) if len(parts) == 1 else (parts[0], parts[1])
+    raise ProjectionError("LAE-PROJ-005", f"malformed map key {key!r}")
+
+
 def unique_key(base: str, used: Iterable[str]) -> str:
     """``base`` if unused, else the first unused of ``base #2``, ``base #3``, ... (R7)."""
     taken = used if isinstance(used, set | dict | frozenset) else set(used)
@@ -224,6 +258,7 @@ def hydrate(
 
 
 def _object_fields(obj: dict[str, Any]) -> dict[str, Any]:
+    """The keys of one object map: its single-valued properties and its array entries (R6)."""
     fields: dict[str, Any] = {}
     for key, value in obj.items():
         if not isinstance(key, str):
@@ -231,7 +266,10 @@ def _object_fields(obj: dict[str, Any]) -> dict[str, Any]:
         _check_text(key, "a key")
         if key in RESERVED_KEYS:
             raise ProjectionError("LAE-PROJ-001", f"reserved key {key!r} in the input")
-        fields[key] = _hydrate_value(key, value, obj)
+        if key not in OPAQUE_KEYS and isinstance(value, list) and value:
+            fields.update(_array_entries(key, value))
+        else:
+            fields[property_key(key)] = _hydrate_value(key, value, obj)
     return fields
 
 
@@ -244,32 +282,32 @@ def _hydrate_value(key: str, value: Any, parent: dict[str, Any]) -> Any:
             return Text(_check_text(value, "content"))
     if is_structured(value):
         return Map(_object_fields(value))
-    if isinstance(value, list) and value:
-        return _hydrate_array(value)
     return encode_plain(value)
 
 
 def entry_fields(item: Any) -> tuple[str, dict[str, Any]]:
-    """Return ``(base key, Map fields)`` for one array item (ids already assigned)."""
+    """Return ``(base item key, Map fields)`` for one array item (ids already assigned)."""
     if is_structured(item):
         return item["id"], _object_fields(item)
     return value_key(item), {VALUE_KEY: encode_plain(item)}
 
 
-def _hydrate_array(items: list[Any]) -> Map:
+def _array_entries(prop: str, items: list[Any]) -> dict[str, Map]:
+    """One entry per item, keyed ``[prop, item key]`` in the parent's own map (R6, R7)."""
+    used: set[str] = set()
     entries: dict[str, Map] = {}
     for index, item in enumerate(items):
         base, fields = entry_fields(item)
         fields[ORDER_KEY] = float(index)
-        entries[unique_key(base, entries)] = Map(fields)
-    return Map(entries)
+        item_key = unique_key(base, used)
+        used.add(item_key)
+        entries[entry_key(prop, item_key)] = Map(fields)
+    return entries
 
 
 # --------------------------------------------------------------------------------------------
 # Projection
 # --------------------------------------------------------------------------------------------
-
-_OMIT: Final = object()
 
 
 def entry_order(entry: Any) -> float | None:
@@ -282,14 +320,25 @@ def entry_order(entry: Any) -> float | None:
     return float(order)
 
 
-def is_container(value: Any) -> bool:
-    """True if a shared map is an array container: every value is an entry map (R11)."""
-    return isinstance(value, Map) and all(entry_order(v) is not None for v in value.values())
+def _sort(entries: list[tuple[str, Any]]) -> list[tuple[str, Map]]:
+    # R13: by _order, then by the whole entry key in Unicode code-point order.
+    def sort_key(item: tuple[str, Any]) -> tuple[float, str]:
+        order = entry_order(item[1])
+        if order is None:
+            raise ProjectionError("LAE-PROJ-005", f"entry {item[0]!r} has no numeric _order")
+        return order, item[0]
+
+    return sorted(entries, key=sort_key)
 
 
-def sorted_entries(container: Map) -> list[tuple[str, Map]]:
-    """Entries by ``_order`` ascending, ties broken by key in Unicode code-point order (R13)."""
-    return sorted(container.items(), key=lambda kv: (entry_order(kv[1]), kv[0]))
+def sorted_entries(parent: Map, prop: str) -> list[tuple[str, Map]]:
+    """The entries of array property ``prop`` of an object map, as ``(map key, entry)`` (R13)."""
+    found: list[tuple[str, Any]] = []
+    for key, value in parent.items():
+        key_prop, item_key = parse_key(key)
+        if item_key is not None and key_prop == prop:
+            found.append((key, value))
+    return _sort(found)
 
 
 def project(doc: Doc) -> dict[str, Any]:
@@ -299,12 +348,16 @@ def project(doc: Doc) -> dict[str, Any]:
 
 def _project_object(obj: Map) -> dict[str, Any]:
     out: dict[str, Any] = {}
+    arrays: dict[str, list[tuple[str, Any]]] = {}
     for key, value in obj.items():
-        if key == ORDER_KEY:
-            continue
-        projected = _project_value(value)
-        if projected is not _OMIT:
-            out[key] = projected
+        prop, item_key = parse_key(key)
+        if item_key is not None:
+            arrays.setdefault(prop, []).append((key, value))
+        elif key not in RESERVED_KEYS:
+            out[prop] = _project_value(value)
+    # Entries win over a single value stored for the same property (R11).
+    for prop, entries in arrays.items():
+        out[prop] = [_project_entry(entry) for _, entry in _sort(entries)]
     return out
 
 
@@ -312,11 +365,7 @@ def _project_value(value: Any) -> Any:
     if isinstance(value, Text):
         return str(value)
     if isinstance(value, Map):
-        if not is_container(value):
-            return _project_object(value)
-        if len(value) == 0:
-            return _OMIT
-        return [_project_entry(entry) for _, entry in sorted_entries(value)]
+        return _project_object(value)
     return decode_plain(value)
 
 
@@ -374,17 +423,17 @@ def order_between(before: float | None, after: float | None) -> float | None:
     return candidate if ok and math.isfinite(candidate) else None
 
 
-def rebalance(container: Map) -> None:
-    """Renumber a container to 0.0, 1.0, ... in its current projected order."""
-    for index, (_, entry) in enumerate(sorted_entries(container)):
+def rebalance(parent: Map, prop: str) -> None:
+    """Renumber the entries of one property to 0.0, 1.0, ... in their current projected order."""
+    for index, (_, entry) in enumerate(sorted_entries(parent, prop)):
         if entry[ORDER_KEY] != float(index):
             entry[ORDER_KEY] = float(index)
 
 
-def order_for_index(container: Map, index: int, skip: str | None = None) -> float:
+def order_for_index(parent: Map, prop: str, index: int, skip: str | None = None) -> float:
     """The ``_order`` that places an entry at ``index``, rebalancing first if needed."""
     for attempt in range(2):
-        orders = [entry_order(e) for k, e in sorted_entries(container) if k != skip]
+        orders = [entry_order(e) for k, e in sorted_entries(parent, prop) if k != skip]
         index = max(0, min(index, len(orders)))
         before = orders[index - 1] if index > 0 else None
         after = orders[index] if index < len(orders) else None
@@ -392,43 +441,66 @@ def order_for_index(container: Map, index: int, skip: str | None = None) -> floa
         if order is not None:
             return order
         if attempt == 0:
-            rebalance(container)
+            rebalance(parent, prop)
     raise ProjectionError("LAE-PROJ-005", "no free _order after rebalance")
+
+
+def _same_item(entry: Map, item: Any) -> bool:
+    if is_structured(item):
+        return VALUE_KEY not in entry and entry.get("id") == item["id"]
+    return VALUE_KEY in entry and value_key(decode_plain(entry[VALUE_KEY])) == value_key(item)
 
 
 def insert_entry(
     doc: Doc,
-    container: Map,
+    parent: Map,
+    prop: str,
     item: Any,
     index: int | None = None,
     *,
     record_uri: str,
     mint: Mint | None = None,
 ) -> str:
-    """Insert ``item`` at array position ``index`` (default: append); return its entry key.
+    """Insert ``item`` at position ``index`` (default: append) of ``parent[prop]``; return its key.
 
-    Inserting a reference or opaque value whose key is already present is a no-op (set semantics).
+    No container is created: the entry is one more key of ``parent`` (R14). Inserting a reference
+    or opaque value that the array already holds is a no-op (set semantics, R7).
     """
+    if prop in RESERVED_KEYS or prop in OPAQUE_KEYS:
+        raise ProjectionError("LAE-PROJ-001", f"{prop!r} cannot be an array property")
     if is_structured(item):
         item = _assign_object(item, mint or (lambda: mint_node_iri(record_uri)))
     base, fields = entry_fields(item)
     with doc.transaction():
-        if base in container:
-            return base
-        position = len(container) if index is None else index
-        fields[ORDER_KEY] = order_for_index(container, position)
-        container[base] = Map(fields)
-    return base
+        existing = dict(sorted_entries(parent, prop))
+        key = entry_key(prop, base)
+        if key in existing and _same_item(existing[key], item):
+            return key
+        if key in existing:  # the base key is held by a suffixed duplicate of another item
+            used = {parse_key(k)[1] or "" for k in existing}
+            key = entry_key(prop, unique_key(base, used))
+        single = property_key(prop)
+        if single in parent:
+            # Allowed to go: the marker of an empty source array, and a single value that
+            # concurrent edits left behind entries (the projection already ignores it, R11).
+            if parent[single] != EMPTY_ARRAY and not existing:
+                raise ProjectionError("LAE-PROJ-006", f"{prop!r} holds a single value")
+            del parent[single]
+        position = len(existing) if index is None else index
+        fields[ORDER_KEY] = order_for_index(parent, prop, position)
+        parent[key] = Map(fields)
+    return key
 
 
-def move_entry(doc: Doc, container: Map, key: str, index: int) -> None:
-    """Move entry ``key`` so that it sits at ``index`` among the other entries."""
+def move_entry(doc: Doc, parent: Map, key: str, index: int) -> None:
+    """Move entry ``key`` so that it sits at ``index`` among the other entries of its property."""
+    prop = parse_key(key)[0]
     with doc.transaction():
-        order = order_for_index(container, index, skip=key)
-        container[key][ORDER_KEY] = order
+        order = order_for_index(parent, prop, index, skip=key)
+        parent[key][ORDER_KEY] = order
 
 
-def remove_entry(doc: Doc, container: Map, key: str) -> None:
-    """Delete entry ``key`` from a container."""
+def remove_entry(doc: Doc, parent: Map, key: str) -> None:
+    """Delete entry ``key``; nothing else is touched."""
     with doc.transaction():
-        del container[key]
+        del parent[key]
