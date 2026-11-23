@@ -5,6 +5,7 @@ import type { UiProfile, VocabBundle } from "../api/hooks/editing.ts";
 import { classificationGroups } from "../widgets/classifications.ts";
 import { type WidgetEnv, WidgetEnvContext } from "../widgets/environment.ts";
 import { ProfileSectionView } from "./ProfileSectionView.tsx";
+import { type SlotFocus, SlotFocusContext } from "./slotFocus.ts";
 
 interface ProfileRendererProps {
   profile: UiProfile;
@@ -15,7 +16,11 @@ interface ProfileRendererProps {
   bundle: VocabBundle | null;
   /** Labels transcluded on the loaded record's references, by URI. */
   refLabels: ReadonlyMap<string, string>;
+  /** The slot a diagnostic asked to focus, if any (`slotFocus.ts`). */
+  focus?: SlotFocus;
 }
+
+const NO_FOCUS: SlotFocus = { request: null, done: () => undefined };
 
 /**
  * The editing form of a UI Profile (spec §6.1): its `sections` in order, each with its `slots`,
@@ -29,6 +34,7 @@ export function ProfileRenderer({
   disabled,
   bundle,
   refLabels,
+  focus = NO_FOCUS,
 }: ProfileRendererProps) {
   const groups = useMemo(() => classificationGroups(profile, bundle), [profile, bundle]);
   const env = useMemo<WidgetEnv>(
@@ -45,11 +51,13 @@ export function ProfileRenderer({
   );
   return (
     <WidgetEnvContext.Provider value={env}>
-      <div className="flex w-full max-w-4xl flex-col gap-8" data-testid="profile-form">
-        {profile.sections.map((section) => (
-          <ProfileSectionView key={section.id} section={section} />
-        ))}
-      </div>
+      <SlotFocusContext.Provider value={focus}>
+        <div className="flex w-full max-w-4xl flex-col gap-8" data-testid="profile-form">
+          {profile.sections.map((section) => (
+            <ProfileSectionView key={section.id} section={section} />
+          ))}
+        </div>
+      </SlotFocusContext.Provider>
     </WidgetEnvContext.Provider>
   );
 }

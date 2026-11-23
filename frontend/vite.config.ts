@@ -30,12 +30,17 @@ const proxy: Record<string, ProxyOptions> = {
 
 /**
  * The CRDT mirror's tests (`src/crdt/*.test.ts`) read the backend's shared projection fixtures
- * and the golden corpus unchanged (never copies that could drift). Only Vitest's server may
- * serve these two directories outside the root.
+ * and the golden corpus unchanged (never copies that could drift), and the browser schema
+ * check's tests read the vendored Linked Art schemas and the server's verdicts on them
+ * (`backend/tests/validation/data/schema_browser_cases.json`). Only Vitest's server may serve
+ * these directories outside the root.
  */
-const TEST_DATA = ["../backend/tests/projection/fixtures", "../tests/corpus"].map((path) =>
-  fileURLToPath(new URL(path, import.meta.url)),
-);
+const TEST_DATA = [
+  "../backend/tests/projection/fixtures",
+  "../backend/tests/validation/data",
+  "../tests/corpus",
+  "../profiles/schema",
+].map((path) => fileURLToPath(new URL(path, import.meta.url)));
 const testFs = process.env.VITEST
   ? { allow: [searchForWorkspaceRoot(process.cwd()), ...TEST_DATA] }
   : undefined;
