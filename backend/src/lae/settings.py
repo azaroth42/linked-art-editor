@@ -8,6 +8,7 @@ field is optional; secrets are ``SecretStr`` so they never appear in ``repr`` or
 from __future__ import annotations
 
 from functools import lru_cache
+from pathlib import Path
 from typing import Annotated, Literal
 
 from pydantic import SecretStr, field_validator
@@ -104,6 +105,10 @@ class Settings(BaseSettings):
 
     dev_user: str | None = None
     """Development login bypass, ``<email>:<Role>``; refused when ``env`` is ``production``."""
+
+    reader_assets_dir: Path | None = None
+    """Built Public Reader script (``corepack pnpm build:reader``); default
+    ``frontend/dist-reader`` in the repository (``lae.reader.assets``, Step 1.21)."""
 
     @field_validator(
         "github_allowed_orgs", "github_allowed_users", "allowed_origins", mode="before"

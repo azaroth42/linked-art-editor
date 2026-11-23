@@ -1,4 +1,5 @@
 dist
+dist-reader
 coverage
 playwright-report
 test-results

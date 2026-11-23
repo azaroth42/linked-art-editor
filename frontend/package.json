@@ -9,7 +9,8 @@
   },
   "scripts": {
     "dev": "vite",
-    "build": "tsc --noEmit -p tsconfig.json && vite build",
+    "build": "tsc --noEmit -p tsconfig.json && vite build && vite build -c vite.reader.config.ts",
+    "build:reader": "vite build -c vite.reader.config.ts",
     "preview": "vite preview",
     "lint": "eslint . && bash ../scripts/check-logical-css.sh",
     "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p tsconfig.node.json",

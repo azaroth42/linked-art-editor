@@ -1,1 +1,116 @@
-{}
+{
+  "site": {
+    "name": "Laertes",
+    "page_title": "{title} – Laertes",
+    "footer": "Published with Laertes, the Linked Art editor"
+  },
+  "nav": {
+    "skip_to_main": "Skip to main content",
+    "edit": "Edit this record"
+  },
+  "record": {
+    "untitled": "Untitled record"
+  },
+  "class": {
+    "HumanMadeObject": "Object",
+    "DigitalObject": "Digital object",
+    "LinguisticObject": "Text",
+    "VisualItem": "Visual work",
+    "Set": "Set",
+    "Person": "Person",
+    "Group": "Group",
+    "Place": "Place",
+    "Type": "Concept",
+    "Language": "Language",
+    "Material": "Material",
+    "Currency": "Currency",
+    "MeasurementUnit": "Measurement unit",
+    "Activity": "Activity",
+    "Event": "Event",
+    "Period": "Period",
+    "PropositionalObject": "Abstract work",
+    "Provenance": "Provenance"
+  },
+  "section": {
+    "names": "Names",
+    "identifiers": "Identifiers",
+    "classifications": "Classifications",
+    "materials": "Materials",
+    "dimensions": "Dimensions",
+    "statements": "Statements",
+    "related": "Related",
+    "data": "Data"
+  },
+  "event": {
+    "produced_by": "Production",
+    "created_by": "Creation",
+    "born": "Birth",
+    "died": "Death",
+    "formed_by": "Formation",
+    "dissolved_by": "Dissolution",
+    "destroyed_by": "Destruction"
+  },
+  "field": {
+    "carried_out_by": "By",
+    "timespan": "Date",
+    "took_place_at": "Place",
+    "technique": "Technique"
+  },
+  "name": {
+    "untyped": "Name"
+  },
+  "identifier": {
+    "untyped": "Identifier"
+  },
+  "dimension": {
+    "untyped": "Dimension",
+    "value": "{value} {unit}"
+  },
+  "statement": {
+    "untyped": "Statement"
+  },
+  "value": {
+    "note": "({note})"
+  },
+  "date": {
+    "from": "from {date}",
+    "until": "until {date}"
+  },
+  "property": {
+    "referred_to_by": "Referred to by",
+    "member_of": "Member of",
+    "part_of": "Part of",
+    "current_owner": "Current owner",
+    "current_custodian": "Current custodian",
+    "current_permanent_custodian": "Permanent custodian",
+    "current_location": "Current location",
+    "current_permanent_location": "Permanent location",
+    "shows": "Shows",
+    "carries": "Carries",
+    "about": "About",
+    "represents": "Represents",
+    "broader": "Broader concept",
+    "equivalent": "Same as",
+    "residence": "Residence",
+    "language": "Language",
+    "used_for": "Used for",
+    "conforms_to": "Conforms to"
+  },
+  "media": {
+    "alt": "Image of {title}",
+    "manifest": "Open the IIIF manifest"
+  },
+  "viewer": {
+    "label": "Image viewer",
+    "instructions": "Select the viewer, then use the arrow keys to pan, = and - to zoom, and 0 to reset."
+  },
+  "version": {
+    "banner": "You are viewing version {version} of this record, published {date}.",
+    "view_current": "View the current version",
+    "is_current": "This is the current version."
+  },
+  "data": {
+    "jsonld": "JSON-LD",
+    "turtle": "Turtle"
+  }
+}

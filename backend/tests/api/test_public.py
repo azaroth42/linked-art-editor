@@ -2,7 +2,8 @@
 
 The invariant checked throughout: no public body (JSON-LD, Turtle, HTML, current or
 ``?version=N``) contains an internal node IRI or a derived (skolemized) node IRI. Both start with
-``<record_uri>/node/``; the stored test records have such ids on every embedded node.
+``<record_uri>/node/``; the stored test records have such ids on every embedded node. The HTML
+is the Public Reader (Step 1.21); ``tests/reader`` tests its parts.
 """
 
 from __future__ import annotations
@@ -34,10 +35,22 @@ from tests.api.conftest import (
     new_uri,
     titled_record,
 )
-from tests.auth.conftest import Served, bearer
+from tests.auth.conftest import (
+    FakeOIDCProvider,
+    Served,
+    bearer,
+    login,
+    serve_app,
+    unique_subject,
+)
 
 HTML_ACCEPT = "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
 """What a browser sends."""
+
+READER_SCRIPT = '<script type="module" src="/reader/assets/reader.js"></script>'
+
+SPA_ASSET = re.compile(r"(?<!/reader)/assets/|/src/|\.tsx|index-[\w-]+\.js|/locales/|/@vite/")
+"""What the SPA's build (``/assets/index-*.js``) or dev server (``/src/main.tsx``) serves."""
 
 CRM = "http://www.cidoc-crm.org/cidoc-crm/"
 
@@ -190,7 +203,7 @@ async def test_turtle(served: Served, db_engine: AsyncEngine) -> None:
 
 @pytest.mark.parametrize("accept", [None, "*/*", "text/html", HTML_ACCEPT, "image/png"])
 async def test_html(served: Served, db_engine: AsyncEngine, accept: str | None) -> None:
-    uri, _, _ = await published(db_engine)
+    uri, type_uri, _ = await published(db_engine)
     headers = {"Accept-Language": "fr"}
     if accept is not None:
         headers["Accept"] = accept
@@ -200,13 +213,26 @@ async def test_html(served: Served, db_engine: AsyncEngine, accept: str | None) 
     response = await served.client.send(request)
     assert_public(response, uri)
     assert response.headers["content-type"] == "text/html; charset=utf-8"
+    assert response.headers["vary"] == "Accept, Accept-Language, Cookie"
     page = response.text
     assert page.startswith("<!DOCTYPE html>")
-    assert '<html lang="fr">' in page
-    assert "<title>Scène de nuit</title>" in page
-    assert '<h1 lang="fr">Scène de nuit</h1>' in page
+    # The page is in the first language of the chain that has reader strings (only en so far);
+    # the title is in the caller's language and says so.
+    assert '<html lang="en" dir="ltr">' in page
+    assert "<title>Scène de nuit – Laertes</title>" in page
+    assert '<h1 lang="fr" dir="auto">Scène de nuit</h1>' in page
     assert 'href="?format=jsonld"' in page
     assert 'href="?format=ttl"' in page
+    assert '<link rel="alternate" type="text/turtle" href="?format=ttl">' in page
+    # Sections, with the classification label transcluded in French and marked as such.
+    assert '<h2 id="section-names">Names</h2>' in page
+    assert '<span lang="fr" dir="auto">Scène de nuit</span>' in page
+    assert f'<a href="{type_uri}" lang="fr" dir="auto">peintures</a>' in page
+    assert '<h2 id="section-produced_by">Production</h2>' in page
+    assert '<span dir="auto">1880</span>' in page
+    # No script at all without a IIIF resource, and no edit link without a session.
+    assert "<script" not in page
+    assert "/edit/" not in page
 
 
 async def test_html_escapes_the_label(served: Served, db_engine: AsyncEngine) -> None:
@@ -216,6 +242,117 @@ async def test_html_escapes_the_label(served: Served, db_engine: AsyncEngine) ->
     response = await served.client.get(path_of(uri), headers={"Accept": "text/html"})
     assert "<script>" not in response.text
     assert "&lt;script&gt;x&lt;/script&gt; &amp; co" in response.text
+
+
+def iiif_record(uri: str) -> dict[str, Any]:
+    """A titled record whose image is a IIIF Image API URL with a region."""
+    data = titled_record(uri, "Kylix", "Coupe", f"https://vocab.test/{uuid7()}")
+    data["representation"] = [
+        {
+            "type": "VisualItem",
+            "digitally_shown_by": [
+                {
+                    "type": "DigitalObject",
+                    "access_point": [
+                        {
+                            "id": "https://iiif.test/image/kylix/10.4,20,300,200/max/0/default.jpg",
+                            "type": "DigitalObject",
+                        }
+                    ],
+                }
+            ],
+        }
+    ]
+    return data
+
+
+async def test_html_shows_canvas_panel_for_a_iiif_image(
+    served: Served, db_engine: AsyncEngine
+) -> None:
+    uri = new_uri()
+    await insert_record(db_engine, iiif_record(uri))
+    response = await served.client.get(path_of(uri), headers={"Accept": "text/html"})
+    assert_public(response, uri)
+    page = response.text
+    assert READER_SCRIPT in page
+    assert page.count("<script") == 1
+    assert (
+        '<canvas-panel data-image-service="https://iiif.test/image/kylix" '
+        'data-region="10,20,300,200" height="480" interactive="true" tabindex="0" '
+        'role="application" aria-label="Image viewer" aria-describedby="viewer-help">'
+        "</canvas-panel>"
+    ) in page
+    assert (
+        '<img class="fallback" src="https://iiif.test/image/kylix/full/!800,800/0/default.jpg" '
+        'alt="Image of Kylix"'
+    ) in page
+
+
+@pytest.mark.parametrize("record", ["plain", "iiif"])
+async def test_html_references_no_spa_asset(
+    served: Served, db_engine: AsyncEngine, record: str
+) -> None:
+    """The reader loads nothing from the SPA: at most its own script, from /reader/assets/."""
+    uri = new_uri()
+    data = iiif_record(uri) if record == "iiif" else titled_record(uri, "A", "B", "https://x.test")
+    await insert_record(db_engine, data)
+    page = (await served.client.get(path_of(uri), headers={"Accept": "text/html"})).text
+    assert not SPA_ASSET.search(page), SPA_ASSET.search(page)
+    sources = re.findall(r'<(?:script|link)\b[^>]*\b(?:src|href)="([^"]*)"', page)
+    assert all(source.startswith(("?format=", "/reader/assets/")) for source in sources), sources
+    assert 'rel="stylesheet"' not in page
+    assert ("/reader/assets/reader.js" in page) is (record == "iiif")
+
+
+async def test_html_edit_link_only_with_a_session(db_url: str, db_engine: AsyncEngine) -> None:
+    uri, _, _ = await published(db_engine)
+    edit = f'<a class="edit" href="/edit/{id_of(uri)}">Edit this record</a>'
+    idp = FakeOIDCProvider()
+    async with serve_app(db_url, idp, base_uri=BASE_URI) as served:
+        anonymous = await served.client.get(path_of(uri))
+        assert anonymous.status_code == 200
+        assert edit not in anonymous.text
+        await login(served.client, idp, unique_subject())
+        signed_in = await served.client.get(path_of(uri))
+        assert signed_in.status_code == 200
+        assert edit in signed_in.text
+        assert signed_in.headers["vary"] == "Accept, Accept-Language, Cookie"
+        # The two pages have different tags, so a cached anonymous page is not reused.
+        assert signed_in.headers["etag"] == anonymous.headers["etag"][:-1] + '-edit"'
+        revalidated = await served.client.get(
+            path_of(uri), headers={"If-None-Match": anonymous.headers["etag"]}
+        )
+        assert revalidated.status_code == 200
+        assert edit in revalidated.text
+        # JSON-LD and Turtle do not depend on the session.
+        jsonld = await served.client.get(path_of(uri), params={"format": "jsonld"})
+        assert jsonld.headers["vary"] == "Accept, Accept-Language"
+        assert not jsonld.headers["etag"].endswith('-edit"')
+        await served.client.post("/auth/logout")
+        assert edit not in (await served.client.get(path_of(uri))).text
+
+
+async def test_html_ignores_a_forged_session_cookie(served: Served, db_engine: AsyncEngine) -> None:
+    uri, _, _ = await published(db_engine)
+    served.client.cookies.set("lae_session", "forged")
+    response = await served.client.get(path_of(uri))
+    assert response.status_code == 200
+    assert "/edit/" not in response.text
+
+
+async def test_reader_script_is_served(db_url: str, tmp_path: Any) -> None:
+    (tmp_path / "reader.js").write_text("export {};\n")
+    async with serve_app(db_url, base_uri=BASE_URI, reader_assets_dir=tmp_path) as served:
+        script = await served.client.get("/reader/assets/reader.js")
+        assert script.status_code == 200
+        assert script.headers["content-type"].startswith("text/javascript")
+        assert script.text == "export {};\n"
+        assert (await served.client.get("/reader/assets/missing.js")).status_code == 404
+        assert (await served.client.get("/reader/assets/../pyproject.toml")).status_code == 404
+    async with serve_app(
+        db_url, base_uri=BASE_URI, reader_assets_dir=tmp_path / "not-built"
+    ) as served:
+        assert (await served.client.get("/reader/assets/reader.js")).status_code == 404
 
 
 @pytest.mark.parametrize(
@@ -349,6 +486,12 @@ async def test_versioned_fetch(served: Served, db_engine: AsyncEngine, value: st
     assert "Third Title" in third.text
     if value == "html":
         assert 'href="?version=2&amp;format=jsonld"' in second.text
+        assert "You are viewing version 2 of this record, published Jan 2, 2026." in second.text
+        assert f'<a href="/id/{id_of(uri)}">View the current version</a>' in second.text
+        assert "You are viewing version 3 of this record" in third.text
+        assert "This is the current version." in third.text
+        current = await served.client.get(path_of(uri), params={"format": value})
+        assert "You are viewing version" not in current.text
 
 
 async def test_versioned_jsonld_is_the_stored_snapshot(

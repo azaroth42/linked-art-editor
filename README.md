@@ -98,9 +98,12 @@ the variable is unset (under CI they fail).
 
 End-to-end tests (Playwright + axe) run the production build in `vite preview` against a real
 `lae api`, which Playwright starts with `LAE_DEV_USER=e2e-editor@example.org:Editor` and
-`LAE_ENV=test` on a migrated database named by `LAE_DATABASE_URL`. `LAE_E2E_PORT` (default 4173)
+`LAE_ENV=test` on a migrated database named by `LAE_DATABASE_URL`. Before the tests,
+`e2e/globalSetup.ts` stores the published records the Public Reader tests open
+(`scripts/seed_e2e_records.py`, same database). `LAE_E2E_PORT` (default 4173)
 and `LAE_E2E_API_PORT` (default 8000) choose the ports; outside CI a server already listening on
-one of them is reused, so an API there must run with that dev user:
+one of them is reused, so an API there must run with that dev user and
+`LAE_BASE_URI=http://localhost:8000/id/`:
 
 ```sh
 cd frontend && corepack pnpm exec playwright install chromium   # once
@@ -108,6 +111,11 @@ cd frontend && corepack pnpm exec playwright install chromium   # once
 cd frontend && corepack pnpm build && \
   LAE_DATABASE_URL=postgresql+asyncpg://localhost:5432/lae corepack pnpm test:e2e
 ```
+
+`corepack pnpm build` also builds the Public Reader's script into `frontend/dist-reader/`
+(`corepack pnpm build:reader` alone), which `lae api` serves at `/reader/assets/` for record pages
+with a IIIF image (`LAE_READER_ASSETS_DIR` points elsewhere). Without it the reader pages still
+render; only the image viewer is missing.
 
 CI (`.github/workflows/ci.yml`) runs the `backend`, `frontend`, `e2e`, and `config` jobs on every
 pull request; all four must be green before merging.

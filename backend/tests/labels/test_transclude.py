@@ -12,7 +12,7 @@ from lae.db.models import EntityLabel
 from lae.labels.extract import labels_from_record
 from lae.labels.normalize import known_reference_ids, normalize_refs
 from lae.labels.refs import iter_references, rewrite_references
-from lae.labels.transclude import hydrate_labels, match_label, resolve_label
+from lae.labels.transclude import hydrate_labels, label_language, match_label, resolve_label
 from lae.labels.upsert import upsert_entity_labels_for_record
 from tests.labels.conftest import (
     HACHA,
@@ -62,6 +62,14 @@ def test_resolve_label_falls_back_to_the_default() -> None:
     assert resolve_label(LABELS, "default", ["it"]) == "default"
     assert resolve_label({}, "default", ["en"]) == "default"
     assert resolve_label(LABELS, "default", ["fr", "en"]) == "couleur"
+
+
+def test_label_language() -> None:
+    labels = {"en": "Mona Lisa", "fr": "La Joconde", "und": "Gioconda", "EN-gb": "Mona Lisa"}
+    assert label_language(labels, "La Joconde") == "fr"
+    assert label_language(labels, "Mona Lisa") == "en"  # first in tag order
+    assert label_language(labels, "Gioconda") is None  # undetermined is not a language
+    assert label_language(labels, "something else") is None
 
 
 # --- hydrate_labels against entity_labels ----------------------------------------------------
@@ -167,6 +175,19 @@ async def test_hydrate_labels_in_the_callers_languages(
     # Nothing but reference labels changed.
     assert _without_reference_labels(hydrated) == _without_reference_labels(stored)
     assert hydrated["_label"] == "Gallery"
+
+
+async def test_hydrate_labels_reports_label_languages(db_session: AsyncSession) -> None:
+    stored = await stored_gallery(db_session)
+    languages: dict[str, str] = {}
+    hydrated = await hydrate_labels(stored, ["fr", "en"], db_session, languages=languages)
+    labels = labels_by_id(hydrated)
+    mona_lisa = corpus(MONA_LISA)["id"]
+    assert (labels[mona_lisa], languages[mona_lisa]) == ("La Joconde", "fr")
+    assert languages[corpus(NIGHT_WATCH)["id"]] == "en"
+    assert set(languages) <= {uri for uri, label in labels.items() if label}
+    assert PASTED not in languages
+    assert await hydrate_labels(stored, ["fr", "en"], db_session) == hydrated
 
 
 async def test_hydrate_labels_replaces_stale_labels(db_session: AsyncSession) -> None:

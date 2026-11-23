@@ -1,0 +1,136 @@
+{#- The Public Reader page (Step 1.21). Markup only: every word comes from t() or the record. -#}
+{%- macro attrs(value) -%}
+{%- if value.lang %} lang="{{ value.lang }}"{% endif %} dir="auto"
+{%- endmacro -%}
+{%- macro show(value) -%}
+{%- if value.href -%}
+<a href="{{ value.href }}"{{ attrs(value) }}>{{ value.text }}</a>
+{%- else -%}
+<span{{ attrs(value) }}>{{ value.text }}</span>
+{%- endif -%}
+{%- if value.note %} <span class="note">{{ value.note }}</span>{% endif -%}
+{%- endmacro -%}
+<!DOCTYPE html>
+<html lang="{{ page.lang }}" dir="{{ page.dir }}">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>{{ page.page_title }}</title>
+{% for media_type, href in page.alternates %}
+<link rel="alternate" type="{{ media_type }}" href="{{ href }}">
+{% endfor %}
+<style>
+:root{color-scheme:light;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;line-height:1.5;color:#1a1a1a;background:#fff}
+body{margin:0}
+[hidden]{display:none!important}
+a{color:#0b57a4}
+a:focus-visible,canvas-panel:focus-visible,main:focus-visible{outline:3px solid #0b57a4;outline-offset:2px}
+.skip{position:absolute;inset-inline-start:-100vw}
+.skip:focus{position:static;display:inline-block;padding:.5rem 1rem}
+.site{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:.5rem 1rem;padding:.75rem 1.5rem;background:#f4f4f2}
+header.site{border-block-end:1px solid #d8d8d4}
+footer.site{border-block-start:1px solid #d8d8d4;margin-block-start:3rem;color:#4a4a4a}
+.site p{margin:0}
+.site-name{font-weight:600}
+.edit{display:inline-block;padding:.25rem .75rem;border:1px solid #0b57a4;border-radius:.25rem}
+main{max-inline-size:60rem;margin-inline:auto;padding:1.5rem}
+h1{font-size:2rem;line-height:1.2;margin-block:.5rem}
+.class{color:#4a4a4a;margin-block:0 1.5rem}
+h2{font-size:1.25rem;margin-block:2rem .5rem;padding-block-end:.25rem;border-block-end:1px solid #d8d8d4}
+dl{display:grid;grid-template-columns:minmax(8rem,14rem) 1fr;gap:.375rem 1rem;margin:0}
+dt{grid-column:1;font-weight:600}
+dd{grid-column:2;margin:0}
+ul{margin:0;padding-inline-start:1.25rem}
+li{padding-block:.25rem}
+.note{color:#4a4a4a}
+.banner{background:#fff4d6;border:1px solid #9a7500;padding:.75rem 1rem;margin-block-end:1rem}
+.banner p{margin:0}
+.media{margin:0 0 1.5rem}
+canvas-panel{display:block;overflow:hidden;block-size:{{ viewer_height }}px;background:#eeeeec}
+canvas-panel:not(:defined),canvas-panel:not(:defined)+.help{display:none}
+.fallback{display:block;max-inline-size:100%;max-block-size:{{ viewer_height }}px;block-size:auto}
+.help{font-size:.875rem;color:#4a4a4a;margin-block:.5rem 0}
+@media (max-width:40rem){dl{grid-template-columns:1fr}dt,dd{grid-column:1}dd{margin-block-end:.25rem}}
+</style>
+{% if page.script_src %}
+<script type="module" src="{{ page.script_src }}"></script>
+{% endif %}
+</head>
+<body>
+<a class="skip" href="#main">{{ t("nav.skip_to_main") }}</a>
+<header class="site">
+<p class="site-name">{{ t("site.name") }}</p>
+{% if page.edit_href %}
+<a class="edit" href="{{ page.edit_href }}">{{ t("nav.edit") }}</a>
+{% endif %}
+</header>
+<main id="main" tabindex="-1">
+{% if page.banner %}
+<div class="banner">
+<p>{{ page.banner.text }}
+{% if page.banner.current_href %}
+<a href="{{ page.banner.current_href }}">{{ page.banner.current_text }}</a>
+{% else %}
+{{ page.banner.current_text }}
+{% endif %}
+</p>
+</div>
+{% endif %}
+<h1{{ attrs(page.title) }}>{{ page.title.text }}</h1>
+{% if page.class_label %}
+<p class="class">{{ page.class_label }}</p>
+{% endif %}
+{% if page.media %}
+<figure class="media">
+{% if page.media.iiif %}
+<canvas-panel
+{%- if page.media.iiif.manifest %} manifest-id="{{ page.media.iiif.manifest }}"{% endif %}
+{%- if page.media.iiif.image_service %} data-image-service="{{ page.media.iiif.image_service }}"{% endif %}
+{%- if page.media.iiif.region %} data-region="{{ page.media.iiif.region }}"{% endif %}
+ height="{{ viewer_height }}" interactive="true" tabindex="0" role="application" aria-label="{{ t('viewer.label') }}" aria-describedby="viewer-help"></canvas-panel>
+<p class="help" id="viewer-help">{{ t("viewer.instructions") }}</p>
+{% endif %}
+{% if page.media.image %}
+<img class="fallback" src="{{ page.media.image }}" alt="{{ page.media.alt }}" decoding="async">
+{% endif %}
+{% if page.media.manifest_link %}
+<p class="fallback"><a href="{{ page.media.manifest_link }}">{{ t("media.manifest") }}</a></p>
+{% endif %}
+</figure>
+{% endif %}
+{% for section in page.sections %}
+<section aria-labelledby="section-{{ section.slug }}">
+<h2 id="section-{{ section.slug }}">{{ section.heading }}</h2>
+{% if section.entries %}
+<dl>
+{% for entry in section.entries %}
+<dt{% if entry.term_lang %} lang="{{ entry.term_lang }}"{% endif %}>{{ entry.term }}</dt>
+{% for value in entry.values %}
+<dd>{{ show(value) }}</dd>
+{% endfor %}
+{% endfor %}
+</dl>
+{% endif %}
+{% if section.values %}
+<ul>
+{% for value in section.values %}
+<li>{{ show(value) }}</li>
+{% endfor %}
+</ul>
+{% endif %}
+</section>
+{% endfor %}
+<section aria-labelledby="section-data">
+<h2 id="section-data">{{ t("section.data") }}</h2>
+<ul>
+{% for link in page.data_links %}
+<li><a href="{{ link.href }}" type="{{ page.alternates[loop.index0][0] }}">{{ link.text }}</a></li>
+{% endfor %}
+</ul>
+</section>
+</main>
+<footer class="site">
+<p>{{ t("site.footer") }}</p>
+</footer>
+</body>
+</html>

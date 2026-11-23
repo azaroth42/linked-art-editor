@@ -9,9 +9,8 @@ authentication and never expose draft data (conventions §9): a record that was 
 - ``application/ld+json`` (with or without the Linked Art ``profile`` parameter; also
   ``application/json``): JSON-LD served as ``application/ld+json;profile="<context URL>"``;
 - ``text/turtle``: Turtle (``lae.rdf.to_turtle``);
-- ``text/html``, ``*/*``, no ``Accept``, or nothing acceptable: an HTML page. Until the Public
-  Reader (Step 1.21) replaces it, a minimal page with the record's label (in the caller's locale)
-  and links to the two serializations.
+- ``text/html``, ``*/*``, no ``Accept``, or nothing acceptable: the Public Reader page
+  (``lae.reader``, Step 1.21), with links to the two serializations.
 
 Browsers cannot set ``Accept`` on a link, so ``?format=jsonld|ttl|html`` overrides it; the HTML
 page links to ``?format=jsonld`` and ``?format=ttl``. ``?version=N`` serves the stored JSON-LD of
@@ -31,7 +30,10 @@ Caching: ``ETag`` is weak, ``W/"<entity tag of the stored version>-<representati
 record's ``etag`` for the current version, a hash of the snapshot for ``?version=N``. It is weak
 because transcluded labels may change without the record changing. ``If-None-Match`` (weak
 comparison, or ``*``) is answered with 304. ``Last-Modified`` is when the version was published.
-``Vary: Accept, Accept-Language``.
+``Vary: Accept, Accept-Language``. The HTML page also depends on the reader's own code, template
+and strings, and shows an "Edit" link to a signed-in session, so its tag carries
+``lae.reader.render.fingerprint()`` and, for a session, ``-edit``; the session middleware adds
+``Cookie`` to its ``Vary`` because it reads the session (ADR-0031).
 
 ``GET /id/{uuid}/node/{nid}`` answers 303 with the record URI for any node id that
 ``lae.ids.record_id_from_uri`` accepts: a UUIDv7 internal node id or a UUIDv5 derived one
@@ -43,7 +45,6 @@ from __future__ import annotations
 
 import asyncio
 import hashlib
-import html
 import re
 from datetime import UTC
 from email.utils import format_datetime
@@ -69,15 +70,18 @@ from lae.api.records import (
     ordered_record,
 )
 from lae.app import get_app_settings
+from lae.auth.oidc import has_signed_in_session
 from lae.db.models import Record
 from lae.db.session import get_session
 from lae.ids import record_id_from_uri, record_uri
-from lae.labels.extract import labels_from_record
-from lae.labels.langtags import UNDETERMINED
-from lae.labels.transclude import hydrate_labels, resolve_label
+from lae.labels.transclude import hydrate_labels
 from lae.logging import bind_log_context
 from lae.projection import strip_internal_iris
 from lae.rdf import to_turtle
+from lae.reader.assets import SCRIPT_SRC
+from lae.reader.i18n import catalogue_for
+from lae.reader.render import fingerprint, render_page
+from lae.reader.view import PageVersion, build_page
 from lae.settings import Settings
 
 TURTLE_MEDIA_TYPE: Final = "text/turtle"
@@ -85,6 +89,9 @@ HTML_MEDIA_TYPE: Final = "text/html"
 
 VARY: Final = "Accept, Accept-Language"
 """Request headers every representation depends on."""
+
+EDIT_VARIANT: Final = "-edit"
+"""Suffix of the HTML entity tag for a signed-in session."""
 
 
 class Representation(StrEnum):
@@ -176,10 +183,15 @@ def negotiate(accept: str | None) -> Representation:
     return chosen
 
 
-def entity_tag(version_etag: str, representation: Representation) -> str:
-    """Return the weak ``ETag`` of one representation of a stored version."""
+def entity_tag(version_etag: str, representation: Representation, variant: str = "") -> str:
+    """Return the weak ``ETag`` of one representation (and ``variant``) of a stored version."""
     opaque = version_etag if _ETAGC.fullmatch(version_etag) else _hash(version_etag)
-    return f'W/"{opaque}-{representation.value}"'
+    return f'W/"{opaque}-{representation.value}{variant}"'
+
+
+def html_variant(signed_in: bool) -> str:
+    """The part of the HTML entity tag that is not the record: reader build, session."""
+    return f"-{fingerprint()}{EDIT_VARIANT if signed_in else ''}"
 
 
 def _hash(text: str) -> str:
@@ -196,49 +208,48 @@ def if_none_match(header: str | None, etag: str) -> bool:
     return any(candidate.strip().removeprefix("W/") == opaque for candidate in header.split(","))
 
 
-def placeholder_html(document: dict[str, Any], chain: list[str], version: int | None) -> str:
-    """Return the minimal HTML page: the record's label and links to JSON-LD and Turtle.
-
-    Step 1.21 replaces it with the server-rendered Public Reader.
-    """
-    labels, default_label = labels_from_record(document)
-    label = resolve_label(labels, default_label, chain)
-    label_lang = next(
-        (tag for tag, text in labels.items() if text == label and tag != UNDETERMINED), None
-    )
-    version_query = f"version={version}&" if version is not None else ""
-    jsonld_href = html.escape(f"?{version_query}format={Representation.JSONLD.value}")
-    turtle_href = html.escape(f"?{version_query}format={Representation.TURTLE.value}")
-    title = html.escape(label)
-    heading_lang = f' lang="{html.escape(label_lang)}"' if label_lang else ""
-    return (
-        "<!DOCTYPE html>\n"
-        f'<html lang="{html.escape(chain[0])}">\n'
-        "<head>\n"
-        '<meta charset="utf-8">\n'
-        '<meta name="viewport" content="width=device-width, initial-scale=1">\n'
-        f"<title>{title}</title>\n"
-        f'<link rel="alternate" type="{JSONLD_MEDIA_TYPE}" href="{jsonld_href}">\n'
-        f'<link rel="alternate" type="{TURTLE_MEDIA_TYPE}" href="{turtle_href}">\n'
-        "</head>\n"
-        "<body>\n"
-        "<main>\n"
-        f"<h1{heading_lang}>{title}</h1>\n"
-        "<ul>\n"
-        f'<li><a href="{jsonld_href}" type="{JSONLD_MEDIA_TYPE}">JSON-LD</a></li>\n'
-        f'<li><a href="{turtle_href}" type="{TURTLE_MEDIA_TYPE}">Turtle</a></li>\n'
-        "</ul>\n"
-        "</main>\n"
-        "</body>\n"
-        "</html>\n"
-    )
-
-
 async def public_document(
-    found: RecordVersion, uri: str, chain: list[str], session: AsyncSession
+    found: RecordVersion,
+    uri: str,
+    chain: list[str],
+    session: AsyncSession,
+    *,
+    label_languages: dict[str, str] | None = None,
 ) -> dict[str, Any]:
-    """The JSON-LD every public representation is made from: stripped, labels transcluded."""
-    return await hydrate_labels(strip_internal_iris(found.data, uri), chain, session)
+    """The JSON-LD every public representation is made from: stripped, labels transcluded.
+
+    ``label_languages`` receives the language of each transcluded label (``hydrate_labels``).
+    """
+    stripped = strip_internal_iris(found.data, uri)
+    return await hydrate_labels(stripped, chain, session, languages=label_languages)
+
+
+def reader_page(
+    document: dict[str, Any],
+    *,
+    record: Record,
+    found: RecordVersion,
+    version: int | None,
+    chain: list[str],
+    signed_in: bool,
+    label_languages: dict[str, str],
+    settings: Settings,
+) -> str:
+    """Render the Public Reader page of a public document."""
+    catalogue = catalogue_for(chain)
+    page = build_page(
+        document,
+        record_id=record.id,
+        chain=chain,
+        catalogue=catalogue,
+        base_uri=settings.base_uri,
+        label_languages=label_languages,
+        version=PageVersion(version, record.version, found.modified),
+        signed_in=signed_in,
+        script_src=SCRIPT_SRC,
+        jsonld_type=jsonld_content_type(found.context_version),
+    )
+    return render_page(page, catalogue)
 
 
 def parse_record_id(value: str, base_uri: str) -> UUID:
@@ -293,14 +304,19 @@ async def dereference(
             raise ApiError(status.HTTP_404_NOT_FOUND, VERSION_NOT_FOUND, {"version": version})
         found = maybe
     representation = format_ or negotiate(request.headers.get("accept"))
+    is_html = representation is Representation.HTML
+    signed_in = is_html and has_signed_in_session(request)
     headers = {
-        "ETag": entity_tag(found.etag, representation),
+        "ETag": entity_tag(found.etag, representation, html_variant(signed_in) if is_html else ""),
         "Last-Modified": format_datetime(found.modified.astimezone(UTC), usegmt=True),
         "Vary": VARY,
     }
     if if_none_match(request.headers.get("if-none-match"), headers["ETag"]):
         return Response(status_code=status.HTTP_304_NOT_MODIFIED, headers=headers)
-    document = await public_document(found, record.uri, chain, session)
+    label_languages: dict[str, str] = {}
+    document = await public_document(
+        found, record.uri, chain, session, label_languages=label_languages
+    )
     if representation is Representation.JSONLD:
         return Response(
             orjson.dumps(ordered_record(document)),
@@ -310,7 +326,16 @@ async def dereference(
     if representation is Representation.TURTLE:
         turtle = await asyncio.to_thread(to_turtle, document, found.context_version)
         return Response(turtle, media_type=TURTLE_MEDIA_TYPE, headers=headers)
-    page = placeholder_html(document, chain, version)
+    page = reader_page(
+        document,
+        record=record,
+        found=found,
+        version=version,
+        chain=chain,
+        signed_in=signed_in,
+        label_languages=label_languages,
+        settings=settings,
+    )
     return Response(page, media_type=HTML_MEDIA_TYPE, headers=headers)
 
 

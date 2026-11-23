@@ -4,7 +4,8 @@
 choosing the label for the caller's locale chain (``lae.api.deps.locale_chain``): for each
 language range in order, RFC 4647 basic filtering picks a label whose tag equals the range or
 starts with it followed by ``-``; if no range matches, ``default_label`` is used. References whose
-target has no row keep whatever ``_label`` they have.
+target has no row keep whatever ``_label`` they have. A caller that marks up the labels (the
+Public Reader sets ``lang`` on them) can collect the language of each transcluded label.
 """
 
 from __future__ import annotations
@@ -17,6 +18,7 @@ from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lae.db.models import EntityLabel
+from lae.labels.langtags import UNDETERMINED
 from lae.labels.normalize import LABEL_KEY
 from lae.labels.refs import reference_ids, rewrite_references
 
@@ -52,16 +54,38 @@ def resolve_label(
     return default_label if match is None else match
 
 
+def label_language(labels: Mapping[str, str], label: str) -> str | None:
+    """Return the tag of ``label`` among ``labels`` (first in tag order), else ``None``.
+
+    ``und`` (undetermined) is not a language, so it gives ``None`` too.
+    """
+    for tag in sorted(labels, key=str.lower):
+        if labels[tag] == label and tag != UNDETERMINED:
+            return tag
+    return None
+
+
 async def hydrate_labels(
-    jsonld: Mapping[str, Any], locale_chain: Sequence[str], session: AsyncSession
+    jsonld: Mapping[str, Any],
+    locale_chain: Sequence[str],
+    session: AsyncSession,
+    *,
+    languages: dict[str, str] | None = None,
 ) -> dict[str, Any]:
-    """Return a copy of ``jsonld`` with ``_label`` transcluded on its references (one query)."""
+    """Return a copy of ``jsonld`` with ``_label`` transcluded on its references (one query).
+
+    If ``languages`` is given, it receives the language tag of each transcluded label whose
+    language is known (``label_language``), keyed by the reference's ``id``.
+    """
     uris = reference_ids(jsonld)
     resolved: dict[str, str] = {}
     if uris:
         rows = await session.execute(_LABEL_ROWS, {"uris": sorted(uris)})
         for uri, labels, default_label in rows:
             resolved[uri] = resolve_label(labels, default_label, locale_chain)
+            tag = label_language(labels, resolved[uri])
+            if languages is not None and tag is not None:
+                languages[uri] = tag
 
     def transclude(reference: dict[str, Any]) -> dict[str, Any]:
         label = resolved.get(reference["id"])
