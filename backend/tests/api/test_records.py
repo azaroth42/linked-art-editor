@@ -247,6 +247,9 @@ async def test_get_record_keeps_node_iris_and_transcludes_labels(
 
     english = await served.client.get(f"/api/records/{id_of(uri)}", headers=headers)
     assert english.json()["classified_as"][0]["_label"] == "paintings"
+    # The draft epoch is a header; the body stays the record's JSON-LD (Step 1.17).
+    assert response.headers["X-Draft-Epoch"] == "0"
+    assert "draft_epoch" not in body
 
 
 async def test_get_record_needs_authentication(served: Served, db_engine: AsyncEngine) -> None:
@@ -273,6 +276,10 @@ async def test_get_unpublished_record_needs_a_draft(
     await insert_draft(db_engine, id_of(created.json()["uri"]))
     response = await served.client.get(f"/api/records/{record_id}", headers=headers)
     assert response.status_code == 200
+    # The discard ended epoch 0 (ADR-0027): the editor must connect with the new one.
+    assert created.json()["draft_epoch"] == 0
+    assert response.headers["X-Draft-Epoch"] == "1"
+    assert (await stored(db_engine, record_id)).draft_epoch == 1
     assert response.json() == {
         "@context": CONTEXT_URL,
         "id": created.json()["uri"],

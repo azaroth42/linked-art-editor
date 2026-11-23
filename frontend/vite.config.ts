@@ -1,6 +1,7 @@
 import tailwindcss from "@tailwindcss/vite";
 import react from "@vitejs/plugin-react";
-import type { ProxyOptions } from "vite";
+import { fileURLToPath } from "node:url";
+import { type ProxyOptions, searchForWorkspaceRoot } from "vite";
 import { defineConfig } from "vitest/config";
 
 /**
@@ -10,18 +11,38 @@ import { defineConfig } from "vitest/config";
  * header is kept, so `/auth/login` builds its callback URL on the Vite origin. `/reader/` is the
  * Public Reader's script, which `lae api` serves from `dist-reader/` (`pnpm build:reader`).
  */
-export const API_PATHS = ["/api/", "/auth/", "/health/", "/id/", "/reader/", "/ws/"] as const;
+export const API_PATHS = ["/api/", "/auth/", "/health/", "/id/", "/reader/"] as const;
 
 /** Where the API listens; agents use their slot's port (docs/agent-workflow.md §3). */
 const apiTarget = process.env.VITE_API_TARGET ?? "http://localhost:8000";
 
-const proxy: Record<string, ProxyOptions> = Object.fromEntries(
-  API_PATHS.map((path) => [path, { target: apiTarget, ws: path === "/ws/" }]),
+/**
+ * Draft rooms (`/ws/rooms/{id}`) are served by the `lae crdt-ws` process, not the API (Step 1.8).
+ * The browser's `Origin` (the Vite origin) is forwarded unchanged: `crdt-ws` must allow it
+ * (`LAE_ALLOWED_ORIGINS`; loopback origins are allowed with `LAE_ENV=development`).
+ */
+const crdtWsTarget = process.env.VITE_CRDT_WS_TARGET ?? "http://localhost:8001";
+
+const proxy: Record<string, ProxyOptions> = {
+  ...Object.fromEntries(API_PATHS.map((path) => [path, { target: apiTarget }])),
+  "/ws/": { target: crdtWsTarget, ws: true },
+};
+
+/**
+ * The CRDT mirror's tests (`src/crdt/*.test.ts`) read the backend's shared projection fixtures
+ * and the golden corpus unchanged (never copies that could drift). Only Vitest's server may
+ * serve these two directories outside the root.
+ */
+const TEST_DATA = ["../backend/tests/projection/fixtures", "../tests/corpus"].map((path) =>
+  fileURLToPath(new URL(path, import.meta.url)),
 );
+const testFs = process.env.VITEST
+  ? { allow: [searchForWorkspaceRoot(process.cwd()), ...TEST_DATA] }
+  : undefined;
 
 export default defineConfig({
   plugins: [react(), tailwindcss()],
-  server: { proxy },
+  server: { proxy, fs: testFs },
   preview: { proxy },
   test: {
     environment: "jsdom",

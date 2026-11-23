@@ -5,7 +5,8 @@ Phase 1, Step 1.6 (spec §3.1, §3.4, §4.1). Routes, all under ``/api/records``
 - ``POST /api/records`` (``edit_draft``): create a never-published record (``version = 0``) and
   open its draft in ``crdt-ws``; return ``{id, uri, draft_epoch}``.
 - ``GET /api/records/{id}`` (signed in): the published JSON-LD **with** internal node IRIs (the
-  editor needs them), ``_label`` transcluded for the caller's locale chain.
+  editor needs them), ``_label`` transcluded for the caller's locale chain, and the record's
+  current draft epoch in the ``X-Draft-Epoch`` header (Step 1.17).
 - ``GET /api/records/{id}/revisions`` and ``GET /api/records/{id}/revisions/{n}`` (signed in):
   the revision list and one revision's stored JSON-LD, in the shapes Step 1.14 specifies; Step
   1.14 adds the semantic diff and revert beside them.
@@ -111,6 +112,14 @@ RECORD_TYPES: Final = frozenset(
 Embedded classes (``Name``, ``TimeSpan``, ...) never have a URI of their own."""
 
 JSONLD_MEDIA_TYPE: Final = "application/ld+json"
+
+DRAFT_EPOCH_HEADER: Final = "X-Draft-Epoch"
+"""Response header of ``GET /api/records/{id}``: ``records.draft_epoch``.
+
+The editor states it as ``?epoch=`` when it opens ``/ws/rooms/{id}`` (ADR-0027); ``crdt-ws``
+accepts the same name as a request header. It is a header, not a key of the body, because the
+body is the record's JSON-LD and must stay exactly that.
+"""
 
 RECORD_KEY_ORDER: Final = ("@context", "id", "type", "_label")
 """Keys put first in served JSON-LD (``jsonb`` does not keep key order)."""
@@ -366,7 +375,15 @@ async def create_record(
     "/{record_id}",
     response_class=JSONResponse,
     responses={
-        status.HTTP_200_OK: {"content": {JSONLD_MEDIA_TYPE: {}}},
+        status.HTTP_200_OK: {
+            "content": {JSONLD_MEDIA_TYPE: {}},
+            "headers": {
+                DRAFT_EPOCH_HEADER: {
+                    "description": "The record's current draft epoch (records.draft_epoch).",
+                    "schema": {"type": "integer"},
+                }
+            },
+        },
         status.HTTP_301_MOVED_PERMANENTLY: {"description": "LAE-REC-003"},
         status.HTTP_404_NOT_FOUND: {"description": "LAE-REC-001"},
         status.HTTP_410_GONE: {"description": "LAE-REC-002"},
@@ -380,15 +397,21 @@ async def get_record(
 ) -> Response:
     """Return the published JSON-LD with internal node IRIs and transcluded labels.
 
-    A never-published record (``version = 0``) is found only while it has a draft. Deleted →
-    410; merged → 301 to ``/api/records/{merged_into}``.
+    The header ``X-Draft-Epoch`` is the record's current draft epoch: the editor connects to
+    ``/ws/rooms/{id}?epoch=<it>``. It changes on publish, discard and revert (ADR-0027), so the
+    editor reads it again before every fresh connection. A never-published record
+    (``version = 0``) is found only while it has a draft. Deleted → 410; merged → 301 to
+    ``/api/records/{merged_into}``.
     """
     bind_log_context(user_id=user.id, record_id=record_id)
     record = await get_record_or_404(session, record_id)
     check_status(record, f"{router.prefix}/{record.merged_into}")
     if record.version == 0 and not await has_draft(session, record_id):
         raise not_found()
-    return jsonld_response(await hydrate_labels(record.data, chain, session))
+    return jsonld_response(
+        await hydrate_labels(record.data, chain, session),
+        headers={DRAFT_EPOCH_HEADER: str(record.draft_epoch)},
+    )
 
 
 @router.get("/{record_id}/revisions", responses={status.HTTP_404_NOT_FOUND: {}})

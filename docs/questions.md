@@ -588,3 +588,26 @@ Implemented as decided above (items 3 and 4). Points for a human:
    the TTL.
    **Resolved in Step 1.15:** it does (`lae.scheduler.reaper`, "abandoned creations": no draft,
    `created_at` older than `draft_ttl_days`; partial index from migration 0007; ADR-0029).
+
+## Step 1.17
+
+1. **The draft epoch is a response header of `GET /api/records/{id}` (`X-Draft-Epoch`), not a
+   key of the body.** The guide says "add `draft_epoch` to that response"; the body is the
+   record's JSON-LD and a non-Linked-Art key in it would reach the editor's document view and
+   any consumer of the endpoint. The header has the name `crdt-ws` already accepts for the
+   epoch. `POST /api/records` keeps `draft_epoch` in its JSON body as before.
+2. **A write path naming `_label` is `LAE-PROJ-007` in the TypeScript mirror.** Python rejects
+   such a path with `PathSyntaxError` (the grammar has no `_`-prefixed keys); the mirror checks
+   `id`, `type` and `_label` before parsing, as asked in review. Both reject without writing;
+   only the error class differs, and no fixture covers it.
+3. **Old-epoch IndexedDB stores are never deleted.** Each draft epoch of a record has its own
+   store (`lae-draft:<record id>:<epoch>`), so a stale document is never merged into a new
+   hydration and its unsent edits survive a `4409`. Nothing reads them until the Phase 4 rebase
+   modal (Step 4.15), which should also decide when to delete them.
+4. **The editor page's title field is a stand-in.** `/edit/:id` edits the first
+   `identified_by[Name]` as plain text so that co-editing works end to end; Step 1.18 replaces it
+   with the profile's `title` slot.
+5. **Not verified here:** a browser on another origin than `LAE_BASE_URI` in production (the
+   e2e test sets `LAE_ALLOWED_ORIGINS` to the preview origin); IndexedDB recovery after a browser
+   restart (unit tests run without IndexedDB; the store name is tested, not the reload).
+

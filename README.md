@@ -69,8 +69,11 @@ cd frontend && corepack pnpm dev       # Vite dev server
 ```
 
 The Vite dev server (and `corepack pnpm preview`) proxies `/api`, `/auth`, `/health`, `/id`, and
-`/ws` to the API at `VITE_API_TARGET` (default `http://localhost:8000`), so the SPA and the API
-share one origin and the session cookie. The SPA's API types, `frontend/src/api/schema.d.ts`, are
+`/reader` to the API at `VITE_API_TARGET` (default `http://localhost:8000`) and `/ws` (draft
+rooms) to `lae crdt-ws` at `VITE_CRDT_WS_TARGET` (default `http://localhost:8001`), so the SPA,
+the API and the rooms share one origin and the session cookie. `crdt-ws` accepts the browser's
+`Origin` only if it is allowed: any loopback origin with `LAE_ENV=development` (the default),
+otherwise list it in `LAE_ALLOWED_ORIGINS` (e.g. `LAE_ALLOWED_ORIGINS=http://localhost:5173`). The SPA's API types, `frontend/src/api/schema.d.ts`, are
 generated from the backend's OpenAPI document without a running server; after changing an
 endpoint, run `cd frontend && corepack pnpm api:generate` and commit the result (CI's
 `api:check` fails while it is stale).
