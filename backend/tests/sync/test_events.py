@@ -35,6 +35,7 @@ from tests.sync.conftest import (
     all_events,
     current_data,
     event,
+    expected_store,
     id_of,
     insert_event,
     new_uri,
@@ -48,6 +49,7 @@ from tests.sync.conftest import (
     rename,
     revision_jsonld,
     revision_lines,
+    triples_of,
 )
 
 pytestmark = pytest.mark.usefixtures("queue")
@@ -316,6 +318,45 @@ async def test_an_event_after_a_dead_letter_replaces_from_the_last_applied_versi
     after = await only_event(conn)
     v4 = await revision_lines(conn, record_id, 4)
     assert await translate_event(conn, after) == build_update(*diff_triples(v3, v4))
+
+
+async def test_an_event_after_two_dead_letters_replaces_from_the_first(
+    served: Served,
+    network: Network,
+    editor: Caller,
+    db_engine: AsyncEngine,
+    conn: asyncpg.Connection,
+) -> None:
+    """Review of PR #148 (item 4): ``lo`` is the smallest version of the whole failed run."""
+    record_id, uri = await publish_new(served, editor, person("Version one", "Dropped later"))
+    client = RecordingClient()
+    assert (await process_batch(conn, client)).outcome == "done"
+
+    def second(data: dict[str, Any]) -> None:
+        data["identified_by"][0]["content"] = "Version two"
+        del data["identified_by"][1]  # a node only v1 has
+
+    await publish_edit(served, network, editor, db_engine, record_id, second)
+    await publish_edit(served, network, editor, db_engine, record_id, rename("Version three"))
+    await conn.execute(
+        "UPDATE outbox_events SET status = 'failed', attempts = 5, processed_at = now(), "
+        "last_error = 'LAE-SYNC-004 {}' WHERE status = 'pending'"
+    )
+    await publish_edit(served, network, editor, db_engine, record_id, rename("Version four"))
+    heal = await only_event(conn)
+    assert (heal.from_version, heal.to_version) == (3, 4)
+    subjects = await all_subjects(conn, record_id, uri, 1, 2, 3)
+    v4 = await revision_lines(conn, record_id, 4)
+
+    update = await translate_event(conn, heal)
+
+    assert update == build_delete_where_subjects(subjects) + " ;\n" + build_update([], v4)
+    v1_only = subjects_of(await revision_lines(conn, record_id, 1)) - subjects_of(
+        await revision_lines(conn, record_id, 3)
+    )
+    assert v1_only and v1_only <= set(delete_where_subjects(update))
+    assert (await process_batch(conn, client)).done == (heal.id,)
+    assert triples_of(client.store) == expected_store(v4)
 
 
 # -- 9-10: errors and the shape of every update -------------------------------------------------
