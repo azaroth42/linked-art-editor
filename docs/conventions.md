@@ -67,7 +67,8 @@ Processes (Procfile entries, systemd unit names, and `lae` CLI sub-commands are 
 | Unit (backend) | `backend/tests/` | every PR |
 | Corpus round-trip | `backend/tests/test_roundtrip.py` | every PR |
 | Property tests | `backend/tests/property/` | every PR (bounded examples), nightly (extended) |
-| Integration (Postgres, QLever) | marked `integration` | every PR, against PostgreSQL (and QLever from Phase 1) installed natively on the CI runner |
+| Integration (Postgres) | marked `integration` | every PR, against PostgreSQL installed natively on the CI runner |
+| Integration (QLever) | gated by `LAE_TEST_QLEVER_PORT` | **locally only, never in CI** (owner decision 2026-11-23): CI never installs or starts QLever. Run them with `LAE_TEST_QLEVER_PORT=<slot QLever port>` against Homebrew QLever before opening the PR and paste the pass output into the PR description; the tests skip when QLever is absent. Fable reviewers re-run them locally before merging |
 | Frontend unit | `frontend/src/**/*.test.tsx` | every PR |
 | E2E + axe | `frontend/e2e/` | every PR |
 | Load / scale | `scripts/load/` | nightly, and at each phase exit |
