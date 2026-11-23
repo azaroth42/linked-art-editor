@@ -83,6 +83,67 @@ def test_a_reference_keeps_its_id() -> None:
     )
 
 
+def test_a_reference_with_equivalent_keeps_the_id_the_schema_requires() -> None:
+    """``core.json`` allows ``equivalent`` on a reference; ADR-0021 would call it embedded."""
+    same = [{"id": "https://other.example.org/image/1", "type": "VisualItem"}]
+    doc = base()
+    doc["shows"] = [
+        {"id": "https://museum.example.org/image/1", "type": "VisualItem", "equivalent": same}
+    ]
+    assert validate_schema(doc) == []
+    del doc["shows"][0]["id"]
+    assert [(item.code, item.path) for item in validate_schema(doc)] == [
+        ("LAE-SCHEMA-required", "/shows/0")
+    ]
+
+
+def test_an_id_on_a_statement_or_an_embedded_work_is_ignored() -> None:
+    """Classes that can be records too are embedded when they carry content (ADR-0021)."""
+    doc = base()
+    doc["referred_to_by"] = [
+        {
+            "id": "https://museum.example.org/statement/1",
+            "type": "LinguisticObject",
+            "content": "Oil on canvas",
+        }
+    ]
+    doc["representation"] = [
+        {
+            "id": "https://museum.example.org/image/1",
+            "type": "VisualItem",
+            "digitally_shown_by": [
+                {
+                    "id": "https://museum.example.org/digital/1",
+                    "type": "DigitalObject",
+                    "access_point": [{"id": "https://example.org/a.jpg", "type": "DigitalObject"}],
+                }
+            ],
+        }
+    ]
+    assert validate_schema(doc) == []
+
+
+def test_an_id_on_a_name_inside_a_concept_reference_is_ignored() -> None:
+    """Each object is judged alone, also inside a reference: its meta-type keeps its id."""
+    doc = base()
+    doc["classified_as"] = [
+        {
+            "id": "http://vocab.getty.edu/aat/300033618",
+            "type": "Type",
+            "_label": "Painting",
+            "classified_as": [
+                {"id": "http://vocab.getty.edu/aat/300435443", "type": "Type", "_label": "m"}
+            ],
+            "identified_by": [
+                {"id": "https://museum.example.org/name/9", "type": "Name", "content": "Painting"}
+            ],
+        }
+    ]
+    assert validate_schema(doc) == []
+    del doc["classified_as"][0]["classified_as"][0]["id"]
+    assert validate_schema(doc) != []
+
+
 def test_an_error_inside_an_embedded_node_with_an_id_keeps_its_path() -> None:
     doc = base("HumanMadeObject", ["/identified_by/1/id", "https://museum.example.org/name/1"])
     doc["identified_by"][1]["content"] = 7
@@ -157,7 +218,7 @@ def test_a_repaired_reference_is_still_checked_by_shacl() -> None:
     wrong = ReferenceFacts({MATERIAL: "Place"})
     assert found(validate_document(doc, None, wrong).items) == [
         ("LAE-RDF-006", "warning", "/made_of/0/id"),
-        ("LAE-SHACL-006", "violation", "/made_of"),
+        ("LAE-SHACL-006", "violation", "/made_of/0"),
     ]
 
 
@@ -189,6 +250,42 @@ def test_another_nested_context_is_an_expansion_violation() -> None:
     assert found(validate_document(doc).items) == [("LAE-RDF-005", "violation", "")]
 
 
+@pytest.mark.parametrize("nested", [CTX, [CTX]])
+def test_the_schema_ignores_a_repeated_pinned_context_where_it_allows_none(nested: Any) -> None:
+    """A ``Name`` and a reference: the schema has no ``@context`` on either (ADR-0028)."""
+    doc = base()
+    doc["identified_by"][0]["@context"] = nested
+    doc["made_of"][0]["@context"] = nested
+    before = copy.deepcopy(doc)
+    assert validate_schema(doc) == []
+    assert validate_schema(doc, context_version=1) == []
+    assert validate_document(doc).items == validate_document(base()).items
+    assert doc == before
+
+
+@pytest.mark.parametrize(
+    "nested", ["https://example.org/context.json", {"content": "http://example.org/p"}, [], None]
+)
+def test_the_schema_still_reports_any_other_nested_context(nested: Any) -> None:
+    doc = base()
+    doc["identified_by"][0]["@context"] = nested
+    (item,) = validate_schema(doc)
+    assert item.path == "/identified_by/0"
+    assert not validate_document(doc).ok
+    doc = base()
+    doc["made_of"][0]["@context"] = nested
+    (item,) = validate_schema(doc)
+    assert (item.code, item.path) == ("LAE-SCHEMA-additionalProperties", "/made_of/0")
+
+
+def test_a_record_uri_that_needs_encoding_is_refused_at_its_id() -> None:
+    """The ``uri`` format lets it through; the record URI is never repaired, so RDF refuses it."""
+    doc = base()
+    doc["id"] = doc["id"] + " 1"
+    assert validate_schema(doc) == []
+    assert found(validate_document(doc).items) == [("LAE-RDF-003", "violation", "/id")]
+
+
 # --- the LUX records ------------------------------------------------------------------------
 
 
@@ -208,7 +305,7 @@ def without_lux_keys(value: Any) -> Any:
 def test_lux_records_validate_without_an_engine_failure() -> None:
     """The 32 LUX records of PR #130, among them a BCE-dated ``HumanMadeObject``.
 
-    As fetched, every one fails the schema for LUX's ``_links``. Without LUX's own keys 28 are
+    As fetched, every one fails the schema for LUX's ``_links``. Without LUX's own keys 29 are
     publishable; none makes expansion or pyshacl fail (the BCE tetradrachm crashed the Spike S4
     harness, whose shapes compared ``xsd:dateTime`` literals; the pipeline compares dates in
     Python).
@@ -232,11 +329,11 @@ def test_lux_records_validate_without_an_engine_failure() -> None:
         if result.ok:
             ok.append(path.name)
     assert len(paths) == 32
-    assert len(ok) == 28
+    assert len(ok) == 29
     assert "object-c1b6648b-caf8-4a1f-b28d-43ce8c83a852.json" in ok, "the BCE tetradrachm"
     assert codes == {
         "LAE-RDF-006": 8,
-        "LAE-SCHEMA-additionalProperties": 4,
+        "LAE-SCHEMA-additionalProperties": 2,
         "LAE-SCHEMA-anyOf": 2,
         "LAE-SCHEMA-const": 1,
         "LAE-SHACL-002": 3,

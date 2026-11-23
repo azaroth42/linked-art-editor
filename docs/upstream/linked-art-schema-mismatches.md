@@ -246,7 +246,7 @@ These come from public YCBA, YUAG, and Yale Library feeds (`tests/corpus/SOURCE.
 
 - [ ] `tests/corpus/institutional/yuag-obj-31619.json` — `HumanMadeObject` → `object.json` — 1 error(s)
   - `/used_for` **type** (cardinality): {'type': 'Activity', 'classified_as': [{'id': 'http://vocab.getty.edu/aat/300379380', 'type': 'Type', '_label': 'Environmental Monitoring'}], 'used_specific_object': [{'type': 'HumanMadeObject', '_label': 'Sensor 1', 'i… — schema: `object.json#/properties/used_for/type`
-- [ ] `tests/corpus/institutional/yul-node-07e71913-f2be-479c-a388-65025173b4fb.json` — `LinguisticObject` → `text.json` — 9 error(s)
+- [ ] `tests/corpus/institutional/yul-node-07e71913-f2be-479c-a388-65025173b4fb.json` — `LinguisticObject` → `text.json` — 8 error(s)
   - `/about/0` **required** (reference-without-id): 'id' is a required property — schema: `text.json#/properties/about/items/required`
   - `/about/0` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('created_by', 'identified_by' were unexpected) — schema: `text.json#/properties/about/items/additionalProperties`
   - `/about/1` **required** (reference-without-id): 'id' is a required property — schema: `text.json#/properties/about/items/required`
@@ -255,8 +255,7 @@ These come from public YCBA, YUAG, and Yale Library feeds (`tests/corpus/SOURCE.
   - `/about/2` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('created_by', 'identified_by' were unexpected) — schema: `text.json#/properties/about/items/additionalProperties`
   - `/about/3` **required** (reference-without-id): 'id' is a required property — schema: `text.json#/properties/about/items/required`
   - `/about/3` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('created_by', 'identified_by' were unexpected) — schema: `text.json#/properties/about/items/additionalProperties`
-  - `/classified_as/1` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('@context' was unexpected) — schema: `text.json#/properties/classified_as/items/additionalProperties`
-- [ ] `tests/corpus/institutional/yul-node-14a3551f-6e93-4501-9b18-1b107f0274aa.json` — `VisualItem` → `image.json` — 11 error(s)
+- [ ] `tests/corpus/institutional/yul-node-14a3551f-6e93-4501-9b18-1b107f0274aa.json` — `VisualItem` → `image.json` — 9 error(s)
   - `/` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('representation' was unexpected) — schema: `image.json#/additionalProperties`
   - `/about/0` **required** (reference-without-id): 'id' is a required property — schema: `image.json#/properties/about/items/required`
   - `/about/0` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('created_by', 'identified_by' were unexpected) — schema: `image.json#/properties/about/items/additionalProperties`
@@ -264,10 +263,8 @@ These come from public YCBA, YUAG, and Yale Library feeds (`tests/corpus/SOURCE.
   - `/about/1` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('created_by', 'identified_by' were unexpected) — schema: `image.json#/properties/about/items/additionalProperties`
   - `/about/2` **required** (reference-without-id): 'id' is a required property — schema: `image.json#/properties/about/items/required`
   - `/about/2` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('created_by', 'identified_by' were unexpected) — schema: `image.json#/properties/about/items/additionalProperties`
-  - `/about/3` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('@context' was unexpected) — schema: `image.json#/properties/about/items/additionalProperties`
   - `/about/4` **required** (reference-without-id): 'id' is a required property — schema: `image.json#/properties/about/items/required`
   - `/about/4` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('created_by', 'identified_by' were unexpected) — schema: `image.json#/properties/about/items/additionalProperties`
-  - `/classified_as/1` **additionalProperties** (property-not-allowed): Additional properties are not allowed ('@context' was unexpected) — schema: `image.json#/properties/classified_as/items/additionalProperties`
 
 ## `id` on embedded nodes (not counted above)
 

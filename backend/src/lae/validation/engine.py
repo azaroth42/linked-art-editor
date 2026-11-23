@@ -96,7 +96,7 @@ def validate_document(
     every reference has the class it declares itself.
     """
     facts = facts or ReferenceFacts()
-    found: list[Diagnostic] = validate_schema(jsonld, record_uri)
+    found: list[Diagnostic] = validate_schema(jsonld, record_uri, context_version=context_version)
     if not has_no_violation(found):
         return Diagnostics(items=ordered(found))
     root_id = jsonld.get("id")

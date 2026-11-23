@@ -31,7 +31,7 @@ from referencing.exceptions import Unresolvable
 
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "backend" / "src"))
-from lae.rdf import strip_embedded_ids  # noqa: E402
+from lae.rdf import strip_embedded_ids, strip_nested_contexts  # noqa: E402
 from lae.validation.schema_map import (  # noqa: E402
     SCHEMA_BASE_URI,
     load_registry,
@@ -234,8 +234,9 @@ def main() -> int:
         raw = path.read_bytes()
         as_stored = json.loads(raw)
         # As ``lae.validation.validate_schema`` checks it: an ``id`` on an embedded node is
-        # ignored (ADR-0028). What that hides from the lists below is reported on its own.
-        record = strip_embedded_ids(as_stored, as_stored.get("id", ""))
+        # ignored, and so is a nested repeat of the pinned ``@context`` (ADR-0028). What the
+        # first hides from the lists below is reported on its own.
+        record = strip_embedded_ids(strip_nested_contexts(as_stored), as_stored.get("id", ""))
         schema = schema_name_for(record)
         validator = validator_for(schema, registry)
         for where, node_type in ignored_ids_of(as_stored, record):

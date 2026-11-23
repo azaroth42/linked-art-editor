@@ -23,6 +23,11 @@ brought with it from elsewhere (``lae.rdf.strip_embedded_ids``, ADR-0028; such a
 the record, ADR-0021). A reference and the root keep their ``id``. Only the schema check ignores
 these ids: storage, RDF, the rules and SHACL see them.
 
+A ``@context`` below the root that repeats the record's pinned context is removed as well
+(``lae.rdf.strip_nested_contexts``): expansion ignores it (ADR-0028), and the schema allows
+``@context`` on few nodes. Any other nested ``@context`` is left for the schema, and for
+expansion, to refuse.
+
 Formats are checked for ``date-time`` and ``uri`` only, with this project's own checkers:
 ``date-time`` accepts signed (BCE) years, which RFC 3339 does not, and ``uri`` is exactly what RDF
 expansion can write (``lae.rdf.repair_iri``): an absolute IRI, also one with characters that
@@ -42,7 +47,7 @@ from referencing import Registry
 from referencing.exceptions import Unresolvable
 
 from lae.projection.project import strip_internal_iris
-from lae.rdf import repair_iri, strip_embedded_ids
+from lae.rdf import repair_iri, strip_embedded_ids, strip_nested_contexts
 from lae.validation.datetimes import is_datetime
 from lae.validation.diagnostics import Diagnostic, diagnostic, pointer
 from lae.validation.schema_map import (
@@ -267,12 +272,16 @@ def _diagnostics(errors: Iterator[ValidationError]) -> Iterator[Diagnostic]:
         yield diagnostic(code, path, "violation", _params(error), fallback=error.message)
 
 
-def validate_schema(jsonld: Any, record_uri: str | None = None) -> list[Diagnostic]:
+def validate_schema(
+    jsonld: Any, record_uri: str | None = None, *, context_version: int | None = None
+) -> list[Diagnostic]:
     """Return the JSON Schema violations of a record, in document order; ``[]`` if it is valid.
 
     ``record_uri`` (default: the root ``id``) says which internal node IRIs to strip before
-    validating; the ids of embedded nodes that have one of their own are ignored too (module
-    docstring). The input is not modified, and every path is a pointer into it.
+    validating; the ids of embedded nodes that have one of their own are ignored too, and so is
+    a nested ``@context`` that repeats the pinned context of ``context_version`` (default: the
+    root's own ``@context``) (module docstring). The input is not modified, and every path is a
+    pointer into it.
     """
     record_type = jsonld.get("type") if isinstance(jsonld, Mapping) else None
     try:
@@ -284,7 +293,8 @@ def validate_schema(jsonld: Any, record_uri: str | None = None) -> list[Diagnost
         return [diagnostic(SCHEMA_RECORD_TYPE, "/type" if record_type else "", "violation", params)]
     uri = record_uri if record_uri is not None else jsonld.get("id")
     owner = uri if isinstance(uri, str) else ""
-    document = strip_embedded_ids(jsonld, owner)
+    document = strip_nested_contexts(jsonld, context_version=context_version)
+    document = strip_embedded_ids(document, owner)
     if owner:
         document = strip_internal_iris(document, owner)
     found: list[Diagnostic] = []

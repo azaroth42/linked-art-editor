@@ -18,9 +18,10 @@ The first five are violations, and ``params.detail`` carries the exception text 
 developers.
 The exception does not say where in the document the term is, so the path is the record root
 (``""``) unless the cause is one this module can find again in the JSON-LD: a root ``id`` that
-is not the record URI (``/id``), and a literal that is not valid Unicode or not a finite number
-(its own pointer). Malformed IRIs and date-times never get this far in ``validate``: the JSON
-Schema ``format`` checks report them first, with their paths.
+is not the record URI (``/id``), a root ``id`` that is not a writable IRI (``/id``; the record
+URI is never percent-encoded), and a literal that is not valid Unicode or not a finite number
+(its own pointer). Other malformed IRIs and date-times never get this far in ``validate``: the
+JSON Schema ``format`` checks report them first, with their paths.
 
 One code is not a failure. Expansion percent-encodes the characters an IRI may not contain (a
 space in a Wikimedia Commons file name) instead of refusing the record (ADR-0028), so the IRI in
@@ -42,6 +43,7 @@ from lae.rdf import (
     InvalidLiteralError,
     OwnershipError,
     expand_to_ntriples,
+    repair_iri,
     repaired_iris,
 )
 from lae.validation.diagnostics import Diagnostic, child, diagnostic, pointer
@@ -99,6 +101,12 @@ def _place(error: ExpansionError, jsonld: Any, record_uri: str | None) -> str:
     if isinstance(error, OwnershipError):
         root_id = jsonld.get("id")
         if isinstance(root_id, str) and record_uri is not None and root_id != record_uri:
+            return child("", "id")
+    if isinstance(error, InvalidIRIError):
+        # The schema's ``uri`` format lets a repairable id through, but the record URI itself is
+        # never repaired (ADR-0028), so a root id with a space gets this far.
+        root_id = jsonld.get("id")
+        if isinstance(root_id, str) and repair_iri(root_id) != root_id:
             return child("", "id")
     return ""
 

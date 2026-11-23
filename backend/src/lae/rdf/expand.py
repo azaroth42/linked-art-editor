@@ -51,7 +51,11 @@ JSON-LD:
   IRI afterwards (relative, no scheme, a bare ``https:/``) raises ``InvalidIRIError`` as before.
   Only node identifiers are repaired; a class or property IRI comes from the vocabulary, not from
   data, and a bad one still raises. ``repaired_iris`` lists the repairs of a record, so that
-  validation can warn about each (``LAE-RDF-006``). The record URI itself is never repaired.
+  validation can warn about each (``LAE-RDF-006``). The record URI itself (the root ``id``) is
+  never repaired, in either serialization. A repaired IRI is only ever the object of a triple:
+  every subject is the record URI, an internal node IRI or a derived node IRI, none of which
+  ``repair_iri`` changes, so two spellings that encode to one IRI (``a b`` and ``a%20b``) can
+  never merge two subjects, in one record or across records.
 - A node below the root may repeat the record's pinned context (``"@context": <pinned URL>``, or
   the one-element array of it). That says nothing new and is dropped. Any other nested
   ``@context`` raises ``ExpansionError``, because it could rename ``@id`` or any property.
@@ -60,8 +64,9 @@ Both happen in ``rdf_triples``, which ``expand_to_ntriples`` and ``to_turtle`` s
 
 Expansion is deterministic: the same JSON-LD and context version give the same set of lines in
 every process. ``EXPANDER_VERSION`` changes whenever that output could change for some input,
-which includes any change to ``ENTITY_TYPES`` or ``EMBEDDED_TYPES`` (ADR-0007 compares it, with
-the context version, before trusting a recomputed diff).
+which includes any change to ``ENTITY_TYPES`` or ``EMBEDDED_TYPES``, and an input that used to be
+refused and now expands (ADR-0007 compares it, with the context version, before trusting a
+recomputed diff; a record that an older expander refused has no triples in the index it built).
 
 pyld is synchronous and slow (about 0.5 ms per corpus record, up to 7 ms); call this module through
 ``asyncio.to_thread`` or a process pool from async code (conventions §4).
@@ -82,8 +87,13 @@ from lae.rdf.canonical import XSD, XSD_STRING, escape_literal
 from lae.rdf.context import CONTEXT_URLS, document_loader
 from lae.rdf.sanitize import clean_datetime, clean_iri
 
-EXPANDER_VERSION: Final = 1
-"""Bump when the triples produced for some input change (see the module docstring)."""
+EXPANDER_VERSION: Final = 2
+"""Bump when the triples produced for some input change (see the module docstring).
+
+- 1: Phase 1 Step 1.3, with ADR-0021.
+- 2: ADR-0028. Every input that version 1 expanded gives the same triples; inputs it refused (an
+  ``id`` with a character an IRI may not contain, a nested pinned ``@context``) now expand.
+"""
 
 # Relative IRIs and undefined terms are resolved against this instead of pyld's default
 # (http://example.org/base/), so that they can be recognised and rejected.
@@ -147,6 +157,8 @@ _ID_KEYS: Final = ("id", "@id")
 _TYPE_KEYS: Final = ("type", "@type")
 _STUB_KEYS: Final = frozenset({"id", "@id", "type", "@type", "_label", "@context"})
 _CLASSIFIED_STUB_KEYS: Final = _STUB_KEYS | {"classified_as"}
+# What the Linked Art JSON Schema allows on a reference (``core.json``, the ``*Ref`` definitions).
+_SCHEMA_REFERENCE_KEYS: Final = _CLASSIFIED_STUB_KEYS | {"equivalent"}
 # pyld's test for an absolute IRI refuses any Unicode whitespace (U+00A0, U+2028, ...), which
 # N-Triples allows in an IRI; pyld would drop the triple without a word.
 _WHITESPACE: Final = re.compile(r"\s")
@@ -387,15 +399,37 @@ def _is_foreign(obj: dict[str, Any], record_uri: str) -> bool:
     return identifier is not None and not _is_owned(identifier, record_uri)
 
 
+def _is_schema_embedded(obj: dict[str, Any], record_uri: str) -> bool:
+    """True if ``obj`` is an embedded node with a foreign ``id`` that the schema has no place for.
+
+    That is ``_is_embedded``, less one case: the schema's reference definitions allow
+    ``equivalent`` on a reference, so ``{"id", "type", "_label", "equivalent"}`` of a class that
+    can be a record (a ``VisualItem``, a ``LinguisticObject``, an ``Activity``) must keep the
+    ``id`` the schema requires there, although expansion writes it as a node of the record.
+    """
+    if not (_is_foreign(obj, record_uri) and _is_embedded(obj)):
+        return False
+    return bool(_types(obj) & EMBEDDED_TYPES) or not obj.keys() <= _SCHEMA_REFERENCE_KEYS
+
+
 def strip_embedded_ids(jsonld: dict[str, Any], record_uri: str) -> dict[str, Any]:
     """Return a copy without the ``id`` of any embedded node that brought one of its own.
 
     For the JSON Schema check only (ADR-0028): the Linked Art schema does not allow ``id`` on a
-    ``Name``, ``Identifier``, ``TimeSpan`` or ``Dimension``, but ADR-0021 makes such a node part
-    of the record. Every object below the root is judged alone by ``_is_embedded``, the split
-    expansion uses: an embedded node loses its ``id`` (and ``@id``); a reference, an object with
-    an internal node IRI, and the root keep theirs. Nothing else changes, so every JSON Pointer
-    into the result is valid in ``jsonld``. Nothing inside ``@context`` is touched.
+    ``Name``, ``Identifier``, ``TimeSpan``, ``Dimension``, a statement or an embedded
+    ``VisualItem``, but ADR-0021 makes such a node part of the record. Every object below the
+    root is judged alone by ``_is_embedded``, the split expansion uses: an embedded node loses
+    its ``id`` (and ``@id``); a reference, an object with an internal node IRI, and the root keep
+    theirs. So does an object that the schema reads as a reference although expansion does not:
+    one whose only property besides ``classified_as`` is ``equivalent`` (``_is_schema_embedded``).
+
+    "Alone" includes objects inside a reference. Expansion drops what a reference carries, but
+    the schema reads it, and there the same split holds: a ``Name`` with an id inside a concept
+    reference is still a node the schema allows no ``id`` on, and a meta-type under the
+    reference's ``classified_as`` is still a reference, which keeps its ``id``.
+
+    Nothing else changes, so every JSON Pointer into the result is valid in ``jsonld``. Nothing
+    inside ``@context`` is touched.
     """
     return {
         key: item if key == "@context" else _without_embedded_ids(item, record_uri)
@@ -408,11 +442,49 @@ def _without_embedded_ids(value: Any, record_uri: str) -> Any:
         return [_without_embedded_ids(item, record_uri) for item in value]
     if not isinstance(value, dict):
         return value
-    drop = _ID_KEYS if _is_foreign(value, record_uri) and _is_embedded(value) else ()
+    drop = _ID_KEYS if _is_schema_embedded(value, record_uri) else ()
     return {
         key: item if key == "@context" else _without_embedded_ids(item, record_uri)
         for key, item in value.items()
         if key not in drop
+    }
+
+
+def strip_nested_contexts(
+    jsonld: dict[str, Any], *, context_version: int | None = None
+) -> dict[str, Any]:
+    """Return a copy without the nested ``@context`` entries that repeat the pinned context.
+
+    For the JSON Schema check only (ADR-0028). Expansion ignores a ``@context`` below the root
+    that is the record's pinned context URL (or the one-element array of it), so the schema,
+    which allows ``@context`` on few nodes, must not report it either. The pinned URL is that of
+    ``context_version``, or without one the root's own ``@context`` if that is a pinned URL. Any
+    other nested ``@context`` is kept: the schema reports it where it does not allow one, and
+    expansion refuses it everywhere outside a reference. The root's ``@context`` is kept, and
+    only keys are removed, so every JSON Pointer into the result is valid in ``jsonld``.
+    """
+    if context_version is not None:
+        context_url: str | None = _context_url(context_version)
+    else:
+        declared = jsonld.get("@context")
+        context_url = declared if isinstance(declared, str) and declared in CONTEXT_URLS else None
+    if context_url is None:
+        return jsonld
+    return {
+        key: item if key == "@context" else _without_pinned_contexts(item, context_url)
+        for key, item in jsonld.items()
+    }
+
+
+def _without_pinned_contexts(value: Any, context_url: str) -> Any:
+    if isinstance(value, list):
+        return [_without_pinned_contexts(item, context_url) for item in value]
+    if not isinstance(value, dict):
+        return value
+    return {
+        key: item if key == "@context" else _without_pinned_contexts(item, context_url)
+        for key, item in value.items()
+        if not (key == "@context" and _is_pinned_context(item, context_url))
     }
 
 
@@ -543,7 +615,8 @@ def _prepare(value: Any, context_url: str, *, root: bool = False) -> Any:
 
     A nested ``@context`` equal to the pinned one is dropped and any other raises; an ``id`` that
     ``repair_iri`` can repair is replaced. An ``id`` it cannot repair is left for
-    ``_check_expanded``, which says what is wrong with it.
+    ``_check_expanded``, which says what is wrong with it. So is the root's ``id``: the record URI
+    is never repaired, or a record could be written under a subject other than its URI.
     """
     if isinstance(value, list):
         return [_prepare(item, context_url) for item in value]
@@ -556,7 +629,7 @@ def _prepare(value: Any, context_url: str, *, root: bool = False) -> Any:
             if not root and not _is_pinned_context(item, context_url):
                 raise ExpansionError(_NESTED_CONTEXT_ERROR)
         elif key in _ID_KEYS and isinstance(item, str):
-            out[key] = repair_iri(item) or item
+            out[key] = item if root else repair_iri(item) or item
         else:
             out[key] = _prepare(item, context_url)
     return out

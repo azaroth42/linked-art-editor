@@ -516,7 +516,9 @@ def _hop_path(hop: _Hop, ctx: _Context) -> str | None:
     items = node.obj.get(key)
     if isinstance(value, ox.NamedNode) and isinstance(items, list):
         for position, item in enumerate(items):
-            if isinstance(item, dict) and _identifier(item) == value.value:
+            identifier = _identifier(item) if isinstance(item, dict) else None
+            # The store has the IRI expansion wrote, the JSON-LD the id as given (ADR-0028).
+            if identifier is not None and value.value in (identifier, repair_iri(identifier)):
                 return child(path, position)
     return path
 

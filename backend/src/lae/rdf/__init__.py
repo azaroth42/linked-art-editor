@@ -14,6 +14,7 @@ from lae.rdf.expand import (
     repair_iri,
     repaired_iris,
     strip_embedded_ids,
+    strip_nested_contexts,
     strip_stub_attributes,
 )
 from lae.rdf.serialize import to_turtle
@@ -35,6 +36,7 @@ __all__ = [
     "repair_iri",
     "repaired_iris",
     "strip_embedded_ids",
+    "strip_nested_contexts",
     "strip_stub_attributes",
     "to_turtle",
 ]
