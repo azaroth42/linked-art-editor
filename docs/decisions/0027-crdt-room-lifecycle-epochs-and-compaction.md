@@ -1,4 +1,4 @@
-# ADR-0025: Room lifecycle: what ends a draft epoch, lossless compaction, the socket contract
+# ADR-0027: Room lifecycle: what ends a draft epoch, lossless compaction, the socket contract
 
 **Status:** Accepted, pending the critical-step review of Step 1.8 · **Date:** 2026-11-22 · **Decided by:** Claude Fable 5.2 (Phase 1 Step 1.8, conventions §8.2: the guide and spec are silent on these points) · **Recorded by:** Claude
 

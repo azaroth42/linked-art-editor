@@ -494,13 +494,13 @@ Implemented as decided above (items 3 and 4). Points for a human:
 
 ## Step 1.8
 
-1. **`records.draft_epoch` now also increments when a draft is discarded (ADR-0025).** Decision
+1. **`records.draft_epoch` now also increments when a draft is discarded (ADR-0027).** Decision
    B6 says "on every publish". Without the extra increment, a draft opened after a discard, a
    reaped draft or a revert would be a second hydration at the same epoch, and a browser tab
    that still held the old document would be merged into it. Please confirm the reading of B6;
    Steps 1.10, 1.14 and 1.15 must delete drafts only through `CrdtWsClient.close(discard=True)`
    or `lae.crdt.store.delete_draft`.
-2. **Compaction does not write plain `Doc.get_update()` when an update is pending (ADR-0025).**
+2. **Compaction does not write plain `Doc.get_update()` when an update is pending (ADR-0027).**
    `pycrdt` 0.14.13 leaves out updates whose dependencies have not arrived. The room merges
    those into the compacted state. No decision needed unless the pinned pair changes.
 3. **`transact` and `revert` raise `NotImplementedError`,** as the guide says. They were not

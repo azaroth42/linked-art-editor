@@ -28,7 +28,7 @@ Stable contract (Steps 1.6, 1.9, 1.10, 1.14, 1.15 and Phase 3 call these; signat
 - ``close(record_id, *, discard)``: ``discard=True`` deletes the draft, closes its sockets with
   4409 and makes sure ``records.draft_epoch`` is beyond the deleted draft's epoch. Call it
   *after* the publish transaction has committed, and *instead of* deleting draft rows anywhere
-  else (ADR-0025).
+  else (ADR-0027).
 - ``apply_update(record_id, update, user_id)``: a Yjs update, persisted then broadcast.
 - ``list_rooms()``, ``eject(user_id)``.
 

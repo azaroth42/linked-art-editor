@@ -4,7 +4,7 @@
   Read its module docstring for the invariants: one hydration per draft epoch, persist before
   broadcast, lossless compaction, no room dropped while it has sockets.
 - ``store``: the SQL on ``crdt_drafts`` / ``crdt_updates`` / ``records.draft_epoch``.
-  ``store.delete_draft`` is the only correct way to delete a draft (ADR-0025).
+  ``store.delete_draft`` is the only correct way to delete a draft (ADR-0027).
 - ``protocol``: awareness codec and update inspection.
 - ``server``: the ``crdt-ws`` ASGI application (``/ws/rooms/{record_id}`` and ``/internal/``)
   and ``main(settings)`` for ``lae crdt-ws``. Its docstring is the wire contract for the editor

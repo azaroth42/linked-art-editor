@@ -5,7 +5,7 @@ draft goes through it, so a Yjs-wire-compatible sidecar could replace the implem
 ``InMemoryRoomManager`` implements it with ``pycrdt`` and runs only inside the single ``crdt-ws``
 process (decision A4, ADR-0011); other processes call it through ``lae.crdt.client``.
 
-Invariants (decisions B5 and B6, ADR-0025). A reviewer should be able to check each one against
+Invariants (decisions B5 and B6, ADR-0027). A reviewer should be able to check each one against
 the method named after it.
 
 1. **One hydration per draft epoch** (``InMemoryRoomManager._load``). A draft is hydrated from

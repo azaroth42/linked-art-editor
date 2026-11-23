@@ -4,7 +4,7 @@ Every function takes the caller's ``AsyncSession`` and neither commits nor rolls
 caller decides what is atomic. ``lae.crdt.rooms`` is the only writer of live drafts; the
 functions are separate so that the rules below can be read (and tested) in one place.
 
-Rules (decisions B5, B6; ADR-0025):
+Rules (decisions B5, B6; ADR-0027):
 
 - One ``crdt_drafts`` row per record is the draft. Its ``draft_epoch`` equals
   ``records.draft_epoch`` for as long as the draft is current.
