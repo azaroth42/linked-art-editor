@@ -48,13 +48,13 @@ afterEach(() => {
 describe("App", () => {
   it("shows the home page and the signed-in user", async () => {
     renderApp("/", signedIn);
-    const heading = await screen.findByRole("heading", { level: 1, name: "Linked Art Editor" });
+    const heading = await screen.findByRole("heading", { level: 1, name: "Laertes" });
     expect(screen.getByRole("main").contains(heading)).toBe(true);
     const header = screen.getByRole("banner");
     expect(within(header).getByText("Signed in as editor@example.org (Editor)")).toBeDefined();
     expect(within(header).getByRole("button", { name: "Sign out" })).toBeDefined();
     // The title is set in an effect after render; wait for it instead of reading it once.
-    await waitFor(() => expect(document.title).toBe("Linked Art Editor"));
+    await waitFor(() => expect(document.title).toBe("Laertes"));
   });
 
   it("sends an anonymous visitor to the login page, which returns to the requested page", async () => {
@@ -73,7 +73,7 @@ describe("App", () => {
     // One button per provider, in the server's order (the default first).
     expect(screen.getAllByRole("link", { name: /^Sign in with/ })).toEqual([oidc, github]);
     // The title is set in an effect after render; wait for it instead of reading it once.
-    await waitFor(() => expect(document.title).toBe("Sign in – Linked Art Editor"));
+    await waitFor(() => expect(document.title).toBe("Sign in – Laertes"));
   });
 
   it("names a provider it has no translation for by its display name", async () => {
@@ -114,7 +114,7 @@ describe("App", () => {
 
   it("ignores an off-site next", async () => {
     const { router } = renderApp("/login?next=//evil.example/", signedIn);
-    await screen.findByRole("heading", { level: 1, name: "Linked Art Editor" });
+    await screen.findByRole("heading", { level: 1, name: "Laertes" });
     expect(router.state.location.pathname).toBe("/");
   });
 
@@ -123,7 +123,7 @@ describe("App", () => {
     const { router } = renderApp(`/records/${RECORD_ID}/history`, signedIn);
     await screen.findByRole("heading", { level: 1, name: "Revision history" });
     // The title is set in an effect after render; wait for it instead of reading it once.
-    await waitFor(() => expect(document.title).toBe("Revision history – Linked Art Editor"));
+    await waitFor(() => expect(document.title).toBe("Revision history – Laertes"));
     await user.click(screen.getByRole("link", { name: "Back to the editor" }));
     await screen.findByRole("heading", { level: 1, name: "Edit record" });
     expect(router.state.location.pathname).toBe(`/edit/${RECORD_ID}`);
@@ -152,7 +152,7 @@ describe("App", () => {
     await screen.findByText("The server cannot be reached right now.");
     up = true;
     await user.click(screen.getByRole("button", { name: "Try again" }));
-    await screen.findByRole("heading", { level: 1, name: "Linked Art Editor" });
+    await screen.findByRole("heading", { level: 1, name: "Laertes" });
   });
 
   it("signs out and returns to the login page", async () => {
@@ -180,7 +180,7 @@ describe("App", () => {
   it("renders the pseudo locale wrapped, accented, and expanded", async () => {
     renderApp("/", signedIn, "pseudo");
     const heading = await screen.findByRole("heading", { level: 1 });
-    expect(heading.textContent).toMatch(/^\[Ļíñķéð Åŕţ Éðíţóŕ ~+/);
+    expect(heading.textContent).toMatch(/^\[Ļáéŕţéš ~+/);
     expect(heading.textContent).toMatch(/\]$/);
   });
 });

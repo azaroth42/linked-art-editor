@@ -2,6 +2,10 @@
 
 Terms are grouped by origin. Project-specific terms are marked **[LAE]**.
 
+## The project
+
+- **Laertes [LAE]:** this project: the *Linked Art Editor with Real Time Entity Synchronization*. The `lae` prefix of the package, CLI, and `LAE_` settings is the first three letters of the name.
+
 ## Linked Art and CIDOC-CRM
 
 - **Linked Art:** A JSON-LD profile of CIDOC-CRM for cultural heritage data. Records are JSON documents with `@context`, `id`, `type`, and property arrays. Model docs: `/Users/rs2668/Development/linked-art/linked.art/docs/model/`.

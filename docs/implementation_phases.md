@@ -1,4 +1,4 @@
-# Implementation Phases: Collaborative Linked Art Editor
+# Implementation Phases: Laertes
 
 **Status:** Draft v0.1
 **Companion to:** `spec/` (architecture; section numbers preserved from the original design document). This document is about *sequence*, not design: what gets built when, why in that order, and what has to be true before the next phase starts. Each phase has a step-by-step guide under `docs/phases/`; `docs/reuse_map.md` lists what to take from the adjacent repositories.

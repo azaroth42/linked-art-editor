@@ -1,5 +1,8 @@
-# linked-art-editor
-A web based multi-user real time editor for Linked Art records
+# Laertes
+
+**Linked Art Editor with Real Time Entity Synchronization**: a web-based, multi-user, real-time editor for Linked Art records. Laertes is also the father of Odysseus.
+
+Start with [`docs/README.md`](docs/README.md). Internal identifiers keep the `lae` prefix (package, CLI, `LAE_` settings).
 
 Design, decisions, and the implementation plan live in [`docs/`](docs/README.md).
 

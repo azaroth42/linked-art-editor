@@ -7,13 +7,13 @@ const RECORD_ID = "0190a3b2-7c4d-7e8f-9a0b-1c2d3e4f5a6b";
 
 // Every SPA route gets an axe check (conventions §5). `/` is covered in home.spec.ts.
 const SIGNED_IN_ROUTES = [
-  { path: `/edit/${RECORD_ID}`, heading: "Edit record", title: "Edit record – Linked Art Editor" },
+  { path: `/edit/${RECORD_ID}`, heading: "Edit record", title: "Edit record – Laertes" },
   {
     path: `/records/${RECORD_ID}/history`,
     heading: "Revision history",
-    title: "Revision history – Linked Art Editor",
+    title: "Revision history – Laertes",
   },
-  { path: "/no/such/page", heading: "Page not found", title: "Page not found – Linked Art Editor" },
+  { path: "/no/such/page", heading: "Page not found", title: "Page not found – Laertes" },
 ];
 
 for (const route of SIGNED_IN_ROUTES) {

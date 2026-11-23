@@ -1,4 +1,6 @@
-# Collaborative Linked Art Editor — Documentation Index and Status Board
+# Laertes — Documentation Index and Status Board
+
+**Laertes** is the *Linked Art Editor with Real Time Entity Synchronization* (and, in the *Odyssey*, the father of Odysseus). Internal identifiers keep the `lae` prefix: the Python package `lae`, the `lae` CLI, and `LAE_` settings.
 
 **Start here.** This file tells an implementing agent what exists, what has been decided, what has been done, and where to begin. Keep the Status section current: every time a guide step is completed, tick it here in the same PR.
 

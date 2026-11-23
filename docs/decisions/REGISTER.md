@@ -107,4 +107,5 @@ Decisions made during the November 2026 design review are also written up as ADR
 | F8 | Default implementer is Claude Opus 5.5; steps marked **CRITICAL** are implemented and reviewed by a model from the tier above (Claude Fable/Mythos class). | fixed | ADR-0015; conventions §10 |
 | F9 | Spikes S1–S6 produce written GO/NO-GO reports in `docs/spikes/`; a NO-GO stops the phase until a human acknowledges. | fixed | Phase 0 |
 | F11 | No Docker or containers anywhere: development, CI, and production install PostgreSQL, QLever, and the Python processes natively. | locked | ADR-0017 |
+| F12 | The product is named **Laertes** (Linked Art Editor with Real Time Entity Synchronization) in all user-visible text; internal identifiers (`lae` package and CLI, `LAE_` settings, `lae-*` systemd units) are unchanged. | fixed | Owner, 2026-11-22 |
 | F10 | Questions go to `docs/questions.md`; design changes go to `docs/decisions/NNNN-*.md`; the spec is never edited to match code. | fixed | conventions §8 |

@@ -12,7 +12,7 @@
 # argument, so it is visible to local users in the process list.
 
 [Unit]
-Description=QLever SPARQL server for the Linked Art Editor
+Description=QLever SPARQL server for the Laertes
 Documentation=https://github.com/azaroth42/linked-art-editor/blob/main/deploy/README.md
 Wants=network-online.target
 After=network-online.target

@@ -1,4 +1,4 @@
-# Linked Art Editor processes. Each name is a `lae` CLI sub-command and has a matching
+# Laertes processes. Each name is a `lae` CLI sub-command and has a matching
 # deploy/systemd/lae-<name>.service unit for production.
 #
 # Development: `make run` starts them with honcho from the repository root; LAE_* settings come

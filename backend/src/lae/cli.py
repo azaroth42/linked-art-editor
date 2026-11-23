@@ -62,7 +62,7 @@ EXIT_CONFIG_ERROR = 2
 
 def build_parser() -> argparse.ArgumentParser:
     """Build the argument parser with one sub-command per process."""
-    parser = argparse.ArgumentParser(prog="lae", description="Collaborative Linked Art Editor")
+    parser = argparse.ArgumentParser(prog="lae", description="Laertes")
     subparsers = parser.add_subparsers(dest="command", required=True, metavar="<command>")
     for name, help_text in COMMANDS.items():
         subparser = subparsers.add_parser(name, help=help_text, description=help_text)

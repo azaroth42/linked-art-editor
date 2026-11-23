@@ -168,7 +168,7 @@ def create_app(
             await http_client.aclose()
             await engine.dispose()
 
-    app = FastAPI(title="Linked Art Editor", version=lae.__version__, lifespan=lifespan)
+    app = FastAPI(title="Laertes", version=lae.__version__, lifespan=lifespan)
     app.state.settings = settings
     install_auth(app, settings, http_transport)
     app.add_middleware(RequestContextMiddleware)

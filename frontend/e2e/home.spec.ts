@@ -6,11 +6,11 @@ import { E2E_DEV_USER } from "./devUser.ts";
 
 test("the dev user logs in, opens / and the page has no axe violations", async ({ page }) => {
   await login(page);
-  await expect(page.getByRole("heading", { level: 1, name: "Linked Art Editor" })).toBeVisible();
+  await expect(page.getByRole("heading", { level: 1, name: "Laertes" })).toBeVisible();
   await expect(page.getByTestId("current-user")).toHaveText(
     `Signed in as ${E2E_DEV_USER.email} (${E2E_DEV_USER.role})`,
   );
-  await expect(page).toHaveTitle("Linked Art Editor");
+  await expect(page).toHaveTitle("Laertes");
   await expectNoAxeViolations(page);
 });
 

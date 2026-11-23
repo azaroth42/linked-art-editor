@@ -88,7 +88,7 @@ GitHub has verified it. The first sign-in gets the `Viewer` role.
    → **New OAuth App**. (For an app owned by an organization, use the organization's
    **Settings** → **Developer settings** → **OAuth Apps** instead.)
 2. Fill in the form:
-   - **Application name**: `Linked Art Editor (local)`
+   - **Application name**: `Laertes (local)`
    - **Homepage URL**: `http://localhost:8000`
    - **Authorization callback URL**: `http://localhost:8000/auth/callback/github`
    - **Enable Device Flow**: leave unticked.
