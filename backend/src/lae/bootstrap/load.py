@@ -80,6 +80,7 @@ from lae.bootstrap.records import (
 )
 from lae.bootstrap.rewrite import (
     acquire_load_lock,
+    drop_superseded_labels,
     finish,
     has_column,
     index_is_stale,
@@ -457,6 +458,7 @@ async def load(
             BOOTSTRAP_EXPANDER_VERSION: EXPANDER_VERSION,
         }
         await set_sync_state(conn, versions)
+        superseded_labels_deleted = await drop_superseded_labels(conn)
         metatypes_harvested = await harvest_all_metatypes(conn)
         finish_started = time.perf_counter()
         await finish(conn, changed=rewrite["changed"] > 0)
@@ -490,6 +492,7 @@ async def load(
         "rewrite": rewrite,
         "finish_seconds": round(finish_s, 2),
         "records_total": records_total,
+        "superseded_labels_deleted": superseded_labels_deleted,
         "metatypes_harvested": metatypes_harvested,
         "index_rebuild_needed": stale,
         "sync_state": versions,

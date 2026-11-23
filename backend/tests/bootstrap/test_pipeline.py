@@ -369,6 +369,38 @@ async def test_labels_are_stripped_only_from_references_with_a_known_target(
     assert row["data"]["_label"] == "The Brown Tea Pot"  # the root keeps its own
 
 
+async def test_label_only_rows_superseded_by_a_loaded_record_are_deleted(
+    bootstrap_settings: Settings, tmp_path: Path
+) -> None:
+    """A seeded AAT label row whose URI becomes a loaded record's alias goes; others stay."""
+    csv_path = tmp_path / "aat.csv"
+    csv_path.write_text(
+        "aat_code,preferred_name\n300033618,paintings\n300015050,oil paint\n", encoding="utf-8"
+    )
+    await load_aat_labels(csv_path, settings=bootstrap_settings, report_path=tmp_path / "a.jsonl")
+    concept = {
+        "@context": "https://linked.art/ns/v1/linked-art.json",
+        "id": AAT + "300033618",
+        "type": "Type",
+        "_label": "paintings",
+        "identified_by": [{"type": "Name", "content": "paintings"}],
+    }
+    source = write_jsonl(tmp_path / "in.jsonl", [concept])
+    summary = await load(
+        source, settings=bootstrap_settings, report_path=tmp_path / "r.jsonl", workers=1
+    )
+    assert summary["records_written"] == 1
+    assert summary["superseded_labels_deleted"] == 1
+    rows = await fetch(bootstrap_settings, "SELECT uri, source FROM entity_labels ORDER BY uri")
+    by_uri = {row["uri"]: row["source"] for row in rows}
+    assert AAT + "300033618" not in by_uri  # superseded by the local record
+    assert by_uri[AAT + "300015050"] == "aat"  # no record for it: the label row stays
+    [record] = (await stored(bootstrap_settings)).values()
+    assert by_uri[record["uri"]] == "local"
+    again = await rewrite_refs(settings=bootstrap_settings, workers=1)
+    assert again["superseded_labels_deleted"] == 0
+
+
 async def test_an_interrupted_load_is_completed_by_the_next_one(
     bootstrap_settings: Settings, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

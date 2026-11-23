@@ -52,3 +52,5 @@ It updates `records.data` and `etag` without a revision or an outbox event, like
 - Later import paths (Phase 2) must write `record_aliases` rows for re-minted records with their own `source`, and merges may add aliases; a record can have several.
 - Not done here: `ref.unresolved_target` findings for references that keep their `_label` (the Step 3.10 sweep), and rewriting references to another record's *node* IRIs under its source URI (none seen in the corpus).
 - Register entry A6 cites this ADR; ADR-0024 is superseded.
+
+*Amended 2026-11-23 (owner):* label-only `entity_labels` rows (`source <> 'local'`) whose URI becomes the alias of a loaded record are deleted by the load and by `rewrite-refs`, so autocomplete offers the record once.

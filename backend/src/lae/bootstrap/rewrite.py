@@ -248,6 +248,25 @@ async def rewrite_pass(
     }
 
 
+async def drop_superseded_labels(conn: asyncpg.Connection) -> int:
+    """Delete label-only rows whose URI now names a loaded record (owner decision, ADR-0030).
+
+    A sidecar or seed row (``source <> 'local'``, e.g. an AAT label) whose URI became the alias of
+    a bulk-loaded record is superseded by that record's own ``entity_labels`` row, so keeping it
+    would make autocomplete offer the same entity twice. Runs after the reference rewrite and
+    before the metatype harvest, so harvested metatypes land on the record's row. Returns the
+    number of rows deleted.
+    """
+    status: str = await conn.execute(
+        """
+        DELETE FROM entity_labels AS el
+        USING record_aliases AS a
+        WHERE el.uri = a.alias_uri AND el.source <> 'local'
+        """
+    )
+    return int(status.split()[-1])
+
+
 async def acquire_load_lock(conn: asyncpg.Connection) -> None:
     """Take the session advisory lock of bulk loads, or raise ``BootstrapError``."""
     if not await conn.fetchval("SELECT pg_try_advisory_lock($1)", LOAD_LOCK):
@@ -322,6 +341,7 @@ async def rewrite_refs(
             ),
         ) as pool:
             summary = await rewrite_pass(conn, pool, since=None, batch=batch, inflight=workers + 1)
+        superseded_labels_deleted = await drop_superseded_labels(conn)
         # References now name their targets by their final URIs: harvest again (ADR-0032).
         metatypes_harvested = await harvest_all_metatypes(conn) if summary["changed"] else 0
         await finish(conn, changed=summary["changed"] > 0)
@@ -335,6 +355,7 @@ async def rewrite_refs(
         "batch": batch,
         "completed_interrupted_load": pending_since is not None,
         **summary,
+        "superseded_labels_deleted": superseded_labels_deleted,
         "metatypes_harvested": metatypes_harvested,
         "index_rebuild_needed": stale,
     }
