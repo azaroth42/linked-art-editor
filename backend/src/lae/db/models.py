@@ -142,7 +142,8 @@ class RecordRevision(Base):
     jsonld_zstd: Mapped[bytes] = mapped_column(LargeBinary)
     context_version: Mapped[int] = mapped_column(Integer)
     authors: Mapped[list[uuid.UUID]] = mapped_column(ARRAY(Uuid), server_default=EMPTY_ARRAY)
-    published_by: Mapped[uuid.UUID] = mapped_column(Uuid)
+    # Migration 0008: NULL for the revision of a bulk-loaded version, which nobody published.
+    published_by: Mapped[uuid.UUID | None] = mapped_column(Uuid)
     summary: Mapped[str] = mapped_column(Text, server_default="")
     accepted_warnings: Mapped[list[dict[str, Any]]] = mapped_column(
         JSONB, server_default=EMPTY_JSON_ARRAY
