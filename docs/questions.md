@@ -817,3 +817,29 @@ steps. Notes for the steps that meet it, and two choices the owner may want to c
    without a publisher (a bulk-loaded version 1). Naming people needs a small read endpoint (for
    example user ids → display names, signed in), which the contract does not provide; this step
    adds none (the admin UI's user directory may be a natural home for it).
+
+## Owner decision, 2026-11-23 (derived `_label`)
+
+Found while implementing Step 1.19 (PR #155): the Linked Art JSON Schema requires a root `_label`,
+no profile slot edits it and `frontend/src/crdt/paths.ts` refuses to write it, so a record without
+one could never be published from the UI; `CreateStubDialog` creates stubs without it, which
+blocked the parent's publish with `LAE-PUB-003`; and `_label` did not follow title edits.
+
+**Decision (owner, 2026-11-23):** a record's root `_label` is derived on the server from its
+primary name, the preferred language first. It is set on every draft write and when a stub is
+created, so it always follows title edits. Users cannot edit it.
+
+Contract: `docs/contracts/1.19a-derived-label.md`. Choices made there, for the owner to overturn
+if wanted:
+
+1. **Derived on read, not written into the CRDT.** Every reading of a draft (snapshot,
+   validation, publish, diff, the browser's projection) carries the derived label; the server
+   appends no update of its own. The effect is the one decided; the mechanism avoids a second
+   update per keystroke, undo entries and stale snapshots.
+2. **The preferred language is `en`, a constant**, as for `entity_labels.default_label`. Open: a
+   per-installation setting needs a way to tell the browser, which no step provides yet.
+3. **A record without any name keeps the `_label` it has** (141 of the 276 corpus records have
+   no usable name); with neither, publish is refused with the existing `LAE-SCHEMA-required` /
+   `LAE-PUB-003`. Bulk load keeps the source `_label`; the first publish through the editor
+   replaces it with the derived one, which the publish diff shows.
+4. Step 1.17 item 2 is settled: a write path naming `_label` is `LAE-PROJ-007` in Python too.
