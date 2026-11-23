@@ -43,7 +43,7 @@ Your **slot number** is your GitHub issue number `N`.
 Run every command in the step's **Verify** block and the repo-wide checks:
 
 ```
-cd backend && uv run ruff check . && uv run ruff format --check . && uv run mypy src && uv run pytest -q
+cd backend && uv run ruff check . && uv run ruff format --check . && uv run mypy src && uv run pytest -q -n auto
 cd frontend && corepack pnpm lint && corepack pnpm typecheck && corepack pnpm test
 ```
 
