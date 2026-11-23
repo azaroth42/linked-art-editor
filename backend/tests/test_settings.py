@@ -32,6 +32,7 @@ FIELDS = (
     "github_allowed_users",
     "session_secret",
     "dev_user",
+    "reader_assets_dir",
 )
 
 SECRETS = (
@@ -75,6 +76,7 @@ def test_defaults(clean_env: pytest.MonkeyPatch) -> None:
     assert settings.github_allowed_users == []
     assert settings.allowed_origins == []
     assert settings.dev_user is None
+    assert settings.reader_assets_dir is None
     for secret in SECRETS:
         assert getattr(settings, secret) is None
 

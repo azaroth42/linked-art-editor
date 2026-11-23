@@ -8,6 +8,8 @@ kept on ``app.state``: the SQLAlchemy async engine (with its session factory, se
 ``lae.db.session.get_session``) and one ``httpx.AsyncClient`` for outgoing calls (QLever,
 ``crdt-ws``).
 
+The built Public Reader script is mounted under ``/reader/assets`` (``lae.reader.assets``).
+
 ``openapi_document`` builds the same OpenAPI document as ``GET /openapi.json`` without serving
 the application; ``scripts/export_openapi.py`` writes it for the frontend's generated API types.
 """
@@ -33,6 +35,7 @@ from lae.auth.setup import install_auth
 from lae.crdt.client import CrdtWsClient
 from lae.db.session import create_engine, create_sessionmaker
 from lae.logging import RequestContextMiddleware, get_logger
+from lae.reader.assets import mount_assets
 from lae.settings import Settings
 
 HTTP_TIMEOUT_SECONDS = 30.0
@@ -154,11 +157,14 @@ def create_app(
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-        # Validation's schemas and shapes are loaded now, so that a broken file under profiles/
-        # stops the start instead of failing the first validation (Step 1.9).
+        # Validation's schemas and shapes (Step 1.9) and the Public Reader's template and strings
+        # (Step 1.21) are loaded now, so that a broken file stops the start instead of failing
+        # the first request.
+        from lae.reader.render import warm_up as warm_up_reader
         from lae.validation import warm_up
 
         await asyncio.to_thread(warm_up)
+        await asyncio.to_thread(warm_up_reader)
         engine = create_engine(settings.database_url)
         http_client = httpx.AsyncClient(timeout=HTTP_TIMEOUT_SECONDS, transport=http_transport)
         app.state.engine = engine
@@ -180,6 +186,7 @@ def create_app(
     app.include_router(health_router)
     for router in api.routers():
         app.include_router(router)
+    mount_assets(app, settings)
     return app
 
 

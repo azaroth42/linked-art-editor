@@ -254,6 +254,15 @@ def start_session(request: Request, user_id: UUID) -> None:
     request.session[SESSION_ISSUED_KEY] = int(time.time())
 
 
+def has_signed_in_session(request: Request) -> bool:
+    """True if the request carries a valid session cookie of a signed-in user.
+
+    Only the cookie is read (its signature and age are checked by the session middleware); the
+    user is not looked up, so this costs nothing on public pages.
+    """
+    return "session" in request.scope and request.session.get(SESSION_USER_KEY) is not None
+
+
 async def session_principal(request: Request, session: AsyncSession) -> CurrentUser | None:
     """Return the session cookie's user, or ``None`` (and clear the session) if there is none.
 
