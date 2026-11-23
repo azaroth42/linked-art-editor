@@ -541,16 +541,19 @@ async def test_revert_needs_publish(served: Served, db_engine: AsyncEngine) -> N
 
 @pytest.mark.parametrize("status", [RecordStatus.DELETED, RecordStatus.MERGED])
 async def test_revert_of_a_deleted_or_merged_record(
-    served: Served, db_engine: AsyncEngine, status: RecordStatus
+    served: Served, network: Network, db_engine: AsyncEngine, status: RecordStatus
 ) -> None:
     uri = new_uri()
     data = titled_record(uri, "A", "B", f"https://vocab.test/{uuid7()}")
     await insert_record(db_engine, data, status=status)
+    watched = Reopening(network, times=0)
+    served.app.state.http_client._transport = watched
     response = await served.client.post(
         f"/api/records/{id_of(uri)}/revisions/1/revert", headers=await editor(db_engine)
     )
     assert response.status_code == 409
     assert response.json()["code"] == "LAE-CRDT-005"
+    assert watched.discards == 0  # refused by the endpoint, before anything is discarded
 
 
 class Reopening(Network):
@@ -617,3 +620,71 @@ async def test_revert_when_crdt_ws_is_down(
     )
     assert response.status_code == 503
     assert response.json()["code"] == "LAE-CRDT-009"
+
+
+async def test_revert_to_a_revision_that_cannot_be_hydrated_keeps_the_draft(
+    served: Served, network: Network, db_engine: AsyncEngine
+) -> None:
+    """422 ``LAE-CRDT-008`` is decided before the discard (contract §3 item 17)."""
+    uri = new_uri()
+    v3 = titled_record(uri, "A", "B", f"https://vocab.test/{uuid7()}")
+    record_id = id_of(uri)
+    await insert_record(db_engine, v3, version=3)
+    await insert_revision(db_engine, record_id, 2, {**v3, "_order": 1})  # a reserved key (R5)
+    await edit_draft(network, record_id, lambda doc: ops.set_scalar(doc, "x_note", "keep me"))
+    before = await network.rooms.snapshot(record_id)
+
+    path = f"/api/records/{record_id}/revisions/2/revert"
+    response = await served.client.post(path, headers=await editor(db_engine))
+    assert response.status_code == 422
+    assert response.json() == {
+        "code": "LAE-CRDT-008",
+        "path": path,
+        "params": {"record_id": str(record_id), "projection_code": "LAE-PROJ-001"},
+    }
+    after = await network.rooms.snapshot(record_id)
+    assert (after.draft_epoch, after.jsonld["x_note"]) == (before.draft_epoch, "keep me")
+
+
+class OpenFails(Network):
+    """A network on which ``crdt-ws`` cannot be reached for ``open`` while ``failing``."""
+
+    def __init__(self, inner: Network) -> None:
+        super().__init__(inner.crdt_app)
+        self.failing = True
+
+    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+        if self.failing and request.url.path.endswith("/open"):
+            raise httpx.ConnectError("crdt-ws unreachable", request=request)
+        return await super().handle_async_request(request)
+
+
+async def test_revert_when_crdt_ws_fails_between_the_discard_and_the_open(
+    served: Served, network: Network, db_engine: AsyncEngine
+) -> None:
+    """Contract §4: the old draft is gone, there is no new one, and a second revert succeeds."""
+    record_id, v2, _ = await three_versions(db_engine)
+    headers = await editor(db_engine)
+    await edit_draft(network, record_id, lambda doc: ops.set_scalar(doc, "x_note", "unpublished"))
+    old_epoch = (await network.rooms.snapshot(record_id)).draft_epoch
+    before = await stored(db_engine, record_id)
+    flaky = OpenFails(network)
+    served.app.state.http_client._transport = flaky
+
+    path = f"/api/records/{record_id}/revisions/2/revert"
+    failed = await served.client.post(path, headers=headers)
+    assert failed.status_code == 503
+    assert failed.json()["code"] == "LAE-CRDT-009"
+    between = await stored(db_engine, record_id)
+    assert before.record is not None and between.record is not None
+    assert (between.draft, between.updates) == (None, 0)
+    assert between.record.draft_epoch > old_epoch  # the discarded draft's clients get 4409
+    assert (between.record.version, between.record.etag) == (3, before.record.etag)
+    assert revision_rows(between.revisions) == revision_rows(before.revisions)
+
+    flaky.failing = False
+    response = await served.client.post(path, headers=headers)
+    assert response.status_code == 200, response.text
+    assert response.json()["draft_epoch"] == between.record.draft_epoch
+    snapshot = await network.rooms.snapshot(record_id)
+    assert canonical_json(snapshot.jsonld) == canonical_json(v2)
