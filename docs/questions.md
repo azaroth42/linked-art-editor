@@ -763,4 +763,9 @@ steps. Notes for the steps that meet it, and two choices the owner may want to c
 4. **The `sync-integration` CI job** installs QLever from the Homebrew tap `qlever-dev/qlever`
    pinned at commit `205cc9d5183fd669c227e7ac7e1dbd0164573dd6` (formula `qlever 0.6.0_1`, the
    prebuilt `qlever_0.6.0-1_macos_arm64.tar.gz`, macOS arm64 only), so it runs on `macos-15`;
-   PostgreSQL 18 and pgvector also come from Homebrew. Run time: see the PR (first run).
+   PostgreSQL 18 and pgvector also come from Homebrew. Homebrew 7 refuses a third-party tap's
+   formulae until `brew trust qlever-dev/qlever`. First green run (PR #148): 7 min 4 s in all,
+   of which installing QLever 4 min 55 s and `pytest -m integration tests/sync` 1 min 19 s (46
+   passed, none skipped). macOS arm64 runners can queue for a long time: the first attempt was
+   cancelled after 15 min with "The job was not acquired by Runner of type hosted" (capacity), and
+   a re-run was picked up at once.
