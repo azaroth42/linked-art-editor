@@ -30,5 +30,5 @@ Step 1.8 builds the room manager on decisions A4, B1, B5 and B6. Four points are
 - A client without an epoch cannot connect, including ad-hoc tools; they read the epoch from `POST /internal/rooms/{id}/open` or the records API.
 - Phase 4 Step 4.15's `{code: STALE_EPOCH, current_epoch, base_version}` payload is not sent yet: a text frame would break `y-websocket`'s binary reader, and the close reason is limited to 123 bytes. The server's awareness state already carries `draft_epoch` and `base_version`.
 - A deployment whose editor is served from another origin than its record URIs must set `LAE_ALLOWED_ORIGINS`, or browsers cannot open a room.
-- Migration 0004 also adds `crdt_drafts.last_update_id`.
+- Migration 0006 also adds `crdt_drafts.last_update_id`.
 - A client holding `edit_draft` can still write any Yjs structure into a draft, including one that no longer projects to JSON-LD (`snapshot` then answers 422 `LAE-CRDT-008` and the draft can only be discarded). Checking every update against the projection was not added (see `docs/questions.md`, Step 1.8).

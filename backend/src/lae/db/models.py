@@ -125,7 +125,7 @@ class Record(Base):
         DateTime(timezone=True), server_default=NOW, onupdate=NOW
     )
     merged_into: Mapped[uuid.UUID | None] = mapped_column(Uuid)
-    # Migration 0004: epoch of the current or next draft; bumped by publish and discard (B6).
+    # Migration 0006: epoch of the current or next draft; bumped by publish and discard (B6).
     draft_epoch: Mapped[int] = mapped_column(Integer, server_default=text("0"))
 
 

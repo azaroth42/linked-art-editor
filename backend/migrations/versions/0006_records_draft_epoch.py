@@ -9,8 +9,8 @@ Also adds ``crdt_drafts.last_update_id``: the id of the last ``crdt_updates`` ro
 the draft, kept across compaction, so that publish can tell whether a draft has changed since
 the snapshot it validated (``lae.crdt.store.draft_unchanged``).
 
-Revision ID: 0004
-Revises: 0003
+Revision ID: 0006
+Revises: 0005
 Create Date: 2026-11-22
 """
 
@@ -19,8 +19,8 @@ from collections.abc import Sequence
 import sqlalchemy as sa
 from alembic import op
 
-revision: str = "0004"
-down_revision: str | Sequence[str] | None = "0003"
+revision: str = "0006"
+down_revision: str | Sequence[str] | None = "0005"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 
