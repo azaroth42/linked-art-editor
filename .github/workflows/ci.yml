@@ -112,6 +112,8 @@ jobs:
           brew tap qlever-dev/qlever
           git -C "$(brew --repository qlever-dev/qlever)" fetch --quiet origin "$QLEVER_TAP_COMMIT"
           git -C "$(brew --repository qlever-dev/qlever)" checkout --quiet "$QLEVER_TAP_COMMIT"
+          # Homebrew refuses formulae of a third-party tap until it is trusted.
+          brew trust qlever-dev/qlever
           brew install qlever-dev/qlever/qlever
           qlever-server --version
           qlever-index --version
