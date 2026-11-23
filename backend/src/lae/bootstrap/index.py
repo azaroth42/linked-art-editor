@@ -8,9 +8,12 @@ patterns are unsupported", Spike S6 finding 4), so the export is symlinked into 
 
 When the server answers, ``sync_state`` gets ``qlever_index_watermark``, the highest outbox event
 id the export reflects (from ``<file>.meta.json``, written by ``export-nt``): the sync worker
-replays every later event. ``bootstrap_context_version`` and ``bootstrap_expander_version`` are
-set to the versions the export expanded with, because those produced the triples now in QLever
-(ADR-0007; ``lae bootstrap load`` sets them first).
+replays every later event. It also gets ``qlever_index_watermark_time``, the export's
+``snapshot_at`` (``null`` when the metadata has none): autocomplete searches the ``entity_labels``
+rows updated after it in Postgres, because QLever's text index never sees them (Step 1.13).
+``bootstrap_context_version`` and ``bootstrap_expander_version`` are set to the versions the
+export expanded with, because those produced the triples now in QLever (ADR-0007; ``lae bootstrap
+load`` sets them first).
 
 The server is left running. To stop it, match its index name and port (``qlever stop
 --cmdline-regex``, as ``make down`` does); never run a bare ``qlever stop``, which stops every
@@ -40,6 +43,7 @@ from lae.bootstrap.common import (
     BOOTSTRAP_CONTEXT_VERSION,
     BOOTSTRAP_EXPANDER_VERSION,
     QLEVER_INDEX_WATERMARK,
+    QLEVER_INDEX_WATERMARK_TIME,
     asyncpg_dsn,
     set_sync_state,
 )
@@ -220,7 +224,10 @@ def build_index(
     ready_s = time.perf_counter() - started
     triples = sparql_count(port)
 
-    state: dict[str, Any] = {QLEVER_INDEX_WATERMARK: watermark}
+    state: dict[str, Any] = {
+        QLEVER_INDEX_WATERMARK: watermark,
+        QLEVER_INDEX_WATERMARK_TIME: meta.get("snapshot_at") if meta is not None else None,
+    }
     if meta is not None:
         state[BOOTSTRAP_CONTEXT_VERSION] = meta["context_version"]
         state[BOOTSTRAP_EXPANDER_VERSION] = meta["expander_version"]

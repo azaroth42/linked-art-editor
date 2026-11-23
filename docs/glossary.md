@@ -52,7 +52,7 @@ Terms are grouped by origin. Project-specific terms are marked **[LAE]**.
 - **`entity_labels`:** Postgres lookup table of every known entity URI (local and sidecar) with BCP-47 labels, default label, metatypes, and Value Set ids.
 - **Sidecar dataset:** An external vocabulary or authority loaded locally as Linked Art (AAT, ULAN, TGN, Wikidata subset) into its own QLever graph `urn:graph:sidecar:<name>` and into `entity_labels`.
 - **Outbox:** `outbox_events` rows written in the same transaction as a publish; the sync worker turns them into QLever updates.
-- **Watermark:** The id of the last outbox event applied to the live QLever index (`sync_state.qlever_index_watermark`).
+- **Watermark:** The id of the last outbox event applied to the live QLever index (`sync_state.qlever_index_watermark`). Its companion `sync_state.qlever_index_watermark_time` is when the Postgres snapshot the live index was built from was taken (ISO 8601; written by `lae bootstrap build-index`, and by every rebuild that swaps in a new index). QLever's text index never sees literals added by updates (Spike S1), so autocomplete also searches the `entity_labels` rows updated after that time (the *overlay*, Step 1.13).
 - **Tombstone:** A deleted record kept with `status = 'deleted'`; its URI returns `410 Gone`.
 - **Merge batch / split batch:** Manifests allowing one-click undo of a merge or split.
 - **UUIDv7:** Time-ordered UUID used for every record and node id.

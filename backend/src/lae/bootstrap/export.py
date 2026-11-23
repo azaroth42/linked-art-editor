@@ -23,6 +23,13 @@ that the sync worker replays only later events. It is written, with the counts, 
 ``<out>.meta.json``. An event whose transaction is still open when the snapshot is taken, with an
 id below the maximum, would be in neither; a bootstrap runs before editing starts, and blue/green
 rebuilds (Phase 2) handle that case.
+
+**Snapshot time.** ``snapshot_at`` in the metadata is the start of the snapshot's transaction
+(``now()``, ISO 8601). ``build-index`` stores it as ``qlever_index_watermark_time``: an
+``entity_labels`` row updated after it may be missing from the index's text search, so
+autocomplete looks for it in Postgres instead (Step 1.13). ``updated_at`` is the writing
+transaction's start, so a row written by a transaction that began before the snapshot and committed
+after it would be missed; that is the in-flight case above, with the same answer.
 """
 
 from __future__ import annotations
@@ -334,6 +341,7 @@ async def export_nt(
                 watermark = int(
                     await conn.fetchval("SELECT coalesce(max(id), 0) FROM outbox_events")
                 )
+                snapshot_at = await conn.fetchval("SELECT now()")
                 context_versions = sorted(
                     row[0]
                     for row in await conn.fetch(
@@ -367,6 +375,7 @@ async def export_nt(
         "format": "nq",
         "gzip": compress,
         "watermark": watermark,
+        "snapshot_at": snapshot_at.isoformat(),
         "context_version": settings.context_version,
         "record_context_versions": context_versions,
         "expander_version": EXPANDER_VERSION,

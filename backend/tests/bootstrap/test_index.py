@@ -155,6 +155,7 @@ def test_build_serve_and_update_a_bootstrapped_index(
         state = asyncio.run(fetch(settings, "SELECT key, value::text FROM sync_state"))
         assert {row["key"]: json.loads(row["value"]) for row in state} == {
             "qlever_index_watermark": 7,
+            "qlever_index_watermark_time": None,
             "bootstrap_context_version": 1,
             "bootstrap_expander_version": 1,
         }

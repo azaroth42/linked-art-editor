@@ -14,5 +14,13 @@ def routers() -> list[APIRouter]:
     """Return every HTTP API router, in registration order."""
     from lae.api import public, records, validation
     from lae.auth import oidc, tokens
+    from lae.search import autocomplete
 
-    return [oidc.router, tokens.router, records.router, public.router, validation.router]
+    return [
+        oidc.router,
+        tokens.router,
+        records.router,
+        public.router,
+        validation.router,
+        autocomplete.router,
+    ]
