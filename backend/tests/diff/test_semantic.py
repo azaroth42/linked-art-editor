@@ -12,6 +12,7 @@ from typing import Any, get_args
 import pytest
 from pydantic import TypeAdapter
 
+from lae.app import openapi_document
 from lae.diff import CHANGE_KINDS, Change, semantic_diff
 from lae.diff.semantic import (
     AddNode,
@@ -26,6 +27,8 @@ from lae.diff.semantic import (
     item_keys,
 )
 from lae.projection import canonical_json, hydrate, project
+from lae.projection.project import record_map, sorted_entries
+from lae.projection.rules import entry_key
 from tests.diff.applier import apply_changes
 
 URI = "https://data.test/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f"
@@ -92,6 +95,8 @@ def test_equal_documents_have_no_changes() -> None:
 def test_inputs_must_be_objects() -> None:
     with pytest.raises(TypeError):
         semantic_diff([], {})  # type: ignore[arg-type]
+    with pytest.raises(TypeError):
+        semantic_diff(record(), None)  # type: ignore[arg-type]
 
 
 def test_change_kinds_are_the_six_of_decision_b10() -> None:
@@ -197,13 +202,30 @@ def test_a_literal_that_appears_is_set_and_one_that_goes_is_clear() -> None:
 
 
 def test_json_equality_is_exact() -> None:
-    old = record(dimension=[{"id": nid(1), "type": "Dimension", "value": 33, "x": True}])
-    new = record(dimension=[{"id": nid(1), "type": "Dimension", "value": 33.0, "x": 1}])
+    def doc(value: Any, x: Any, zero: float, tags: list[Any]) -> dict[str, Any]:
+        dimension = {"id": nid(1), "type": "Dimension", "value": value, "x": x, "y": zero}
+        return record(dimension=[dimension], x_tags=tags)
+
+    old = doc(33, True, 0.0, [1, 0.0])
+    new = doc(33.0, 1, -0.0, [True, 1.0, -0.0])
     changes = diff(old, new)
-    assert [(c.property, c.old, c.new) for c in changes] == [("value", 33, 33.0), ("x", True, 1)]
+    assert [(c.property, c.op, c.key, c.old, c.new) for c in changes] == [
+        ("value", "change", None, 33, 33.0),
+        ("x", "change", None, True, 1),
+        ("y", "change", None, 0.0, -0.0),
+        # As array items, 1 / 1.0 / true and 0.0 / -0.0 have different keys: nothing is kept.
+        ("x_tags", "clear", "=n:1", 1, None),
+        ("x_tags", "clear", "=n:0.0", 0.0, None),
+        ("x_tags", "set", "=b:true", None, True),
+        ("x_tags", "set", "=n:1.0", None, 1.0),
+        ("x_tags", "set", "=n:-0.0", None, -0.0),
+    ]
     assert isinstance(changes[0].new, float) and isinstance(changes[1].new, int)
     wire = TypeAdapter(list[Change]).dump_json(changes)
     assert b'"old":33,"new":33.0' in wire and b'"old":true,"new":1' in wire
+    assert b'"old":0.0,"new":-0.0' in wire
+    # Key order never matters.
+    assert semantic_diff(old, dict(reversed(list(old.items())))) == []
 
 
 def test_context_and_opaque_values_are_literals_whatever_their_form() -> None:
@@ -476,18 +498,45 @@ def test_reorder_inside_a_nested_node() -> None:
 
 
 def test_item_keys_are_the_keys_hydration_assigns() -> None:
-    items = [ref(PAINTING), "x", ref(PAINTING), "x", 1, 1.0, None, {"a": 1}, name(1, "n")]
-    assert item_keys(items) == [
+    items = [
+        ref(PAINTING),
+        "x",
+        ref(PAINTING),
+        "x",
+        1,
+        1.0,
+        True,
+        None,
+        {"a": 1},
+        [1],
+        name(1, "n"),
+        ref(PAINTING, label="third"),
+        "x #2",
+        ref(f"{PAINTING} #2"),
+    ]
+    keys = item_keys(items)
+    assert keys == [
         PAINTING,
         "=s:x",
         f"{PAINTING} #2",
         "=s:x #2",
         "=n:1",
         "=n:1.0",
+        "=b:true",
         "=z",
         '=j:{"a":1}',
+        "=j:[1]",
         nid(1),
+        f"{PAINTING} #3",
+        "=s:x #2 #2",
+        f"{PAINTING} #2 #2",
     ]
+    # The oracle: the entry keys a freshly hydrated Doc holds for the array, in its order.
+    for prop in ("classified_as", "[", '["a","b"]'):
+        root = record_map(hydrate(record(**{prop: items}), URI))
+        assert [key for key, _ in sorted_entries(root, prop)] == [
+            entry_key(prop, key) for key in keys
+        ]
 
 
 def test_repeated_references_are_matched_by_occurrence() -> None:
@@ -561,16 +610,28 @@ def test_the_steps_describe_the_new_version() -> None:
 def test_root_id_and_type_are_literals() -> None:
     old = record()
     new = {**record(), "type": "DigitalObject"}
-    (change,) = semantic_diff(old, new)
-    assert (change.kind, change.path, change.old, change.new) == (
+    (change,) = diff(old, new)
+    assert (change.kind, change.path, change.op, change.old, change.new) == (
         "update_literal",
         "type",
+        "change",
         "HumanMadeObject",
         "DigitalObject",
+    )
+    # Two versions of one record never differ in ``id``, but the function is total.
+    (change,) = diff(old, {**record(), "id": BOL})
+    assert (change.kind, change.path, change.op, change.old, change.new) == (
+        "update_literal",
+        "id",
+        "change",
+        URI,
+        BOL,
     )
 
 
 def test_nodes_without_ids_are_compared_by_value() -> None:
+    # Not run through the applier: hydration gives every node an id (R4), so a projected
+    # document never has a node without one.
     def doc(content: str) -> dict[str, Any]:
         stripped = {"type": "Name", "content": content}
         return record(identified_by=[stripped, {"type": "Name", "content": "same"}])
@@ -586,7 +647,7 @@ def test_nodes_without_ids_are_compared_by_value() -> None:
 def test_changes_survive_json() -> None:
     old = record(identified_by=[name(1, "a")], classified_as=[ref(PAINTING)], x=1)
     new = record(identified_by=[name(2, "b")], classified_as=[ref(ARTWORK)], x=None)
-    changes = semantic_diff(old, new)
+    changes = diff(old, new)
     adapter = TypeAdapter(list[Change])
     assert adapter.validate_json(adapter.dump_json(changes)) == changes
     assert {c["kind"] for c in adapter.dump_python(changes)} == {
@@ -595,4 +656,23 @@ def test_changes_survive_json() -> None:
         "add_ref",
         "remove_ref",
         "update_literal",
+    }
+
+
+def test_openapi_lists_the_fields_of_every_change() -> None:
+    """Generated clients see every field of every change, and ``kind`` as the discriminator."""
+    schemas = openapi_document()["components"]["schemas"]
+    models = get_args(get_args(Change)[0])
+    assert len(models) == len(CHANGE_KINDS)
+    for model in models:
+        schema = schemas[model.__name__]
+        assert set(schema["properties"]) == set(model.model_fields), model.__name__
+        assert set(schema["required"]) == set(model.model_fields), model.__name__
+        assert schema["properties"]["kind"]["const"] == model.model_fields["kind"].default
+    for model in (Step, RefSummary, TextEdit):
+        assert set(schemas[model.__name__]["properties"]) == set(model.model_fields)
+    changes = schemas["SemanticDiff"]["properties"]["changes"]["items"]
+    assert changes["discriminator"]["propertyName"] == "kind"
+    assert {ref["$ref"].rsplit("/", 1)[1] for ref in changes["oneOf"]} == {
+        model.__name__ for model in models
     }

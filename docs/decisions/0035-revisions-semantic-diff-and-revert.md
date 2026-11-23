@@ -1,0 +1,31 @@
+# ADR-0035: Revisions, the semantic diff and revert (response envelope, change fields, revert)
+
+**Status:** Accepted · **Date:** 2026-11-23 · **Decided by:** the Step 1.14 contract (`docs/contracts/1.14-revisions.md`, Claude Fable 5.2), implemented by Claude Opus 5.5 (Rob Sanderson may override) · **Recorded by:** Claude
+
+## Context
+Phase 1 Step 1.14 adds the typed semantic diff of two versions of a record (decision B10, spec §4.3), the diff of the live draft against the published version, and revert to a revision (decision B9). The publish dialog (Step 1.19), the history browser (Step 1.20), `apply_change` (Phase 3 Step 3.6), the graph overlay (Phase 4 Step 4.2) and the offline rebase modal (Phase 4 Step 4.15) all read the one list of changes, so its shape is a contract. The guide names the six kinds and a few fields (`path`, `node_type`, `node_id`, `summary_fields`, `old`, `new`, `uri`, `type`) and says the routes return "changes"; it leaves open how a change is addressed precisely enough to be applied, how a type change or a move is reported, which label a change shows, what a never-published record is compared with, and what revert does when a client recreates the draft in the middle.
+
+## Decision
+1. **The diff routes answer an envelope**, `SemanticDiff = {record_id, from_version, to_version, draft_epoch, changes}`, not a bare array, so that fields can be added later. For the draft diff `to_version` is null and `draft_epoch` is the compared draft's epoch; for a diff of two versions the reverse. Revert answers `Reverted = {id, version, draft_epoch, base_version}`.
+2. **`POST /api/records/{id}/draft/diff` needs `publish`**, like the publish dialog it feeds (spec §4.3 gives the diff against the published revision to the Editor). `GET …/revisions/{m}/diff/{n}` needs only a signed-in user, like the revision list.
+3. **Fields beyond the guide's**, each needed so that applying the list in order reproduces the new version (contract §3 item 12): every change has `parent` (the chain of `Step`s `{property, key, id, type, classified_as, label}` from the root, read from the new version) and `property`; additions have `key` (the R7 item key, null for a single value) and `before` (the nearest following kept item, null to append); node and reference changes carry the whole `value`; `update_literal` has `op` (`set` / `change` / `clear`, because JSON null is a value) and `text_edit` (the single R23 splice in code points for a shared `Text`); `reorder` has `order` (every item key of the new version) and `previous` (the kept keys in the old order); `add_ref` / `remove_ref` carry `label`. `path` is for people only (`identified_by[Name:Primary Name].content`); software uses `parent`. Every field is always serialized and is marked required in the OpenAPI schema.
+4. **A changed `type` is a replacement**: the node is removed whole and added whole under the same key, because `type` is set when a node is created (R20) and the write operations never change it. A node moved to another property or parent is a `remove_node` plus an `add_node` with the same `node_id`; moves are not paired.
+5. **Labels: the looked-up label beats a stored `_label`**, the precedence of read-time transclusion (`hydrate_labels`). The lookup follows the caller's `Accept-Language` and is one `entity_labels` query over the reference ids of both documents (`lae.labels.transclude.resolve_labels`). Labels only fill `label` and `path`; `value`, `old` and `new` are always the stored JSON.
+6. **A never-published record (`version = 0`) is diffed against its skeleton** `{"@context", "id", "type"}` taken from `records.data`, with `from_version = 0`: everything the editor added is reported as added, and the template content a new record starts with is not hidden.
+7. **Revert discards only through the room manager and retries.** After the record, its status, the version and the hydratability of the revision are checked, the endpoint calls `crdt-ws` `close(discard=True)` and then `open(content=<stored JSON-LD of the revision>)`, node IRIs kept. If an editor's socket recreated a draft from `records.data` in between, `open` answers 409 `LAE-CRDT-004`; the endpoint discards and opens again, `REVERT_ATTEMPTS = 3` attempts in all, then passes the 409 on. Revert publishes nothing; the editor publishes the reverted draft as usual.
+
+## Alternatives considered
+- **A bare array of changes.** It cannot carry the epoch the draft diff was computed on or gain fields without breaking clients.
+- **`edit_draft` for the draft diff.** The graph overlay of Phase 4 Step 4.2 would like it for Collaborators; the spec gives the published-version diff to the Editor. Left to the owner (`docs/questions.md`, Step 1.14).
+- **A path string as the only address.** Labels and types are not unique and not escaped; a client could not apply a change reliably.
+- **`update_literal` on a nested `type`.** No write operation can perform it, and the identity of a node would change under its comments and anchors.
+- **The stored `_label` before the lookup.** The stored label is only what there is for a target without an `entity_labels` row (spec §3.2); preferring it would show stale labels.
+- **Comparing a never-published draft with `records.data`.** `records.data` of a new record already holds the template, so the first publish dialog would show nothing of it.
+- **Deleting the draft rows directly, or no retry.** ADR-0027 makes `crdt-ws` the only writer of draft rows; without the retry a single reconnecting tab makes revert fail.
+
+## Consequences
+- `lae.crdt.ops.apply_change` (Phase 3 Step 3.6) must accept exactly these fields; until then `backend/tests/diff/applier.py` defines what applying a change means, and the property tests prove that applying the list to `hydrate(old)` projects to `new`.
+- Clients must reconnect with the `draft_epoch` revert returns; sockets of the discarded draft are closed with 4409.
+- A revert followed by a publish makes a new version whose JSON-LD equals the reverted revision, node IRIs included, so comment anchors and later diffs hold.
+
+Evidence: `backend/tests/diff/` (hand-made cases, the property tests over the corpus and random documents) and `backend/tests/api/test_revisions.py` (real `api`, in-process `crdt-ws`, real publish).

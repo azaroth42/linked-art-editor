@@ -17,7 +17,9 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 from uuid_utils.compat import uuid7
 
 from lae.api import revisions
-from lae.db.models import CrdtDraft, Record, RecordStatus
+from lae.crdt.rooms import EpochMismatchError
+from lae.db.models import CrdtDraft, RecordRevision, RecordStatus
+from lae.diff.semantic import same_json
 from lae.projection import canonical_json, ops
 from tests.api.conftest import (
     AAT,
@@ -31,6 +33,54 @@ from tests.api.conftest import (
     titled_record,
 )
 from tests.auth.conftest import Served
+from tests.publish.conftest import caller, edit, open_draft, publish, stored
+
+
+def add_name(content: str) -> Any:
+    """An edit that adds a Name with ``content``."""
+    return lambda doc: ops.add_node(doc, "identified_by", {"type": "Name", "content": content})
+
+
+async def published_versions(
+    served: Served, network: Network, db_engine: AsyncEngine
+) -> tuple[UUID, Any]:
+    """A bulk-loaded record taken to version 3 through the real publish; ``(id, editor)``.
+
+    Version 2 added a Name, version 3 changed the English title. The first publish back-filled
+    the row of version 1 (ADR-0033).
+    """
+    who = await caller(db_engine)
+    uri = new_uri()
+    await insert_record(db_engine, titled_record(uri, "First", "Premier", f"{AAT}300033618"))
+    record_id = id_of(uri)
+    await open_draft(network, record_id)
+    await edit(network, record_id, who.id, add_name("Second"))
+    assert (await publish(served, who, record_id)).json()["version"] == 2
+
+    def retitle(doc: Doc[Any]) -> None:
+        first = ops.list_entries(doc, "identified_by")[0][1]
+        ops.set_scalar(doc, "content", "Third", base=first)
+
+    await open_draft(network, record_id)
+    await edit(network, record_id, who.id, retitle)
+    assert (await publish(served, who, record_id)).json()["version"] == 3
+    return record_id, who
+
+
+def revision_rows(revisions: list[RecordRevision]) -> list[tuple[Any, ...]]:
+    """Everything stored for each revision, comparable across sessions."""
+    return [
+        (
+            r.version,
+            r.jsonld_zstd,
+            r.ntriples_zstd,
+            r.published_by,
+            r.authors,
+            r.summary,
+            r.created_at,
+        )
+        for r in revisions
+    ]
 
 
 def kind_of(uri: str) -> str:
@@ -68,13 +118,6 @@ async def edit_draft(network: Network, record_id: UUID, edit: Any) -> None:
     before = replica.get_state()
     edit(replica)
     await network.rooms.apply_update(record_id, replica.get_update(before), None)
-
-
-async def record_row(engine: AsyncEngine, record_id: UUID) -> Record:
-    async with AsyncSession(engine) as session:
-        record = await session.get(Record, record_id)
-        assert record is not None
-        return record
 
 
 async def draft_row(engine: AsyncEngine, record_id: UUID) -> CrdtDraft | None:
@@ -179,6 +222,43 @@ async def test_diff_of_a_bulk_loaded_record_with_itself(
     )
     assert response.status_code == 200
     assert response.json()["changes"] == []
+
+
+async def test_diff_across_a_back_filled_version_one(
+    served: Served, network: Network, db_engine: AsyncEngine
+) -> None:
+    """The first publish of a bulk-loaded record writes the row of version 1 (ADR-0033)."""
+    who = await caller(db_engine)
+    uri = new_uri()
+    loaded = titled_record(uri, "A title", "Un titre", f"{AAT}300033618")
+    await insert_record(db_engine, loaded)
+    record_id = id_of(uri)
+    await open_draft(network, record_id)
+    await edit(network, record_id, who.id, add_name("Another title"))
+    assert (await publish(served, who, record_id)).json()["version"] == 2
+    back_filled = (await stored(db_engine, record_id)).revision(1)
+    assert (back_filled.published_by, back_filled.authors) == (None, [])
+
+    response = await served.client.get(
+        f"/api/records/{record_id}/revisions/1/diff/2", headers=who.headers
+    )
+    assert response.status_code == 200, response.text
+    body = response.json()
+    assert (body["from_version"], body["to_version"]) == (1, 2)
+    (added,) = body["changes"]
+    assert (added["kind"], added["path"], added["before"]) == ("add_node", "identified_by", None)
+    assert added["summary_fields"] == {"content": "Another title"}
+    reverse = await served.client.get(
+        f"/api/records/{record_id}/revisions/2/diff/1", headers=who.headers
+    )
+    assert [c["kind"] for c in reverse.json()["changes"]] == ["remove_node"]
+
+    listed = await served.client.get(f"/api/records/{record_id}/revisions", headers=who.headers)
+    assert listed.status_code == 200
+    assert [(entry["version"], entry["published_by"]) for entry in listed.json()] == [
+        (1, None),
+        (2, str(who.id)),
+    ]
 
 
 async def test_diff_needs_authentication_and_a_record(
@@ -314,6 +394,7 @@ async def test_revert_replaces_the_draft_with_the_revision(
         network, record_id, lambda doc: ops.set_scalar(doc, "x_note", "unpublished edit")
     )
     old_epoch = (await network.rooms.snapshot(record_id)).draft_epoch
+    before = await stored(db_engine, record_id)
 
     response = await served.client.post(
         f"/api/records/{record_id}/revisions/2/revert", headers=headers
@@ -328,9 +409,17 @@ async def test_revert_replaces_the_draft_with_the_revision(
     }
     # Discarding the old draft ended its epoch (ADR-0027): stale clients get 4409.
     assert body["draft_epoch"] > old_epoch
-    record = await record_row(db_engine, record_id)
-    assert (record.version, record.draft_epoch) == (3, body["draft_epoch"])
-    assert canonical_json(record.data) == canonical_json(v3)  # nothing was published
+    # Nothing was published: the record row and the revisions are as they were.
+    after = await stored(db_engine, record_id)
+    assert before.record is not None and after.record is not None
+    assert (after.record.version, after.record.draft_epoch) == (3, body["draft_epoch"])
+    assert (after.record.etag, after.record.updated_at) == (
+        before.record.etag,
+        before.record.updated_at,
+    )
+    assert canonical_json(after.record.data) == canonical_json(v3)
+    assert revision_rows(after.revisions) == revision_rows(before.revisions)
+    assert (len(after.events), after.label) == (len(before.events), before.label)
 
     # The draft is revision 2 exactly, node IRIs included.
     snapshot = await network.rooms.snapshot(record_id)
@@ -341,6 +430,61 @@ async def test_revert_replaces_the_draft_with_the_revision(
     draft_diff = await served.client.post(f"/api/records/{record_id}/draft/diff", headers=headers)
     back = await served.client.get(f"/api/records/{record_id}/revisions/3/diff/2", headers=headers)
     assert draft_diff.json()["changes"] == back.json()["changes"] != []
+
+
+async def test_revert_then_publish_makes_a_new_version_equal_to_the_revision(
+    served: Served, network: Network, db_engine: AsyncEngine
+) -> None:
+    record_id, who = await published_versions(served, network, db_engine)
+    await edit(network, record_id, who.id, add_name("never published"))
+    before = await stored(db_engine, record_id)
+    assert [r.version for r in before.revisions] == [1, 2, 3]
+
+    reverted = await served.client.post(
+        f"/api/records/{record_id}/revisions/2/revert", headers=who.headers
+    )
+    assert reverted.status_code == 200, reverted.text
+    assert reverted.json()["base_version"] == 3
+    published = await publish(served, who, record_id, summary="Revert to revision 2")
+    assert published.status_code == 200, published.text
+    assert published.json()["version"] == 4
+
+    after = await stored(db_engine, record_id)
+    assert [r.version for r in after.revisions] == [1, 2, 3, 4]
+    assert same_json(after.jsonld(4), after.jsonld(2))
+    assert revision_rows(after.revisions[:3]) == revision_rows(before.revisions)
+    assert after.record is not None and same_json(after.record.data, after.jsonld(2))
+    # Version 3 to 4 is version 3 to 2: the reverted nodes are the nodes of revision 2.
+    to_four = await served.client.get(
+        f"/api/records/{record_id}/revisions/3/diff/4", headers=who.headers
+    )
+    to_two = await served.client.get(
+        f"/api/records/{record_id}/revisions/3/diff/2", headers=who.headers
+    )
+    assert to_four.json()["changes"] == to_two.json()["changes"] != []
+    same = await served.client.get(
+        f"/api/records/{record_id}/revisions/2/diff/4", headers=who.headers
+    )
+    assert same.json()["changes"] == []
+
+
+async def test_a_stale_client_is_refused_after_a_revert(
+    served: Served, network: Network, db_engine: AsyncEngine
+) -> None:
+    record_id, _, _ = await three_versions(db_engine)
+    old_epoch = (await network.rooms.open(record_id)).draft_epoch
+    response = await served.client.post(
+        f"/api/records/{record_id}/revisions/2/revert", headers=await editor(db_engine)
+    )
+    assert response.status_code == 200, response.text
+    new_epoch = response.json()["draft_epoch"]
+    assert new_epoch > old_epoch
+    # A browser tab that still holds the discarded draft's epoch cannot reconnect to it.
+    with pytest.raises(EpochMismatchError) as refused:
+        await network.rooms.open(record_id, expected_epoch=old_epoch)
+    assert refused.value.current == new_epoch
+    room = await network.rooms.open(record_id, expected_epoch=new_epoch)
+    assert room.draft_epoch == new_epoch
 
 
 async def test_revert_without_a_draft_and_to_the_current_version(
@@ -366,7 +510,8 @@ async def test_revert_to_a_version_that_has_no_snapshot_keeps_the_draft(
     await edit_draft(network, record_id, lambda doc: ops.set_scalar(doc, "x_note", "keep me"))
     before = await network.rooms.snapshot(record_id)
 
-    for missing in (1, 4):  # bulk-loaded version 1 has no row yet (Step 1.10 adds it)
+    # 0 and 4 do not exist; version 1 was bulk-loaded and moved on without a row.
+    for missing in (0, 1, 4):
         response = await served.client.post(
             f"/api/records/{record_id}/revisions/{missing}/revert", headers=headers
         )

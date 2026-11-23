@@ -15,7 +15,6 @@ from __future__ import annotations
 import copy
 import os
 import random
-from collections import Counter
 from functools import cache
 from typing import Any
 
@@ -25,10 +24,10 @@ from hypothesis import strategies as st
 from pydantic import TypeAdapter
 
 from lae.corpus import corpus_files, load_record
-from lae.diff.semantic import Change, same_json, semantic_diff
+from lae.diff.semantic import CHANGE_KINDS, Change, same_json, semantic_diff
 from lae.projection import assign_node_iris, canonical_json, hydrate, project
 from tests.diff.applier import apply_changes
-from tests.diff.mutations import mutate
+from tests.diff.mutations import mutate, reorderable
 from tests.projection.strategies import RECORD_URI, records
 
 MAX_EXAMPLES = int(os.environ.get("LAE_DIFF_MAX_EXAMPLES", "200"))
@@ -78,26 +77,52 @@ def test_a_corpus_record_against_itself_and_the_next_one(index: int) -> None:
     check_pair(new, old, old["id"])
 
 
-@settings(
-    max_examples=MAX_EXAMPLES,
-    deadline=None,
-    suppress_health_check=[HealthCheck.too_slow, HealthCheck.data_too_large],
-)
-@given(
-    st.integers(0, len(CORPUS) - 1),
-    st.integers(0, len(CORPUS) - 1),
-    st.integers(1, 6),
-    st.randoms(use_true_random=False),
-)
-def test_edited_corpus_records(index: int, donor: int, count: int, rng: random.Random) -> None:
-    old = corpus_record(index)
-    new, names = mutate(old, rng, corpus_record(donor), count)
-    for name in names:
-        event(f"edit: {name}")
-    changes = check_pair(old, new, old["id"])
-    for kind, _ in Counter(change.kind for change in changes).items():
-        event(f"change: {kind}")
-    check_pair(new, old, old["id"])
+REORDER_SHARE = 0.05
+"""The share of edited corpus records whose changes must include a ``reorder``."""
+
+REORDERABLE = [index for index in range(len(CORPUS)) if reorderable(corpus_record(index))]
+"""Corpus records with an array that a ``reorder`` edit can change (two in five)."""
+
+
+def test_edited_corpus_records() -> None:
+    """Item 12 of the contract over random edits of corpus records, in both directions.
+
+    Every change kind must occur, and a ``reorder`` in at least ``REORDER_SHARE`` of the
+    examples: a generator that rarely reorders would leave the ``reorder`` path untested. Three
+    in five corpus records have no array that a ``reorder`` edit can change, so half the
+    examples start from one of the others (``REORDERABLE``).
+    """
+    kinds_per_example: list[set[str]] = []
+
+    @settings(
+        max_examples=MAX_EXAMPLES,
+        deadline=None,
+        suppress_health_check=[HealthCheck.too_slow, HealthCheck.data_too_large],
+    )
+    @given(
+        st.one_of(st.sampled_from(REORDERABLE), st.integers(0, len(CORPUS) - 1)),
+        st.integers(0, len(CORPUS) - 1),
+        st.integers(1, 6),
+        st.randoms(use_true_random=True),
+    )
+    def edited(index: int, donor: int, count: int, rng: random.Random) -> None:
+        old = corpus_record(index)
+        new, names = mutate(old, rng, corpus_record(donor), count)
+        for name in names:
+            event(f"edit: {name}")
+        changes = check_pair(old, new, old["id"])
+        kinds = {change.kind for change in changes}
+        for kind in sorted(kinds):
+            event(f"change: {kind}")
+        check_pair(new, old, old["id"])
+        kinds_per_example.append(kinds)
+
+    edited()
+    reordered = sum("reorder" in kinds for kinds in kinds_per_example)
+    assert reordered >= REORDER_SHARE * len(kinds_per_example), (
+        f"{reordered} of {len(kinds_per_example)} examples had a reorder"
+    )
+    assert set().union(*kinds_per_example) == set(CHANGE_KINDS)
 
 
 @settings(

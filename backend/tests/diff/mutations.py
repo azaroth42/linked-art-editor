@@ -14,7 +14,7 @@ from collections.abc import Callable, Iterator
 from typing import Any
 
 from lae.ids import node_iri
-from lae.projection import assign_node_iris
+from lae.projection import assign_node_iris, canonical_json
 from lae.projection.rules import OPAQUE_KEYS, is_structured
 
 AAT = "http://vocab.getty.edu/aat/"
@@ -105,15 +105,41 @@ def remove_item(record: dict[str, Any], rng: random.Random, donor: dict[str, Any
             del obj[key]
 
 
+def reorderable(record: dict[str, Any]) -> list[tuple[dict[str, Any], str]]:
+    """``(object, key)`` of every array that holds two different items: one ``reorder`` can
+    change."""
+    return [
+        (obj, key)
+        for obj, key in arrays(record)
+        if len({canonical_json(item) for item in obj[key]}) > 1
+    ]
+
+
 def reorder(record: dict[str, Any], rng: random.Random, donor: dict[str, Any]) -> None:
-    found = [(obj, key) for obj, key in arrays(record) if len(obj[key]) > 1]
-    if found:
-        obj, key = rng.choice(found)
-        if rng.random() < 0.5:
-            rng.shuffle(obj[key])
-        else:
-            item = obj[key].pop(rng.randrange(len(obj[key])))
-            obj[key].insert(rng.randint(0, len(obj[key])), item)
+    """Change the order of an array that holds two different items (shuffle, or move one).
+
+    The order always changes when some array can change: a shuffle or a move that happens to
+    give the same order back is followed by a swap of two neighbours that differ. Only records
+    without a ``reorderable`` array are left as they are.
+    """
+    found = reorderable(record)
+    if not found:
+        return
+    obj, key = rng.choice(found)
+    items: list[Any] = obj[key]
+    original = canonical_json(items)
+    if rng.random() < 0.5:
+        rng.shuffle(items)
+    else:
+        item = items.pop(rng.randrange(len(items)))
+        items.insert(rng.randint(0, len(items)), item)
+    if canonical_json(items) == original:
+        index = next(
+            i
+            for i in range(len(items) - 1)
+            if canonical_json(items[i]) != canonical_json(items[i + 1])
+        )
+        items[index], items[index + 1] = items[index + 1], items[index]
 
 
 def add_item(record: dict[str, Any], rng: random.Random, donor: dict[str, Any]) -> None:
@@ -217,6 +243,7 @@ MUTATIONS: list[Mutation] = [
     edit_string,
     delete_key,
     remove_item,
+    reorder,
     reorder,
     reorder,
     add_item,

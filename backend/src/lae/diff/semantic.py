@@ -134,11 +134,11 @@ JSON, so a change can be applied as it is.
 
 from __future__ import annotations
 
-from collections.abc import Mapping
+from collections.abc import Mapping, Sequence
 from dataclasses import dataclass
 from typing import Annotated, Any, Final, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 from lae.ids import is_internal_node_iri
 from lae.projection.canonical_json import canonical_json
@@ -198,6 +198,10 @@ class TextEdit(BaseModel):
 
 
 class _ChangeBase(BaseModel):
+    # Every field is always serialized, so the OpenAPI (serialization) schema marks every field
+    # required, ``kind`` included: generated clients get a discriminated union.
+    model_config = ConfigDict(json_schema_serialization_defaults_required=True)
+
     path: str
     """Display path with qualifiers, e.g. ``identified_by[Name:Primary Name].content``."""
     parent: list[Step]
@@ -321,7 +325,7 @@ def item_keys(items: list[Any]) -> list[str]:
     return keys
 
 
-def format_path(parent: list[Step] | tuple[Step, ...], prop: str) -> str:
+def format_path(parent: Sequence[Step], prop: str) -> str:
     """The display path of ``prop`` on the object ``parent`` leads to (module docstring)."""
     segments: list[str] = []
     for step in parent:
@@ -444,7 +448,7 @@ def _same_object(old: Any, new: Any) -> bool:
 class _Differ:
     def __init__(self, context: _Context) -> None:
         self.context = context
-        self.changes: list[Any] = []
+        self.changes: list[Change] = []
 
     # -- emitting ----------------------------------------------------------------------------
 

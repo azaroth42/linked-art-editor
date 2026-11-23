@@ -786,3 +786,23 @@ steps. Notes for the steps that meet it, and two choices the owner may want to c
    an event QLever now rejects or whose revision is unreadable, the worker exits 1 and does so
    again at each restart (pending events wait). Nothing in this step can produce that state; a
    later step should decide between skipping with an alarm and a rebuild.
+
+## Step 1.14
+
+1. **Who may call `POST /api/records/{id}/draft/diff`** (contract `docs/contracts/1.14-revisions.md`
+   §6, recorded here as asked). The route needs `publish` (spec §4.3 gives the diff against the
+   published revision to the Editor; ADR-0035 item 2). Phase 4 Step 4.2's graph overlay calls
+   `draft/diff` to show what the draft changed, for users who may hold only `edit_draft`
+   (Collaborators); as built they get 403 `LAE-AUTH-001`. Whether to relax the permission to
+   `edit_draft` (the diff reveals nothing a Collaborator cannot already see in the draft and the
+   published record) is the owner's call.
+2. **The `reorder` share of the property test** (contract §5 test 14 and §7 item 2). The WIP
+   generator gave a `reorder` change in about 4% of edited corpus records. Measured cause, from
+   3000 applications of the `reorder` edit alone: 63% of the picks were records with no array of
+   two or more items (the edit did nothing), and 41% of the rest gave the original order back
+   (most such arrays hold two items, so a shuffle or a move is the identity half the time); in
+   every case where the order did change, the diff reported a `reorder`. The diff was not at
+   fault. The edit now always changes the order of an array that has two different items, it
+   has three of the fifteen slots in the edit list, and half the examples start from a record
+   that has such an array (two in five corpus records do). Measured over 30 runs of 200 examples:
+   10% to 25% of examples have a `reorder`; the test requires at least 5%.
