@@ -19,7 +19,7 @@ from lae.bootstrap.common import asyncpg_dsn
 from lae.corpus import CORPUS_DIR, load_record
 from lae.settings import Settings
 
-TABLES = "records, entity_labels, sync_state, outbox_events"
+TABLES = "records, record_aliases, qa_findings, entity_labels, sync_state, outbox_events"
 BASE_URI = "https://editor.example.org/id/"
 
 BROWN_TEA_POT = "institutional/ycba-object-5497f1dd-415f-4c05-b593-2a87e00d2ee2.json"
@@ -29,7 +29,13 @@ NIGHT_WATCH = "linkedart/object-nightwatch-1.json"
 YCBA_PERSON = "institutional/ycba-person-85917f42-4d09-4759-8e8c-39851db1af87.json"
 """An institutional record that validates."""
 YUAG_OBJECT = "institutional/yuag-obj-31619.json"
-"""Fails JSON Schema: ``used_for`` is an object (tests/corpus/KNOWN_FAILURES.md)."""
+"""Fails JSON Schema: ``used_for`` is an object (tests/corpus/KNOWN_FAILURES.md). It is a
+member of ``YUAG_SET``."""
+YUAG_SET = "institutional/yuag-set-6.json"
+"""The set ``YUAG_OBJECT`` refers to in ``member_of``."""
+YCBA_OBJECT = "institutional/ycba-object-71b6123e-ce31-467d-b4a2-692b95eca677.json"
+"""Refers to ``YCBA_SET`` in ``member_of``."""
+YCBA_SET = "institutional/ycba-set-850172b2-1cf0-4976-bb36-115c39f764dc.json"
 
 
 def corpus(name: str) -> dict[str, Any]:

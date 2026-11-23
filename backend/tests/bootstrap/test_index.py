@@ -124,7 +124,7 @@ def test_build_serve_and_update_a_bootstrapped_index(
     """Build from an export, serve it, and apply the update a first publish sends (Step 1.11)."""
     lines: set[str] = set()
     for name in (BROWN_TEA_POT, YCBA_PERSON):
-        record, _, _ = prepare(SourceItem(name, corpus_path(name).read_bytes()), BASE_URI)
+        record, _ = prepare(SourceItem(name, corpus_path(name).read_bytes()), BASE_URI, 1)
         assert record is not None
         lines |= expand_to_ntriples(json.loads(record.data), 1, record_uri=record.uri)
     painting = "http://vocab.getty.edu/aat/300033618"

@@ -17,6 +17,13 @@
   told: the code and path of the first error in the one alternative whose ``type`` the instance
   has.
 
+One class of error is not reported: a ``const`` / ``enum`` violation on the ``type`` of a root
+``equivalent`` entry whose ``type`` is the record's own. ``event.json`` and ``abstract.json``
+allow only ``Activity`` and ``LinguisticObject`` references there, although they are also the
+schemas of ``Event``, ``Period`` and ``PropositionalObject`` records, whose equivalents are of
+those classes. Every re-minted record carries its source URI in ``equivalent`` with its own
+class (ADR-0030), so without this no such record could be published.
+
 The ``id`` of every embedded node is removed first, because the public schema does not allow
 ``id`` on most of them: an internal node IRI (``strip_internal_iris``), and an id the node
 brought with it from elsewhere (``lae.rdf.strip_embedded_ids``, ADR-0028; such a node is part of
@@ -272,6 +279,19 @@ def _diagnostics(errors: Iterator[ValidationError]) -> Iterator[Diagnostic]:
         yield diagnostic(code, path, "violation", _params(error), fallback=error.message)
 
 
+def _is_own_class_equivalent(error: ValidationError, record_type: Any) -> bool:
+    """True for a ``type`` error on a root ``equivalent`` entry of the record's own class."""
+    path = list(error.absolute_path)
+    return (
+        error.validator in ("const", "enum")
+        and len(path) == 3
+        and path[0] == "equivalent"
+        and path[2] == "type"
+        and isinstance(record_type, str)
+        and error.instance == record_type
+    )
+
+
 def validate_schema(
     jsonld: Any, record_uri: str | None = None, *, context_version: int | None = None
 ) -> list[Diagnostic]:
@@ -299,7 +319,12 @@ def validate_schema(
         document = strip_internal_iris(document, owner)
     found: list[Diagnostic] = []
     try:
-        found.extend(_diagnostics(validator.iter_errors(document)))
+        errors = (
+            error
+            for error in validator.iter_errors(document)
+            if not _is_own_class_equivalent(error, record_type)
+        )
+        found.extend(_diagnostics(errors))
     except Unresolvable as error:
         found.append(diagnostic(SCHEMA_REF, "", "violation", {"ref": error.ref}))
     return found

@@ -6,9 +6,10 @@ every record with ``lae.rdf.expand_to_ntriples``, the production expansion with 
 ownership and sanitation checks, using the record's own ``records.context_version``. The main
 process appends what comes back to the output file, in completion order; each record's lines
 are sorted. A record that raises ``ExpansionError``, or has an id that cannot be repaired, is
-written to the report and skipped. With an output name ending in ``.gz``, each worker
-gzip-compresses its batch, and the members concatenate into one valid gzip file, so compression
-runs in parallel too.
+written to the report and skipped; ``lae bootstrap load`` rejects such records already
+(ADR-0030), so this only happens to rows that came in some other way. With an output name
+ending in ``.gz``, each worker gzip-compresses its batch, and the members concatenate into one
+valid gzip file, so compression runs in parallel too.
 
 **Sidecar labels.** For every ``entity_labels`` row whose ``source`` is not ``local``, the file
 gets ``<uri> rdf:type <class>`` and one ``<uri> rdfs:label "label"@lang`` per language, as quads in

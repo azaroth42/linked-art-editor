@@ -11,6 +11,7 @@ import pytest
 import lae.bootstrap.aat
 import lae.bootstrap.export
 import lae.bootstrap.load
+import lae.bootstrap.rewrite
 from lae.bootstrap.cli import EXIT_FAILED
 from lae.cli import HANDLERS, NOT_IMPLEMENTED, main
 from lae.settings import get_settings
@@ -35,6 +36,7 @@ def test_bootstrap_is_implemented() -> None:
         ["bootstrap", "nope"],
         ["bootstrap", "load"],
         ["bootstrap", "export-nt"],
+        ["bootstrap", "rewrite-refs", "--input", "x"],
         ["bootstrap", "build-index", "--nt", "x.nt"],
         ["bootstrap", "aat-labels"],
     ],
@@ -69,6 +71,16 @@ def test_each_stage_runs_and_prints_its_summary(
     assert (kwargs["batch"], kwargs["streams"], kwargs["workers"]) == (5, 2, 3)
     assert kwargs["report_path"] == Path("r.jsonl")
 
+    async def rewrite(**kwargs: Any) -> dict[str, Any]:
+        calls["rewrite"] = (None, kwargs)
+        return {"stage": "rewrite"}
+
+    monkeypatch.setattr(lae.bootstrap.rewrite, "rewrite_refs", rewrite)
+    assert main(["bootstrap", "rewrite-refs", "--workers", "2", "--streams", "1"]) == 0
+    assert json.loads(capsys.readouterr().out) == {"stage": "rewrite"}
+    assert (calls["rewrite"][1]["workers"], calls["rewrite"][1]["streams"]) == (2, 1)
+    assert calls["rewrite"][1]["batch"] == 10_000
+
     assert main(["bootstrap", "export-nt", "--out", "x.nt.gz", "--workers", "4"]) == 0
     assert calls["export"][0] == Path("x.nt.gz")
     assert calls["export"][1]["workers"] == 4
@@ -85,3 +97,16 @@ def test_a_failed_index_build_exits_non_zero(
     argv = ["bootstrap", "build-index", "--nt", str(nt), "--dir", str(tmp_path / "i")]
     assert main(argv) == EXIT_FAILED
     assert "lae bootstrap build-index:" in capsys.readouterr().err
+
+
+def test_a_load_that_cannot_run_exits_non_zero(
+    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    from lae.bootstrap.common import BootstrapError
+
+    async def busy(path: Path, **kwargs: Any) -> dict[str, Any]:
+        raise BootstrapError("another lae bootstrap load or rewrite-refs is running")
+
+    monkeypatch.setattr(lae.bootstrap.load, "load", busy)
+    assert main(["bootstrap", "load", "--input", "in"]) == EXIT_FAILED
+    assert "lae bootstrap load: another lae bootstrap" in capsys.readouterr().err

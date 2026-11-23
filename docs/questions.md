@@ -409,34 +409,49 @@ Implemented as decided above (items 3 and 4). Points for a human:
 
 ## Step 1.12
 
-`lae bootstrap` (load, export-nt, build-index, aat-labels) is built and was run at 1M records
-(`docs/spikes/S6-bootstrap.md`, "Phase 1 actual"). Points for a human:
+`lae bootstrap` (load, rewrite-refs, export-nt, build-index, aat-labels) is built and was run at
+1M records (`docs/spikes/S6-bootstrap.md`, "Phase 1 actual" and "ADR-0030 rerun"). The four
+questions the first version raised are answered by the owner decisions of 2026-11-22 above and
+implemented as ADR-0030:
 
-1. **Records that keep a URI from elsewhere (ADR-0024).** The spec does not say what a bulk load
-   does with records whose `id` is not `<base_uri><uuid>`; the whole golden corpus is such records.
-   They keep their URI as `records.uri` and get a UUIDv7 `records.id`; nothing is re-minted or
-   rewritten. Confirm, or ask for re-minting (a second pass that rewrites references and keeps the
-   source URI as `equivalent`). Consequence for Phase 2 Step 2.7: `owner_of` does not recognise
-   these records' node IRIs.
-2. **JSON Schema skips a large share of real-looking data.** The load validates with JSON Schema
-   only and skips failures, as the guide says: 60 of the 244 corpus records (`KNOWN_FAILURES.md`)
-   and 37 % of the 1M S6 synthetic records (370,825), whose templates inherit the corpus failures
-   (references without `id`, entities embedded in `about`, `@context` on nested nodes, cardinality
-   drift). Each is listed in the report with its errors. Is skip-and-report what a migration
-   should do, or should a later step offer to load such records anyway (with a QA finding), so
-   that nothing from a source is left out?
-3. **Records in Postgres but not in QLever.** Expansion rejects values it cannot write
-   (`lae.rdf` raises instead of repairing): 14 of the 629,163 loaded synthetic records have a
-   year-only or `c. 1850` `xsd:dateTime` and were left out of the export (reported,
-   `LAE-BOOT-007`); Spike S6 padded year-only dates instead. They stay in `records` and cannot be
-   published until fixed, and the nightly consistency audit will flag them. Confirm, or ask for
-   year-only dates to be padded at load as S6 did, or for the load to reject such records too
-   (it would have to expand every record twice).
-4. **No stub normalization at load.** Publish strips `_label` from references whose target has an
-   `entity_labels` row (`normalize_refs`, spec §3.2); the bulk load does not, because a single
-   streaming pass does not know every target yet. Labels are transcluded on read either way, so
-   stored `_label`s are only stale copies until the record is first published. Say if a
-   post-load normalization pass is wanted.
+1. **Records that keep a URI from elsewhere (ADR-0024).** **Resolved: re-minted** as
+   `<base_uri><uuidv7>`, source URI in `equivalent` and `record_aliases`, references rewritten,
+   aliases on the editor's host redirected (ADR-0030 §1). `owner_of` recognises every record
+   again, so Phase 2 Step 2.7 needs no special case.
+2. **JSON Schema skipped a large share of real-looking data.** **Resolved: load and flag.** All
+   244 corpus records load (60 flagged); the 1M synthetic set keeps the 37 % it used to skip.
+   Each failure is a `qa_findings` row (ADR-0030 §2).
+3. **Records in Postgres but not in QLever.** **Resolved: rejected at load** when RDF expansion
+   refuses them (`LAE-BOOT-007`, listed in the report), so the two stores hold the same records
+   (ADR-0030 §3). Year-only dates are not padded.
+4. **No stub normalization at load.** **Resolved: a second pass strips `_label`** from references
+   whose target has an `entity_labels` row (ADR-0030 §4).
+
+Points from the rework for a human:
+
+5. **Upstream schema: `equivalent` on `Event`, `Period` and `PropositionalObject`.** `event.json`
+   allows only `Activity` references in `equivalent` and `abstract.json` only `LinguisticObject`
+   ones, although those files are also the schemas of `Event`, `Period` and
+   `PropositionalObject` records. A re-minted record carries its source URI in `equivalent` with
+   its own class, so every such record would fail validation and could not be published.
+   `validate_schema` now accepts a root `equivalent` entry of the record's own class (ADR-0030
+   §6); the vendored files are untouched. Worth reporting to `linked-art/json-validator`: each
+   file's `equivalent` should accept references of every class the file describes.
+6. **Records of no Linked Art record class are still rejected** (`LAE-BOOT-004`), not loaded and
+   flagged: there is no schema to flag them against and no profile to edit them with. Say if
+   they should be loaded too.
+7. **`access_point` is never rewritten.** Its `id` is an address to fetch. If a source used its
+   record URIs as access points, those keep the old URI.
+8. **Aliases on other hosts.** The editor redirects an alias only on the host of `LAE_BASE_URI`
+   (both `http` and `https`). For an institution whose old URIs live on another host, that host
+   has to redirect to the editor; `record_aliases` has the map (`alias_uri` → `/id/{record_id}`).
+9. **Unresolved-reference findings are not written at load.** ADR-0006 pairs a kept `_label` with
+   a `ref.unresolved_target` finding; that is the Step 3.10 sweep. On real data most references
+   are to external authorities, so writing them at load would be millions of rows.
+10. **A load after the index was built needs a rebuild.** `load` and `rewrite-refs` change
+    `records` without outbox events, as the first load does; run `export-nt` and `build-index`
+    afterwards. Phase 2's import path (through publish) is the way to add records to a live
+    system.
 
 ## Step 1.9
 

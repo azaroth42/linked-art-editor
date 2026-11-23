@@ -6,30 +6,34 @@ import hashlib
 import json
 import re
 from typing import Any
-from uuid import UUID
 
 import orjson
 import pytest
 
 from lae.api.records import record_etag
+from lae.bootstrap import records as records_module
 from lae.bootstrap.common import (
+    EXPANSION_FAILED,
     INVALID_ID,
     NO_RECORD_URI,
     NOT_A_RECORD,
-    SCHEMA_INVALID,
+    PREPARE_FAILED,
     UNKNOWN_TYPE,
 )
 from lae.bootstrap.records import (
+    ParsedItem,
     PreparedRecord,
+    build_batch,
+    parse,
+    parse_batch,
     prepare,
-    prepare_batch,
-    schema_errors,
 )
 from lae.bootstrap.source import SourceItem, iter_source
 from lae.corpus import CORPUS_DIR
-from lae.ids import is_internal_node_iri, new_uuid7
+from lae.ids import is_internal_node_iri, new_uuid7, record_uri
 from lae.projection import canonical_json, strip_internal_iris
 from lae.rdf import expand_to_ntriples
+from lae.validation.schema import validate_schema
 from tests.bootstrap.conftest import BASE_URI, BROWN_TEA_POT, NIGHT_WATCH, YUAG_OBJECT, corpus
 
 KNOWN_FAILURES = set(
@@ -46,7 +50,7 @@ def item(doc: Any, source: str = "test.json") -> SourceItem:
 
 
 def prepared(doc: dict[str, Any]) -> PreparedRecord:
-    record, failure, _ = prepare(item(doc), BASE_URI)
+    record, failure = prepare(item(doc), BASE_URI, 1)
     assert failure is None, failure
     assert record is not None
     return record
@@ -67,24 +71,33 @@ def embedded_nodes(value: Any, *, root: bool = True) -> list[dict[str, Any]]:
     return found
 
 
-def test_a_corpus_record_gets_node_iris_an_etag_and_labels() -> None:
+def test_a_corpus_record_is_reminted_and_gets_node_iris_an_etag_and_labels() -> None:
     source = corpus(BROWN_TEA_POT)
     record = prepared(source)
     data = json.loads(record.data)
-    assert record.uri == source["id"]
+    assert record.id.version == 7
+    assert record.uri == record_uri(record.id, base_uri=BASE_URI) == data["id"]
+    assert (record.source_uri, record.alias) == (source["id"], source["id"])
     assert record.type == "HumanMadeObject"
+    assert record.findings == []
     nodes = embedded_nodes(data)
     assert nodes and all(isinstance(node.get("id"), str) for node in nodes)
     minted = [node["id"] for node in nodes if is_internal_node_iri(node["id"], record.uri)]
     assert minted
-    assert strip_internal_iris(data, record.uri) == source
+    # The public form is the source with the new id and the source URI as an equivalent.
+    public = strip_internal_iris(data, record.uri)
+    own = {"id": source["id"], "type": "HumanMadeObject"}
+    assert public == {**source, "id": record.uri, "equivalent": [*source["equivalent"], own]}
     assert record.data.encode() == canonical_json(data)
     assert record.etag == hashlib.blake2b(canonical_json(data), digest_size=16).hexdigest()
+    assert record.etag == record_etag(data)
     assert json.loads(record.labels) == {"en": "The Brown Tea Pot"}
     assert record.default_label == "The Brown Tea Pot"
     assert record.primary_classification == "http://vocab.getty.edu/aat/300033618"
     assert record.source == "test.json"
-    expand_to_ntriples(data, 1)  # every embedded node has an IRI: no BlankNodeError
+    lines = expand_to_ntriples(data, 1)  # every embedded node has an IRI: no BlankNodeError
+    equivalent = f"<{record.uri}> <https://linked.art/ns/terms/equivalent> <{source['id']}> ."
+    assert equivalent in lines
 
 
 def test_labels_in_every_language() -> None:
@@ -93,17 +106,38 @@ def test_labels_in_every_language() -> None:
     assert record.default_label == "The Night Watch"
 
 
-def test_the_etag_is_the_one_publish_computes() -> None:
-    record = prepared(corpus(BROWN_TEA_POT))
-    assert record.etag == record_etag(json.loads(record.data))
-
-
-def test_a_local_uri_keeps_its_uuid_and_a_foreign_one_gets_a_uuidv7() -> None:
+def test_a_local_uri_is_kept_with_its_uuid_and_gets_no_alias() -> None:
     local_id = new_uuid7()
-    local = {**corpus(BROWN_TEA_POT), "id": f"{BASE_URI}{local_id}"}
-    assert prepared(local).id == local_id
-    foreign = prepared(corpus(BROWN_TEA_POT))
-    assert isinstance(foreign.id, UUID) and foreign.id.version == 7
+    local_uri = f"{BASE_URI}{local_id}"
+    record = prepared({**corpus(BROWN_TEA_POT), "id": local_uri})
+    assert (record.id, record.uri, record.source_uri, record.alias) == (
+        local_id,
+        local_uri,
+        local_uri,
+        None,
+    )
+    assert json.loads(record.data)["equivalent"] == corpus(BROWN_TEA_POT)["equivalent"]
+
+
+def test_a_reminted_record_that_is_loaded_again_as_exported_is_unchanged() -> None:
+    """Stored JSON-LD (with node IRIs) is valid input: nothing is minted or added twice."""
+    record = prepared(corpus("linkedart/visual-nightwatch-1.json"))
+    stored = json.loads(record.data)
+    again = prepared(stored)
+    assert json.loads(again.data) == stored
+    assert (again.id, again.alias, again.etag) == (record.id, None, record.etag)
+
+
+def test_node_iris_under_the_source_uri_move_with_the_record() -> None:
+    source = corpus(BROWN_TEA_POT)
+    node = f"{source['id']}/node/{new_uuid7()}"
+    source["identified_by"][0]["id"] = node
+    record = prepared(source)
+    data = json.loads(record.data)
+    assert data["identified_by"][0]["id"] == record.uri + node[len(source["id"]) :]
+    assert all(
+        source["id"] not in line or "equivalent" in line for line in expand_to_ntriples(data, 1)
+    )
 
 
 @pytest.mark.parametrize(
@@ -114,17 +148,19 @@ def test_a_local_uri_keeps_its_uuid_and_a_foreign_one_gets_a_uuidv7() -> None:
         (b'{"type": "Type", "_label": "x"}', NO_RECORD_URI),
         (b'{"id": "no-scheme", "type": "Type", "_label": "x"}', NO_RECORD_URI),
         (b'{"id": "urn:x:1", "type": "Thing", "_label": "x"}', UNKNOWN_TYPE),
+        (b'{"id": "urn:x:1", "type": ["Type", "Set"], "_label": "x"}', UNKNOWN_TYPE),
+        (b'{"id": "urn:x:1", "_label": "x"}', UNKNOWN_TYPE),
     ],
 )
 def test_items_that_are_not_records(text: bytes, code: str) -> None:
-    record, failure, _ = prepare(SourceItem("in.jsonl:3", text), BASE_URI)
+    record, failure = prepare(SourceItem("in.jsonl:3", text), BASE_URI, 1)
     assert record is None
     assert failure is not None and failure.code == code and failure.source == "in.jsonl:3"
 
 
 def test_an_unrepairable_id_below_the_root_is_reported() -> None:
     doc = {**corpus(BROWN_TEA_POT), "member_of": [{"id": "https:/no-host", "type": "Set"}]}
-    record, failure, _ = prepare(item(doc), BASE_URI)
+    record, failure = prepare(item(doc), BASE_URI, 1)
     assert record is None
     assert failure is not None
     assert (failure.code, failure.uri, failure.errors) == (
@@ -137,39 +173,77 @@ def test_an_unrepairable_id_below_the_root_is_reported() -> None:
 def test_repairable_ids_are_repaired_and_counted() -> None:
     doc = corpus(BROWN_TEA_POT)
     doc["id"] = doc["id"] + " "
-    record, failure, repaired = prepare(item(doc), BASE_URI)
-    assert failure is None and record is not None
-    assert record.uri == corpus(BROWN_TEA_POT)["id"]
-    assert repaired == 1
+    parsed = parse(item(doc))
+    assert isinstance(parsed, ParsedItem) and parsed.repaired_ids == 1
+    record = prepared(doc)
+    assert record.source_uri == corpus(BROWN_TEA_POT)["id"]
 
 
-def test_a_schema_failure_lists_the_errors() -> None:
-    record, failure, _ = prepare(item(corpus(YUAG_OBJECT)), BASE_URI)
-    assert record is None and failure is not None
-    assert failure.code == SCHEMA_INVALID
-    assert failure.errors == ["/used_for type: is not of type 'array'"]
-
-
-def test_schema_validation_sees_the_public_form_without_node_iris() -> None:
-    """Many schemas forbid ``id`` on embedded nodes (129 of the 184 valid corpus records would
-    fail with node IRIs), so validation runs on the record with internal IRIs stripped."""
-    record = prepared(corpus("linkedart/visual-nightwatch-1.json"))
+def test_a_schema_failure_is_loaded_and_flagged() -> None:
+    record = prepared(corpus(YUAG_OBJECT))
+    assert [code for code, _ in record.findings] == ["LAE-SCHEMA-type"]
+    params = json.loads(record.findings[0][1])
+    assert params["source"] == "bootstrap"
+    assert params["count"] == 1
+    assert [entry["path"] for entry in params["diagnostics"]] == ["/used_for"]
+    assert params["diagnostics"][0]["params"]["validator_value"] == "array"
+    # The findings are exactly what validation says about the stored record.
     stored = json.loads(record.data)
-    assert schema_errors(stored) == [
-        "/referred_to_by/0 additionalProperties: Additional properties are not allowed "
-        "('id' was unexpected)"
+    assert [d.code for d in validate_schema(stored, record.uri)] == ["LAE-SCHEMA-type"]
+    assert expand_to_ntriples(stored, 1, record_uri=record.uri)
+
+
+def test_findings_are_grouped_by_code_with_a_count() -> None:
+    doc = corpus(BROWN_TEA_POT)
+    doc["member_of"] = {"id": "urn:x:set", "type": "Set"}
+    doc["shows"] = {"id": "urn:x:image", "type": "VisualItem"}
+    del doc["_label"]
+    record = prepared(doc)
+    by_code = {code: json.loads(params) for code, params in record.findings}
+    assert set(by_code) == {"LAE-SCHEMA-required", "LAE-SCHEMA-type"}
+    assert by_code["LAE-SCHEMA-type"]["count"] == 2
+    assert [entry["path"] for entry in by_code["LAE-SCHEMA-type"]["diagnostics"]] == [
+        "/member_of",
+        "/shows",
     ]
-    # Input that already carries node IRIs (an export, the S6 generator) loads unchanged.
-    again = prepared(stored)
-    assert json.loads(again.data) == stored
-    assert again.etag == record.etag
+    assert by_code["LAE-SCHEMA-required"]["diagnostics"][0]["params"]["missing"] == ["_label"]
 
 
-def test_every_corpus_file_loads_unless_it_is_a_known_schema_failure() -> None:
-    batch = prepare_batch(iter_source(CORPUS_DIR), BASE_URI)
-    assert {failure.source for failure in batch.failures} == KNOWN_FAILURES
-    assert {failure.code for failure in batch.failures} == {SCHEMA_INVALID}
-    assert len(batch.records) == 276 - len(KNOWN_FAILURES)
+def test_a_record_that_cannot_be_expanded_is_rejected() -> None:
+    doc = corpus(BROWN_TEA_POT)
+    doc["produced_by"]["timespan"] = {
+        "type": "TimeSpan",
+        "begin_of_the_begin": "c. 1850",
+        "end_of_the_end": "1850",
+    }
+    record, failure = prepare(item(doc), BASE_URI, 1)
+    assert record is None and failure is not None
+    assert (failure.code, failure.uri, failure.stage) == (EXPANSION_FAILED, doc["id"], "load")
+    assert failure.errors[0].startswith("InvalidLiteralError: ")
+
+
+def test_an_unexpected_error_rejects_one_record_not_the_batch(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    def explode(*args: Any, **kwargs: Any) -> Any:
+        raise RuntimeError("boom")
+
+    monkeypatch.setattr(records_module, "assign_node_iris", explode)
+    record, failure = prepare(item(corpus(BROWN_TEA_POT)), BASE_URI, 1)
+    assert record is None and failure is not None
+    assert (failure.code, failure.errors) == (PREPARE_FAILED, ["RuntimeError: boom"])
+
+
+def test_every_corpus_file_loads_and_the_known_schema_failures_are_flagged() -> None:
+    """Zero records lost: all 276 corpus files expand, so all are loaded (ADR-0030)."""
+    parsed, not_records = parse_batch(iter_source(CORPUS_DIR))
+    assert not_records == []
+    batch = build_batch(parsed, BASE_URI, 1)
+    assert batch.failures == []
+    assert len(batch.records) == 276
+    assert {record.source for record in batch.records if record.findings} == KNOWN_FAILURES
+    assert len({record.uri for record in batch.records}) == 276
     for record in batch.records:
+        assert record.alias == record.source_uri
         lines = expand_to_ntriples(orjson.loads(record.data), 1, record_uri=record.uri)
         assert lines

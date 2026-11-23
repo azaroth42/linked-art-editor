@@ -144,8 +144,8 @@ directory). From Phase 1 on, `lae bootstrap` builds the index from Postgres:
 
 ```sh
 cd backend
-uv run lae bootstrap load --input <dir-or-jsonl>           # records + entity_labels (COPY)
 uv run lae bootstrap aat-labels --csv <aat_dataset.csv>    # AAT labels (Phase 1 sidecar stand-in)
+uv run lae bootstrap load --input <dir-or-jsonl>           # records, labels, aliases, findings (COPY)
 uv run lae bootstrap export-nt --out /data/export.nt.gz     # records + sidecar labels as N-Quads
 uv run lae bootstrap build-index --nt /data/export.nt.gz --dir <fresh index dir>
 ```
@@ -153,7 +153,19 @@ uv run lae bootstrap build-index --nt /data/export.nt.gz --dir <fresh index dir>
 `build-index` builds in a fresh directory, starts the server with `--persist-updates` on the
 port of `LAE_QLEVER_URL` (with `LAE_QLEVER_ACCESS_TOKEN` for updates), records the watermark in
 `sync_state`, and prints the command that stops exactly that server. Each command prints a JSON
-summary; skipped records are listed in a JSON Lines report. Timings: `docs/spikes/S6-bootstrap.md`.
+summary; records that were not loaded are listed in a JSON Lines report. Timings:
+`docs/spikes/S6-bootstrap.md`.
+
+`load` gives every record that arrives with a URI from elsewhere a new `<LAE_BASE_URI><uuid>` URI
+and keeps the old one in `record_aliases` (ADR-0030), so set `LAE_BASE_URI` before the first
+load. Labels loaded before the records let `load` strip the `_label` of references to them. A
+record that fails JSON Schema is loaded and listed in `qa_findings`; one that cannot be written
+to RDF is rejected. Loading the same input again writes nothing. After an interrupted `load`,
+or after loading more labels, run `uv run lae bootstrap rewrite-refs`; after any `load` or
+`rewrite-refs` on a database that already has an index, run `export-nt` and `build-index` again.
+Old URIs on the editor's own host are redirected by the `api` process: route requests that match
+nothing else to it. Old URIs on another host must be redirected there
+(`SELECT alias_uri, record_id FROM record_aliases` gives the map).
 
 To run qlever-control by hand, work in the index directory and pass the Qleverfile:
 

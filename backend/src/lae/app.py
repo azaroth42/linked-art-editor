@@ -2,11 +2,12 @@
 
 ``create_app`` registers the routers from ``lae.api``, the health endpoints, request logging,
 authentication (``lae.auth.setup.install_auth``: session cookie, OIDC client, settings checks that
-raise ``AuthConfigError``), and the handler that turns ``lae.api.errors.ApiError`` into a
-structured ``{code, path, params}`` body. Its lifespan owns the two process-wide resources, both
-kept on ``app.state``: the SQLAlchemy async engine (with its session factory, see
-``lae.db.session.get_session``) and one ``httpx.AsyncClient`` for outgoing calls (QLever,
-``crdt-ws``).
+raise ``AuthConfigError``), the handler that turns ``lae.api.errors.ApiError`` into a
+structured ``{code, path, params}`` body, and the 404 handler that redirects a request for a
+record alias to the record (``not_found_handler``, ADR-0030). Its lifespan owns the two
+process-wide resources, both kept on ``app.state``: the SQLAlchemy async engine (with its
+session factory, see ``lae.db.session.get_session``) and one ``httpx.AsyncClient`` for outgoing
+calls (QLever, ``crdt-ws``).
 
 The built Public Reader script is mounted under ``/reader/assets`` (``lae.reader.assets``).
 
@@ -23,9 +24,11 @@ from typing import Annotated, Any, Literal
 
 import httpx
 from fastapi import APIRouter, Depends, FastAPI, Request, Response, status
+from fastapi.exception_handlers import http_exception_handler
 from pydantic import BaseModel, SecretStr
 from sqlalchemy import text
 from sqlalchemy.ext.asyncio import AsyncEngine
+from starlette.exceptions import HTTPException as StarletteHTTPException
 
 import lae
 from lae import api
@@ -147,6 +150,21 @@ async def health_ready(
     )
 
 
+async def not_found_handler(request: Request, exc: Exception) -> Response:
+    """Answer a 404 for an unrouted path with a 301 when the path is a record alias (ADR-0030).
+
+    Every other ``HTTPException`` gets FastAPI's default answer.
+    """
+    from lae.api.public import alias_fallback
+
+    assert isinstance(exc, StarletteHTTPException)
+    if exc.status_code == status.HTTP_404_NOT_FOUND:
+        redirect = await alias_fallback(request)
+        if redirect is not None:
+            return redirect
+    return await http_exception_handler(request, exc)
+
+
 def create_app(
     settings: Settings, *, http_transport: httpx.AsyncBaseTransport | None = None
 ) -> FastAPI:
@@ -183,6 +201,7 @@ def create_app(
     install_auth(app, settings, http_transport)
     app.add_middleware(RequestContextMiddleware)
     app.add_exception_handler(ApiError, api_error_handler)
+    app.add_exception_handler(StarletteHTTPException, not_found_handler)
     app.include_router(health_router)
     for router in api.routers():
         app.include_router(router)

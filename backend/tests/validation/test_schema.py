@@ -239,3 +239,35 @@ def test_every_keyword_the_vendored_schemas_use_is_known() -> None:
     assert used - passing_on <= set(REPORTED_KEYWORDS)
     every_keyword = set(REPORTED_KEYWORDS) | (passing_on - {"then", "else"})
     assert set(Draft7Validator.VALIDATORS) == every_keyword
+
+
+@pytest.mark.parametrize(
+    ("record_type", "wrong_type"),
+    [
+        ("Event", "Activity"),
+        ("Period", "Event"),
+        ("PropositionalObject", "LinguisticObject"),
+        ("HumanMadeObject", "Person"),
+        ("Activity", "Event"),
+    ],
+)
+def test_an_equivalent_of_the_records_own_class_is_accepted(
+    record_type: str, wrong_type: str
+) -> None:
+    """ADR-0030 puts a re-minted record's source URI in ``equivalent`` with the record's class;
+    ``event.json`` and ``abstract.json`` name another class there. Any other class is an error."""
+    record = {
+        "@context": "https://linked.art/ns/v1/linked-art.json",
+        "id": "https://editor.example.org/id/1",
+        "type": record_type,
+        "_label": "A record",
+        "equivalent": [{"id": "https://source.example.org/1", "type": record_type}],
+    }
+    assert validate_schema(record) == []
+    if wrong_type in ("Activity", "LinguisticObject") and record_type != "Activity":
+        return  # the class the upstream schema names for this file
+    record["equivalent"] = [{"id": "https://source.example.org/1", "type": wrong_type}]
+    found = validate_schema(record)
+    assert [(item.code, item.path) for item in found] == [
+        ("LAE-SCHEMA-const", "/equivalent/0/type")
+    ]

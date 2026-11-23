@@ -21,16 +21,21 @@ INVALID_ID: Final = "LAE-BOOT-003"
 """An ``id`` below the root cannot be made a valid IRI."""
 UNKNOWN_TYPE: Final = "LAE-BOOT-004"
 """The root ``type`` is not a Linked Art record class (no JSON Schema for it)."""
-SCHEMA_INVALID: Final = "LAE-BOOT-005"
-"""The record does not validate against the JSON Schema for its type."""
+# LAE-BOOT-005 (the record fails JSON Schema) is retired and not reused: such a record is loaded
+# and flagged in ``qa_findings`` instead (ADR-0030).
 DUPLICATE_URI: Final = "LAE-BOOT-006"
-"""A record with this URI is already loaded, or appeared earlier in the input."""
+"""A record with this source URI is already loaded (as a record URI or as an alias), or
+appeared earlier in the input."""
 EXPANSION_FAILED: Final = "LAE-BOOT-007"
-"""``lae.rdf.expand_to_ntriples`` raised ``ExpansionError`` (export)."""
+"""``lae.rdf.expand_to_ntriples`` raised ``ExpansionError``: the record cannot be written to RDF.
+At load the record is rejected (ADR-0030); at export it is left out and reported."""
 SIDECAR_LABEL_INVALID: Final = "LAE-BOOT-008"
 """A sidecar ``entity_labels`` row has a URI, type or source that cannot be written as RDF."""
 CSV_ROW_INVALID: Final = "LAE-BOOT-009"
 """An AAT CSV row has no numeric ``aat_code`` or no ``preferred_name``, or repeats a code."""
+
+PREPARE_FAILED: Final = "LAE-BOOT-010"
+"""Preparing the record raised an error no other code covers; the record is rejected."""
 
 QLEVER_INDEX_WATERMARK: Final = "qlever_index_watermark"
 """``sync_state`` key: id of the last outbox event reflected in the live QLever index."""
@@ -42,6 +47,16 @@ BOOTSTRAP_CONTEXT_VERSION: Final = "bootstrap_context_version"
 """``sync_state`` key: context version of the bulk load (ADR-0007)."""
 BOOTSTRAP_EXPANDER_VERSION: Final = "bootstrap_expander_version"
 """``sync_state`` key: ``lae.rdf.EXPANDER_VERSION`` of the bulk load (ADR-0007)."""
+BOOTSTRAP_REWRITE_SINCE: Final = "bootstrap_rewrite_since"
+"""``sync_state`` key, present while a load is unfinished: the time (ISO 8601) from which
+``records.created_at`` marks rows whose references have not been rewritten yet (ADR-0030)."""
+
+LOAD_LOCK: Final = 0x1AE0_B007
+"""Advisory lock key: one ``lae bootstrap load`` or ``rewrite-refs`` at a time per database."""
+
+
+class BootstrapError(RuntimeError):
+    """A bootstrap stage cannot run or complete; the CLI prints the message and exits 1."""
 
 
 def asyncpg_dsn(database_url: str) -> str:
@@ -70,7 +85,7 @@ class Failure:
     """One input item that a bootstrap stage skipped, and why."""
 
     stage: str
-    """``load``, ``export`` or ``aat-labels``."""
+    """``load``, ``rewrite``, ``export`` or ``aat-labels``."""
     source: str
     """Where the item came from: ``<file>``, ``<file>:<line>``, or a record URI."""
     code: str
