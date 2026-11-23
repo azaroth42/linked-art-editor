@@ -1,5 +1,6 @@
 # Every PR must be green on all five jobs before it merges (docs/agent-workflow.md §6).
-# No Docker: services (PostgreSQL, later QLever) are installed natively on the runner.
+# No Docker: PostgreSQL is installed natively on the runner. QLever is never run in CI: its
+# integration tests run locally only (docs/conventions.md, owner decision 2026-11-23).
 name: CI
 
 on:
@@ -35,8 +36,8 @@ jobs:
         with:
           database: lae_test
 
-      # QLever is not installed here: the tests that need it skip. The sync worker's QLever
-      # tests run in the `sync-integration` job below.
+      # QLever is not installed here: the tests that need it skip. Run them locally
+      # (backend/tests/sync/README.md).
 
       - uses: astral-sh/setup-uv@v10.4.0
         with:
@@ -85,86 +86,6 @@ jobs:
       - name: pytest
         working-directory: backend
         run: uv run --locked pytest -q -rs
-
-  # The sync worker against a real QLever 0.6.0 (Phase 1 Step 1.11, docs/contracts/1.11-sync-worker.md
-  # §5). QLever is the Homebrew tap the development machine uses (deploy/QLEVER_VERSION), whose
-  # binary is macOS arm64 only, hence macos-15. The tap is pinned to the commit that has
-  # qlever 0.6.0_1; a step fails unless qlever-server reports v0.6.0. PostgreSQL and pgvector
-  # come from Homebrew too. No Docker (ADR-0017). Runs every test in tests/sync that needs a
-  # database or QLever; with LAE_REQUIRE_QLEVER=1 a missing QLever fails instead of skipping.
-  sync-integration:
-    name: sync-integration
-    runs-on: macos-15
-    timeout-minutes: 30
-    env:
-      HOMEBREW_NO_AUTO_UPDATE: "1"
-      HOMEBREW_NO_INSTALL_CLEANUP: "1"
-      HOMEBREW_NO_INSTALLED_DEPENDENTS_CHECK: "1"
-      QLEVER_TAP_COMMIT: 205cc9d5183fd669c227e7ac7e1dbd0164573dd6 # qlever 0.6.0_1, 2026-08-24
-      LAE_TEST_DATABASE_URL: postgresql+asyncpg://lae:lae@localhost:5432/lae_test
-      LAE_TEST_QLEVER_PORT: "7024"
-      LAE_REQUIRE_QLEVER: "1"
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: QLever 0.6.0 (Homebrew tap qlever-dev/qlever, pinned)
-        run: |
-          brew tap qlever-dev/qlever
-          git -C "$(brew --repository qlever-dev/qlever)" fetch --quiet origin "$QLEVER_TAP_COMMIT"
-          git -C "$(brew --repository qlever-dev/qlever)" checkout --quiet "$QLEVER_TAP_COMMIT"
-          # Homebrew refuses formulae of a third-party tap until it is trusted.
-          brew trust qlever-dev/qlever
-          brew install qlever-dev/qlever/qlever
-          qlever-server --version
-          qlever-index --version
-          qlever --version
-
-      - name: QLever is v0.6.0
-        run: |
-          version="$(qlever-server --version)"
-          echo "$version"
-          case "$version" in
-            *"v0.6.0"*) ;;
-            *) echo "::error::expected qlever-server v0.6.0, got: $version"; exit 1 ;;
-          esac
-
-      - name: PostgreSQL 18 and pgvector (Homebrew)
-        run: |
-          brew install postgresql@18 pgvector
-          PG_BIN="$(brew --prefix postgresql@18)/bin"
-          echo "$PG_BIN" >> "$GITHUB_PATH"
-          "$PG_BIN/initdb" -D "$RUNNER_TEMP/pgdata" -U postgres --auth=trust --encoding=UTF8 --locale=C
-          "$PG_BIN/pg_ctl" -D "$RUNNER_TEMP/pgdata" -l "$RUNNER_TEMP/postgres.log" \
-            -o "-p 5432 -k $RUNNER_TEMP" -w start
-          "$PG_BIN/psql" -v ON_ERROR_STOP=1 -h localhost -U postgres -d postgres \
-            -c "CREATE ROLE lae LOGIN SUPERUSER PASSWORD 'lae'" \
-            -c "CREATE DATABASE lae_test OWNER lae"
-          PGPASSWORD=lae "$PG_BIN/psql" -v ON_ERROR_STOP=1 -h localhost -U lae -d lae_test \
-            -f "$GITHUB_WORKSPACE/deploy/postgres/init.sql"
-          PGPASSWORD=lae "$PG_BIN/psql" -h localhost -U lae -d lae_test -Atc \
-            "SELECT extname || ' ' || extversion FROM pg_extension ORDER BY 1"
-
-      - uses: astral-sh/setup-uv@v10.4.0
-        with:
-          version: "0.11.19"
-          enable-cache: true
-          cache-dependency-glob: backend/uv.lock
-          cache-python: true
-
-      - name: uv sync
-        working-directory: backend
-        run: uv sync --locked
-
-      - name: pytest -m integration tests/sync
-        working-directory: backend
-        run: uv run --locked pytest -m integration tests/sync -q -rs
-
-      - name: QLever and PostgreSQL logs
-        if: failure()
-        run: |
-          tail -n 100 "$RUNNER_TEMP/postgres.log" || true
-          find "$RUNNER_TEMP" /private/var/folders -name '*.server-log.txt' -newer "$GITHUB_WORKSPACE" \
-            -exec tail -n 100 {} \; 2>/dev/null || true
 
   frontend:
     name: frontend

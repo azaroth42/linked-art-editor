@@ -35,4 +35,4 @@ Phase 1 Step 1.11 builds `lae sync-worker`, which applies `outbox_events` to the
 - A record whose event is dead-lettered is stale in QLever until its next publish or a rebuild; the nightly audit (Steps 2.18, 3.10) is the backstop. A known race (a worker that lost its connection while a request was in flight) is recorded in `docs/questions.md`, Step 1.11.
 - QLever's `qlever_delta_triples` grows by 2 for a changed triple of the built index (and by 1 when the old triple was itself inserted by an update): the rebuild trigger counts churn.
 
-Evidence: `backend/tests/sync/` (`test_events.py`, `test_batch.py`, `test_replay_property.py` with Postgres and a pyoxigraph store; `test_qlever_integration.py` against QLever 0.6.0 in the `sync-integration` CI job).
+Evidence: `backend/tests/sync/` (`test_events.py`, `test_batch.py`, `test_replay_property.py` with Postgres and a pyoxigraph store; `test_qlever_integration.py` against QLever 0.6.0, run locally only, never in CI).

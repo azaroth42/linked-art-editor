@@ -760,12 +760,8 @@ steps. Notes for the steps that meet it, and two choices the owner may want to c
    {"deleted": 1, "inserted": 1}` for one `DELETE DATA`). Test 37 therefore builds the index with
    the record's first version, as after a bootstrap. Replaying the same update does not lower
    the metric. Step 2.18's rebuild trigger should keep counting churn, not net change.
-4. **The `sync-integration` CI job** installs QLever from the Homebrew tap `qlever-dev/qlever`
-   pinned at commit `205cc9d5183fd669c227e7ac7e1dbd0164573dd6` (formula `qlever 0.6.0_1`, the
-   prebuilt `qlever_0.6.0-1_macos_arm64.tar.gz`, macOS arm64 only), so it runs on `macos-15`;
-   PostgreSQL 18 and pgvector also come from Homebrew. Homebrew 7 refuses a third-party tap's
-   formulae until `brew trust qlever-dev/qlever`. First green run (PR #148): 7 min 4 s in all,
-   of which installing QLever 4 min 55 s and `pytest -m integration tests/sync` 1 min 19 s (46
-   passed, none skipped). macOS arm64 runners can queue for a long time: the first attempt was
-   cancelled after 15 min with "The job was not acquired by Runner of type hosted" (capacity), and
-   a re-run was picked up at once.
+4. **No QLever in CI (owner decision 2026-11-23).** A `sync-integration` job on `macos-15`
+   (Homebrew tap `qlever-dev/qlever` pinned at `205cc9d5183fd669c227e7ac7e1dbd0164573dd6`, which
+   needs `brew trust qlever-dev/qlever`) ran green once in 7 min 4 s (46 passed). Hosted macOS
+   runners then queued for 15+ min, so the owner removed the job: QLever integration tests run
+   locally only (docs/conventions.md, backend/tests/sync/README.md).
