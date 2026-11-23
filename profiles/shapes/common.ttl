@@ -43,7 +43,7 @@ lae:code
 
 laes:
     a owl:Ontology ;
-    rdfs:label "Linked Art Editor SHACL shapes"@en ;
+    rdfs:label "Laertes SHACL shapes"@en ;
     sh:declare [ sh:prefix "rdf" ; sh:namespace "http://www.w3.org/1999/02/22-rdf-syntax-ns#"^^xsd:anyURI ] ;
     sh:declare [ sh:prefix "rdfs" ; sh:namespace "http://www.w3.org/2000/01/rdf-schema#"^^xsd:anyURI ] ;
     sh:declare [ sh:prefix "crm" ; sh:namespace "http://www.cidoc-crm.org/cidoc-crm/"^^xsd:anyURI ] ;

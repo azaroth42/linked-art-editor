@@ -1,4 +1,4 @@
-# Qleverfile for the Linked Art Editor, use with https://github.com/qlever-dev/qlever-control
+# Qleverfile for the Laertes, use with https://github.com/qlever-dev/qlever-control
 #
 # Structure follows lux/qlever-middletier/files/Qleverfile; memory and threads are sized for a
 # developer laptop. QLever runs natively (SYSTEM = native): `make up` / `make down` in
@@ -31,7 +31,7 @@
 [data]
 NAME              = lae
 GET_DATA_CMD      = touch lae-empty.nt
-DESCRIPTION       = Linked Art Editor: published records
+DESCRIPTION       = Laertes: published records
 TEXT_DESCRIPTION  = Literals of published Linked Art records
 # N-Quads, of which N-Triples is a subset: records are in the default graph, sidecar labels in
 # urn:graph:sidecar:<source> graphs (`lae bootstrap export-nt`).

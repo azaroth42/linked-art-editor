@@ -3,7 +3,7 @@
 # deploy/README.md ("Production with systemd"); adjust the paths and user before installing.
 
 [Unit]
-Description=Linked Art Editor: sync-worker (outbox to QLever)
+Description=Laertes: sync-worker (outbox to QLever)
 Documentation=https://github.com/azaroth42/linked-art-editor/blob/main/deploy/README.md
 Wants=network-online.target
 After=network-online.target postgresql.service qlever.service

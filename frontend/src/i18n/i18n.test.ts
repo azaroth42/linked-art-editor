@@ -44,15 +44,14 @@ describe("pseudoLocalize", () => {
     expect(pseudoLocalize("Save")).toMatch(/^\[Šáṽé ~+\]$/);
   });
 
-  it.each([
-    "Save",
-    "Linked Art Editor",
-    "A much longer sentence that has to wrap on narrow screens.",
-  ])("expands %j by at least 35%%", (text) => {
-    expect(pseudoLocalize(text).length).toBeGreaterThanOrEqual(
-      Math.ceil(text.length * (1 + PSEUDO_EXPANSION)),
-    );
-  });
+  it.each(["Save", "Laertes", "A much longer sentence that has to wrap on narrow screens."])(
+    "expands %j by at least 35%%",
+    (text) => {
+      expect(pseudoLocalize(text).length).toBeGreaterThanOrEqual(
+        Math.ceil(text.length * (1 + PSEUDO_EXPANSION)),
+      );
+    },
+  );
 
   it("leaves ICU arguments and Trans tags intact", () => {
     const result = pseudoLocalize("Hello {name}, see <1>docs</1>");
