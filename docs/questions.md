@@ -804,5 +804,7 @@ steps. Notes for the steps that meet it, and two choices the owner may want to c
    every case where the order did change, the diff reported a `reorder`. The diff was not at
    fault. The edit now always changes the order of an array that has two different items, it
    has three of the fifteen slots in the edit list, and half the examples start from a record
-   that has such an array (two in five corpus records do). Measured over 30 runs of 200 examples:
-   10% to 25% of examples have a `reorder`; the test requires at least 5%.
+   that has such an array (two in five corpus records do); the edits' random generator is seeded
+   by Hypothesis (`use_true_random=True`), because the Hypothesis-driven one swung between 2% and
+   25% from run to run. Measured: 9.5% to 25.5% of examples over ten runs of 200, and 20.7%
+   (1033 of 5000) in one run of 5000; the test requires at least 5%.
