@@ -69,8 +69,7 @@ from rdflib.term import Node
 from lae.ids import NODE_PATH, is_internal_node_iri
 from lae.logging import get_logger
 from lae.rdf import ExpansionError
-from lae.rdf.expand import rdf_triples
-from lae.rdf.sanitize import clean_iri
+from lae.rdf.expand import rdf_triples, repair_iri
 from lae.settings import get_settings
 from lae.validation.diagnostics import Diagnostic, Severity, child, diagnostic, ordered
 from lae.validation.expansion import expand_or_diagnose
@@ -97,7 +96,6 @@ _PROBE: Final = "urn:lae:probe"
 _ID_KEYS: Final = ("id", "@id")
 _TYPE_KEYS: Final = ("type", "@type")
 _CONTEXT_KEY: Final = "@context"
-_WHITESPACE: Final = re.compile(r"\s")
 
 TYPE_CLASS: Final = "Type"
 TYPE_SUBCLASSES: Final = frozenset({"Material", "Language", "MeasurementUnit", "Currency"})
@@ -277,8 +275,13 @@ class NodeIndex:
         return None if located is None else located.path
 
 
-def build_index(jsonld: dict[str, Any], record_uri: str) -> NodeIndex:
+def build_index(
+    jsonld: dict[str, Any], record_uri: str, *, context_version: int | None = None
+) -> NodeIndex:
     """Index the nodes and references of ``jsonld`` (which has its internal node IRIs).
+
+    ``context_version`` is passed on to ``strip_stub_attributes`` (which nested ``@context`` is
+    the pinned one, ADR-0028).
 
     The document is walked together with ``strip_stub_attributes(jsonld)``, the form expansion
     reads: there a reference is exactly ``{"id": <its own id>}``, and an embedded node that has
@@ -289,7 +292,7 @@ def build_index(jsonld: dict[str, Any], record_uri: str) -> NodeIndex:
     from lae.rdf import strip_stub_attributes
 
     index = NodeIndex()
-    stripped = strip_stub_attributes(jsonld, record_uri)
+    stripped = strip_stub_attributes(jsonld, record_uri, context_version=context_version)
     index.nodes[record_uri] = _Located("", stripped)
     for key, value in stripped.items():
         if key != _CONTEXT_KEY and key in jsonld:
@@ -358,14 +361,17 @@ def reference_type_triples(
     """
     lines: set[str] = set()
     for uri, declared in index.reference_types.items():
-        if clean_iri(uri) != uri or _WHITESPACE.search(uri):
+        # The subject is the IRI expansion wrote for the reference (ADR-0028); the registry and
+        # the index know it by the id in the JSON-LD.
+        subject = repair_iri(uri)
+        if subject is None:
             # Not an IRI N-Triples can hold. Expansion has refused it already if it is the
             # object of a triple; under a property the context does not define it is inert.
             continue
         for type_name in reference_classes(referenced_types.get(uri), declared):
             iri = class_iri(type_name, context_version)
             if iri is not None:
-                lines.add(f"<{uri}> <{_RDF_TYPE}> <{iri}> .")
+                lines.add(f"<{subject}> <{_RDF_TYPE}> <{iri}> .")
     return lines
 
 
@@ -510,7 +516,9 @@ def _hop_path(hop: _Hop, ctx: _Context) -> str | None:
     items = node.obj.get(key)
     if isinstance(value, ox.NamedNode) and isinstance(items, list):
         for position, item in enumerate(items):
-            if isinstance(item, dict) and _identifier(item) == value.value:
+            identifier = _identifier(item) if isinstance(item, dict) else None
+            # The store has the IRI expansion wrote, the JSON-LD the id as given (ADR-0028).
+            if identifier is not None and value.value in (identifier, repair_iri(identifier)):
                 return child(path, position)
     return path
 
@@ -646,7 +654,7 @@ def validate_shacl(
     if triples is None:
         return failures
     try:
-        index = build_index(jsonld, record_uri)
+        index = build_index(jsonld, record_uri, context_version=version)
         found = run_shapes(triples, index, referenced_types, version, record_uri)
     except Exception as error:
         logger.exception("shacl_validation_failed", record_uri=record_uri)

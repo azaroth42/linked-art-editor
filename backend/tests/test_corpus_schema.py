@@ -2,6 +2,10 @@
 
 Files listed in ``tests/corpus/KNOWN_FAILURES.md`` are strict expected failures: a listed file
 that starts to validate fails the run until its row is removed, and a new failure is never hidden.
+
+A record is checked as ``lae.validation.validate_schema`` checks it: without the ``id`` of an
+embedded node that has one of its own, and a nested repeat of the pinned ``@context``
+(``lae.rdf.strip_embedded_ids``, ``lae.rdf.strip_nested_contexts``, ADR-0028).
 """
 
 from __future__ import annotations
@@ -18,6 +22,7 @@ from referencing import Registry
 from referencing.exceptions import Unresolvable
 
 from lae.corpus import CORPUS_DIR, corpus_files, load_record
+from lae.rdf import strip_embedded_ids, strip_nested_contexts
 from lae.validation.schema_map import (
     PROVENANCE_SCHEMA,
     SCHEMA_BY_TYPE,
@@ -88,6 +93,7 @@ def test_record_validates_against_its_schema(
     path: Path, validators: dict[str, Draft7Validator]
 ) -> None:
     record = load_record(path)
+    record = strip_embedded_ids(strip_nested_contexts(record), record.get("id", ""))
     errors = schema_error_summaries(validators[schema_name_for(record)], record)
     assert not errors, "\n".join(errors)
 

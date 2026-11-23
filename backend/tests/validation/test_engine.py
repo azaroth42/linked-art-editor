@@ -168,7 +168,7 @@ def test_each_expansion_error_has_its_own_code(error: ExpansionError, code: str)
     item = expansion_diagnostic(error)
     assert (item.code, item.severity, item.path) == (code, "violation", "")
     assert item.params == {"detail": str(error)}
-    assert code in RDF_CODES and len(set(RDF_CODES)) == 5
+    assert code in RDF_CODES and len(set(RDF_CODES)) == 6  # with the warning LAE-RDF-006
 
 
 def test_an_expansion_error_whose_cause_cannot_be_found_is_at_the_root() -> None:

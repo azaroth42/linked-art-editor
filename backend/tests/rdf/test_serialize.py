@@ -7,7 +7,7 @@ import pytest
 
 from lae.corpus import iter_corpus
 from lae.rdf.canonical import canonical_ntriples
-from lae.rdf.expand import InvalidIRIError, expand_to_ntriples
+from lae.rdf.expand import ExpansionError, InvalidIRIError, expand_to_ntriples
 from lae.rdf.serialize import context_prefixes, to_turtle
 
 from .node_iris import assign_node_iris
@@ -82,9 +82,32 @@ def test_every_corpus_record_serializes_as_published() -> None:
         assert parse(to_turtle(record, 1))
 
 
-def test_turtle_rejects_bad_iris() -> None:
+@pytest.mark.parametrize("bad", ["relative/a b", "a b.jpg", "https:/", " https://example.org/a"])
+def test_turtle_rejects_bad_iris(bad: str) -> None:
     with pytest.raises(InvalidIRIError):
-        to_turtle({**PUBLIC, "classified_as": [{"id": "https://example.org/a b"}]}, 1)
+        to_turtle({**PUBLIC, "classified_as": [{"id": bad}]}, 1)
+
+
+def test_turtle_percent_encodes_an_iri_as_expansion_does() -> None:
+    """ADR-0028: the same repair in both serializations, and the input is left alone."""
+    image = "https://commons.wikimedia.org/wiki/Special:Filepath/Self Portrait.jpg"
+    encoded = "https://commons.wikimedia.org/wiki/Special:Filepath/Self%20Portrait.jpg"
+    public = {**PUBLIC, "representation": [{"id": image, "type": "VisualItem"}]}
+    triples = parse(to_turtle(public, 1))
+    assert ox.NamedNode(encoded) in {triple.object for triple in triples}
+    assert public["representation"] == [{"id": image, "type": "VisualItem"}]
+    synced = expand_to_ntriples(assign_node_iris(public, RECORD), 1)
+    assert f"<{RECORD}> <{CRM}P138i_has_representation> <{encoded}> ." in synced
+
+
+def test_turtle_ignores_a_nested_pinned_context_and_rejects_any_other() -> None:
+    nested = {"@context": CONTEXT, "type": "Name", "content": "x"}
+    assert parse(to_turtle({**PUBLIC, "identified_by": [nested]}, 1)) == parse(
+        to_turtle({**PUBLIC, "identified_by": [{"type": "Name", "content": "x"}]}, 1)
+    )
+    for other in ({"content": "http://example.org/p"}, "https://example.org/context.json", []):
+        with pytest.raises(ExpansionError, match="@context"):
+            to_turtle({**PUBLIC, "identified_by": [{**nested, "@context": other}]}, 1)
 
 
 def test_context_prefixes_come_from_the_pinned_context() -> None:

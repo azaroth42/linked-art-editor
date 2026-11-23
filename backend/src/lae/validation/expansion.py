@@ -1,4 +1,4 @@
-"""RDF expansion failures as diagnostics.
+"""RDF expansion failures, and repairs, as diagnostics.
 
 ``lae.rdf.expand_to_ntriples`` refuses a record whose triples would be unsafe to store or sync
 and raises a subclass of ``ExpansionError`` (``docs/questions.md``, Step 1.3, item 3). A publish
@@ -12,13 +12,23 @@ code of its own:
 | ``LAE-RDF-003`` | ``InvalidIRIError`` | an IRI is relative, malformed or an undefined term |
 | ``LAE-RDF-004`` | ``InvalidLiteralError`` | a literal is not valid for its datatype |
 | ``LAE-RDF-005`` | ``ExpansionError`` | anything else JSON-LD processing rejects |
+| ``LAE-RDF-006`` | (not raised) | warning: an ``id`` is percent-encoded in RDF |
 
-All are violations, and ``params.detail`` carries the exception text for logs and developers.
+The first five are violations, and ``params.detail`` carries the exception text for logs and
+developers.
 The exception does not say where in the document the term is, so the path is the record root
 (``""``) unless the cause is one this module can find again in the JSON-LD: a root ``id`` that
-is not the record URI (``/id``), and a literal that is not valid Unicode or not a finite number
-(its own pointer). Malformed IRIs and date-times never get this far in ``validate``: the JSON
-Schema ``format`` checks report them first, with their paths.
+is not the record URI (``/id``), a root ``id`` that is not a writable IRI (``/id``; the record
+URI is never percent-encoded), and a literal that is not valid Unicode or not a finite number
+(its own pointer). Other malformed IRIs and date-times never get this far in ``validate``: the
+JSON Schema ``format`` checks report them first, with their paths.
+
+One code is not a failure. Expansion percent-encodes the characters an IRI may not contain (a
+space in a Wikimedia Commons file name) instead of refusing the record (ADR-0028), so the IRI in
+RDF differs from the ``id`` in the stored JSON-LD. ``iri_repair_warnings`` reports each such
+``id`` as the warning ``LAE-RDF-006``, at its own pointer, with ``params.original`` and
+``params.encoded``: the record can be published once the warning is acknowledged, and the
+editor can offer the encoded form as the fix.
 """
 
 from __future__ import annotations
@@ -33,8 +43,10 @@ from lae.rdf import (
     InvalidLiteralError,
     OwnershipError,
     expand_to_ntriples,
+    repair_iri,
+    repaired_iris,
 )
-from lae.validation.diagnostics import Diagnostic, child, diagnostic
+from lae.validation.diagnostics import Diagnostic, child, diagnostic, pointer
 
 RDF_BLANK_NODE: Final = "LAE-RDF-001"
 RDF_OWNERSHIP: Final = "LAE-RDF-002"
@@ -50,7 +62,10 @@ _CODE_BY_ERROR: Final[tuple[tuple[type[ExpansionError], str], ...]] = (
     (ExpansionError, RDF_EXPANSION),
 )
 
-RDF_CODES: Final = tuple(code for _, code in _CODE_BY_ERROR)
+RDF_IRI_REPAIRED: Final = "LAE-RDF-006"
+"""Warning: an ``id`` is percent-encoded in RDF; params ``original`` and ``encoded``."""
+
+RDF_CODES: Final = (*(code for _, code in _CODE_BY_ERROR), RDF_IRI_REPAIRED)
 """Every code this module emits."""
 
 
@@ -87,6 +102,12 @@ def _place(error: ExpansionError, jsonld: Any, record_uri: str | None) -> str:
         root_id = jsonld.get("id")
         if isinstance(root_id, str) and record_uri is not None and root_id != record_uri:
             return child("", "id")
+    if isinstance(error, InvalidIRIError):
+        # The schema's ``uri`` format lets a repairable id through, but the record URI itself is
+        # never repaired (ADR-0028), so a root id with a space gets this far.
+        root_id = jsonld.get("id")
+        if isinstance(root_id, str) and repair_iri(root_id) != root_id:
+            return child("", "id")
     return ""
 
 
@@ -111,3 +132,22 @@ def expand_or_diagnose(
         return expand_to_ntriples(jsonld, context_version, record_uri=record_uri), []
     except ExpansionError as error:
         return None, [expansion_diagnostic(error, jsonld, record_uri)]
+
+
+def iri_repair_warnings(jsonld: Any, record_uri: str | None = None) -> list[Diagnostic]:
+    """Return one ``LAE-RDF-006`` warning for each ``id`` that RDF expansion percent-encodes.
+
+    ``record_uri`` defaults to the root ``id``. Only the ids expansion writes are reported
+    (``lae.rdf.repaired_iris``); one that cannot be repaired is a violation, not a warning, and
+    comes from the schema's ``uri`` format or from expansion itself.
+    """
+    if not isinstance(jsonld, dict):
+        return []
+    root_id = jsonld.get("id")
+    uri = record_uri if record_uri is not None else root_id if isinstance(root_id, str) else ""
+    return [
+        diagnostic(
+            RDF_IRI_REPAIRED, pointer(path), "warning", {"original": original, "encoded": encoded}
+        )
+        for path, original, encoded in repaired_iris(jsonld, uri)
+    ]

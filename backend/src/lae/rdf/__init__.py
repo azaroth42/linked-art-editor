@@ -11,6 +11,10 @@ from lae.rdf.expand import (
     OwnershipError,
     expand_to_ntriples,
     owned_subjects,
+    repair_iri,
+    repaired_iris,
+    strip_embedded_ids,
+    strip_nested_contexts,
     strip_stub_attributes,
 )
 from lae.rdf.serialize import to_turtle
@@ -29,6 +33,10 @@ __all__ = [
     "expand_to_ntriples",
     "owned_subjects",
     "parse_ntriples",
+    "repair_iri",
+    "repaired_iris",
+    "strip_embedded_ids",
+    "strip_nested_contexts",
     "strip_stub_attributes",
     "to_turtle",
 ]

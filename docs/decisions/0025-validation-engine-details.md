@@ -1,6 +1,6 @@
 # ADR-0025: Validation engine details the guide left open
 
-**Status:** Accepted · **Date:** 2026-11-22 · **Decided by:** Claude Fable 5.2 as implementer of Phase 1 Step 1.9, amended and accepted by the critical-step reviewer under the owner's delegation (Rob Sanderson may override) · **Recorded by:** Claude · **Reviewed by:** Claude Fable 5.2
+**Status:** Accepted · **Date:** 2026-11-22 · **Decided by:** Claude Fable 5.2 as implementer of Phase 1 Step 1.9, amended and accepted by the critical-step reviewer under the owner's delegation (Rob Sanderson may override) · **Recorded by:** Claude · **Reviewed by:** Claude Fable 5.2 · **Amended by:** ADR-0028 (the schema check ignores the ids of embedded nodes; the `uri` format accepts an `id` that RDF can percent-encode, reported as the warning `LAE-RDF-006`)
 
 ## Context
 Step 1.9 fixes the pipeline (JSON Schema, then Python rules and SHACL), the diagnostic shape `{code, path, severity, params, message_en}` and the code families. Implementing it needed nine choices the guide and spec §5 do not make. Each is small; together they define what Step 1.10 (publish), Step 1.19 (validation drawer) and Phase 3 (agents) see. All are refinements inside decisions C1 to C3; none changes a locked decision. The review amended items 1, 3, 4, 5 and 6 and added item 9.

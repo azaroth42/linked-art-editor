@@ -6,7 +6,8 @@ rules and SHACL on documents that pass it, returning structured ``Diagnostics``
 
 - JSON Schema (``lae.validation.schema``): ``LAE-SCHEMA-<keyword>``, ``-ref``, ``-recordType``,
   ``-false``.
-- RDF expansion (``lae.validation.expansion``): ``LAE-RDF-001`` to ``-005``.
+- RDF expansion (``lae.validation.expansion``): ``LAE-RDF-001`` to ``-005``, and the warning
+  ``LAE-RDF-006`` for an ``id`` that is percent-encoded in RDF (ADR-0028).
 - Python rules (``lae.validation.rules``): ``LAE-RULE-001`` to ``-005``.
 - SHACL (``lae.validation.shacl``): ``LAE-SHACL-NNN``, the ``lae:code`` of each shape in
   ``profiles/shapes``, and ``LAE-SHACL-000``.

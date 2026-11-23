@@ -617,9 +617,8 @@ def test_the_same_foreign_id_embedded_twice_is_one_node() -> None:
     ("bad", "error"),
     [
         ("name/1", InvalidIRIError),
-        ("https://museum.example.org/name 1", InvalidIRIError),
-        ("https://museum.example.org/name\u00a01", InvalidIRIError),
-        ('https://museum.example.org/name"1', InvalidIRIError),
+        ("name 1", InvalidIRIError),
+        (" https://museum.example.org/name/1", InvalidIRIError),
         ("_:b0", BlankNodeError),
     ],
 )
@@ -707,20 +706,25 @@ def test_invalid_datetime_is_rejected_not_emitted(bound: Any) -> None:
 @pytest.mark.parametrize(
     "bad",
     [
-        "https://example.org/a b",
-        "https://example.org/a>b",
-        'https://example.org/a"b',
-        "https://example.org/a\\b",
-        "https://example.org/{a}",
-        "https://example.org/a\nb",
         "https:/",
+        "https://",
         "relative/path",
+        "relative path",
+        "a file.jpg",
+        " https://example.org/a",
+        "https ://example.org/a",
+        "//example.org/a b",
         "",
+        " ",
         "#fragment",
+        "\ud800",
     ],
 )
 def test_invalid_reference_iri_is_rejected_not_dropped(bad: str) -> None:
-    """pyld alone would silently drop the triple or resolve the IRI against a default base."""
+    """pyld alone would silently drop the triple or resolve the IRI against a default base.
+
+    Percent-encoding (ADR-0028) does not make any of these an absolute IRI, so they still raise.
+    """
     doc = record()
     doc["produced_by"]["carried_out_by"] = [{"id": bad, "type": "Person"}]
     with pytest.raises(InvalidIRIError):
@@ -730,13 +734,17 @@ def test_invalid_reference_iri_is_rejected_not_dropped(bad: str) -> None:
 @pytest.mark.parametrize(
     "space", ["\u00a0", "\u0085", "\u1680", "\u2003", "\u2028", "\u2029", "\u202f", "\u3000"]
 )
-def test_an_iri_with_unicode_whitespace_is_rejected_not_dropped(space: str) -> None:
-    """N-Triples allows these in an IRI, but pyld drops the triple; so reject."""
+def test_an_iri_with_unicode_whitespace_is_encoded_not_dropped(space: str) -> None:
+    """N-Triples allows these in an IRI, but pyld drops the triple; so encode (ADR-0028)."""
     bad = f"https://unknown.example.com/a{space}b"
     doc = record()
     doc["produced_by"]["carried_out_by"] = [{"id": bad, "type": "Person"}]
-    with pytest.raises(InvalidIRIError):
-        expand_to_ntriples(doc, 1)
+    encoded = "".join(f"%{byte:02X}" for byte in space.encode("utf-8"))
+    expected = nt(
+        PRODUCTION, CRM + "P14_carried_out_by", f"https://unknown.example.com/a{encoded}b"
+    )
+    assert expected in expand_to_ntriples(doc, 1)
+    # The record URI itself is never repaired.
     doc = record()
     doc["id"] = RECORD + space
     with pytest.raises(InvalidIRIError):

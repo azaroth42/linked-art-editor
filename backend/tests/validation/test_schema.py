@@ -53,8 +53,9 @@ def test_internal_node_iris_are_stripped_before_validating() -> None:
     record = with_node_iris(base())
     assert record["identified_by"][0]["id"].startswith("https://example.org/object/1/node/")
     assert validate_schema(record) == []
-    # With another record URI they are not this record's node IRIs, and the schema sees them.
-    assert validate_schema(record, "https://example.org/object/2") != []
+    # With another record URI they are not this record's node IRIs but ids from elsewhere on
+    # embedded nodes, which the schema check ignores as well (ADR-0028).
+    assert validate_schema(record, "https://example.org/object/2") == []
 
 
 def test_input_is_not_modified() -> None:

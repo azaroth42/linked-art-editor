@@ -328,6 +328,58 @@ Answers to the Step 1.12 and Step 1.9 questions. ADR numbers are pre-assigned to
 3. **Ignore embedded-node ids in schema validation:** ids on embedded (non-reference) nodes are stripped before the JSON Schema check, as internal node IRIs already are; storage keeps them and RDF handles them per ADR-0021. **ADR-0028.**
 4. **Import robustness (orchestrator decision, reversible, consistent with "load and flag"):** a nested `@context` identical to the record's pinned context is accepted and ignored (any other nested context is still rejected); IRIs containing characters not allowed in IRIs (such as spaces in Wikimedia Commons URLs) are percent-encoded in RDF only, with a warning diagnostic, instead of rejecting the record. **ADR-0028.**
 
+## ADR-0028 (import robustness and embedded-node ids)
+
+Implemented as decided above (items 3 and 4). Points for a human:
+
+1. **No corpus file left `KNOWN_FAILURES.md`: 60 of 244 before and after.** The three files with
+   an `id` on an embedded `Name` each fail for a second reason (`object-3.json`: no top-level
+   `_label`; `object-nightwatch-43.json` and `person-rembrandt-4.json`: a `Name` without
+   `content`). `object-3.json` now has one error instead of two. The upstream report lists the
+   three ids in a section of its own, because they are still a mismatch between the linked.art
+   examples and the schema.
+2. **A nested pinned `@context` is ignored in RDF and in the JSON Schema check** (reviewer
+   decision, reversible): `validate_schema`, `lae bootstrap load`, the corpus schema test and the
+   mismatch report drop it before the schema runs (`lae.rdf.strip_nested_contexts`), because a
+   key that RDF treats as saying nothing should not make a record unpublishable. The schema
+   accepts `@context` on the LUX `DigitalObject`s, but not on a `Name` or on a reference under
+   `about` (`lux/text-a76b91ea-…`, which now validates). The stored JSON-LD and the API bodies
+   keep it. Say if it should be a warning, or removed from the stored document on import.
+3. **Only `id` values are percent-encoded.** A class (`type`) or property IRI with a forbidden
+   character, an IRI given as a bare string, and the record URI itself still raise. Nothing is
+   trimmed: an `id` with a leading space has no scheme and is refused. `a b` and `a%20b` become
+   the same IRI in RDF.
+4. **`EXPANDER_VERSION` is now 2** (reviewer decision). No input that expanded before gives
+   different triples (the argument is in ADR-0028), but inputs that raised now expand, and a
+   bulk-loaded record that `export-nt` left out for that reason has no triples in the index:
+   with an unchanged version its first edit would be diffed against triples QLever never had.
+   With the bump, first edits of records loaded under version 1 take the `DELETE WHERE`
+   fallback until the next export and index build. Only development data exists so far.
+5. **`lae bootstrap load` still rewrites ids in the stored document** (`clean_ids`, which also
+   trims them), which ADR-0028 says not to do. Left for the bootstrap rework (ADR-0030); only
+   the embedded-id rule was added to its schema check, so that `KNOWN_FAILURES.md` means the
+   same thing for load and for publish.
+6. **Not verified in CI: the 32 LUX records.** They are not on main (PR #130), so the two tests
+   that read `tests/corpus/lux/` skip there. Locally, with the files of that branch: 32 of 32
+   expand and serialize as Turtle (7 948 triples; 9 ids encoded; 11 nested contexts ignored);
+   as fetched all 32 fail the schema for LUX's `_links`; without LUX's own keys 29 are
+   publishable and 3 have other schema violations. When PR #130 is rebased, its corpus counts
+   and its `KNOWN_FAILURES.md` rows must be regenerated against this gate.
+8. **A reference that carries `equivalent` keeps its `id` in the schema check.** ADR-0021 calls
+   `{"id", "type": "VisualItem", "equivalent": […]}` an embedded node (it says more than
+   `classified_as`), and expansion writes it under a derived node IRI; the schema's `*Ref`
+   definitions call it a reference and require the `id`. `strip_embedded_ids` follows the schema
+   here. Whether ADR-0021 should treat `equivalent` like `classified_as` (a reference may repeat
+   it) is a separate question, and changing it would change triples (`EXPANDER_VERSION`).
+9. **IRIs that N-Triples can hold but Turtle cannot** (`100%wool`, a `[` in a path, U+007F) are
+   written by expansion as they are and refused by `to_turtle` (now with `InvalidIRIError`
+   instead of pyoxigraph's `ValueError`). They are not valid RFC 3987 IRIs. Say if expansion
+   should refuse them, or `repair_iri` encode them (either changes `EXPANDER_VERSION`).
+7. **The Spike S4 test that crashed on the BCE tetradrachm** (`tests/validation/test_hmo_shapes.py`)
+   no longer exists on main: Step 1.9 replaced it, and its shapes no longer compare
+   `xsd:dateTime` literals. The tetradrachm validates through the production pipeline; a test
+   asserts it once the LUX records are present.
+
 ## Step 1.12
 
 `lae bootstrap` (load, export-nt, build-index, aat-labels) is built and was run at 1M records
