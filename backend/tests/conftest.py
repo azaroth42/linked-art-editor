@@ -8,7 +8,8 @@ container fallback (ADR-0017).
 
 Once per session ``db_url`` drops and recreates that database, applies
 ``deploy/postgres/init.sql``, and runs the migrations; the database is dropped when the session
-ends, so its name must end in ``_test``. Every test that uses ``db_url`` (directly or through
+ends, so its name must end in ``_test``. Under pytest-xdist (``-n auto``) each worker uses
+its own database, ``<name>_<worker>_test``. Every test that uses ``db_url`` (directly or through
 ``db_engine`` or ``db_session``) is marked ``integration``. When the variable is unset those
 tests are skipped with the reason, except under CI (``CI`` set), where they fail; every other
 test runs.
@@ -90,6 +91,11 @@ def db_url() -> Iterator[str]:
             pytest.fail(message)
         pytest.skip(message)
     url = make_url(raw_url)
+    worker = os.environ.get("PYTEST_XDIST_WORKER")
+    if worker and url.database and url.database.endswith("_test"):
+        # Under pytest-xdist each worker gets its own database: <name>_<gw0>_test.
+        url = url.set(database=f"{url.database.removesuffix('_test')}_{worker}_test")
+        raw_url = url.render_as_string(hide_password=False)
     if not url.database or not url.database.endswith("_test"):
         pytest.fail(
             f"{TEST_DATABASE_URL_ENV} names database {url.database!r}; the test session "

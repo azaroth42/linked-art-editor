@@ -1,4 +1,6 @@
-# Every PR must be green on all four jobs before it merges (docs/agent-workflow.md §6).
+# Every PR must be green before it merges (docs/agent-workflow.md §6). On a PR, the `changes` job
+# skips jobs the change cannot affect: a docs-only PR runs only `config`; a frontend-only PR
+# skips `backend`. Pushes to main and manual runs always run every job.
 # No Docker: PostgreSQL is installed natively on the runner. QLever is never run in CI: its
 # integration tests run locally only (docs/conventions.md, owner decision 2026-11-23).
 name: CI
@@ -21,8 +23,48 @@ env:
   FORCE_COLOR: "1"
 
 jobs:
+  # Decides which jobs a PR needs. Skipped jobs count as passed. Rules:
+  #   docs-only (every file under docs/ or ending in .md): only `config` runs.
+  #   frontend-only (every file under frontend/src/ or frontend/e2e/, except the files backend
+  #   tests read: app/permissions.ts, api/schema.d.ts, crdt/paths.ts, widgets/languages.ts):
+  #   `backend` is skipped.
+  changes:
+    name: changes
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    outputs:
+      backend: ${{ steps.classify.outputs.backend }}
+      frontend: ${{ steps.classify.outputs.frontend }}
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 2
+      - id: classify
+        env:
+          EVENT: ${{ github.event_name }}
+        run: |
+          if [ "$EVENT" != "pull_request" ]; then
+            echo "backend=true" >> "$GITHUB_OUTPUT"; echo "frontend=true" >> "$GITHUB_OUTPUT"; exit 0
+          fi
+          # A pull_request checkout is the merge commit; its first parent is the base branch.
+          git diff --name-only HEAD^1 HEAD > "$RUNNER_TEMP/changed.txt"
+          cat "$RUNNER_TEMP/changed.txt"
+          backend=false; frontend=false
+          while IFS= read -r f; do
+            case "$f" in
+              docs/*|*.md) ;;
+              frontend/src/app/permissions.ts|frontend/src/api/schema.d.ts|frontend/src/crdt/paths.ts|frontend/src/widgets/languages.ts)
+                frontend=true; backend=true ;;
+              frontend/src/*|frontend/e2e/*) frontend=true ;;
+              *) frontend=true; backend=true ;;
+            esac
+          done < "$RUNNER_TEMP/changed.txt"
+          echo "backend=$backend" >> "$GITHUB_OUTPUT"; echo "frontend=$frontend" >> "$GITHUB_OUTPUT"
+
   backend:
     name: backend
+    needs: changes
+    if: needs.changes.outputs.backend == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
@@ -83,12 +125,15 @@ jobs:
         working-directory: frontend
         run: corepack pnpm install --frozen-lockfile
 
+      # pytest-xdist: one worker per CPU, each on its own database (<name>_<worker>_test).
       - name: pytest
         working-directory: backend
-        run: uv run --locked pytest -q -rs
+        run: uv run --locked pytest -q -rs -n auto
 
   frontend:
     name: frontend
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     defaults:
@@ -143,6 +188,8 @@ jobs:
   # migrated native PostgreSQL.
   e2e:
     name: e2e
+    needs: changes
+    if: needs.changes.outputs.frontend == 'true'
     runs-on: ubuntu-24.04
     timeout-minutes: 15
     env:
