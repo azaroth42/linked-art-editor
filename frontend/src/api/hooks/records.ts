@@ -27,6 +27,11 @@ export async function fetchEditorRecord(id: string): Promise<EditorRecord> {
   return { jsonld: data as Record<string, unknown>, draftEpoch: epoch };
 }
 
+/** The query key of {@link useEditorRecord}. */
+export function editorRecordKey(id: string) {
+  return ["records", id, "editor"] as const;
+}
+
 /**
  * The record for the editor. The epoch changes on publish, discard and revert (ADR-0027), so it
  * is fetched afresh whenever the editor mounts and never refreshed in the background: a live
@@ -34,7 +39,7 @@ export async function fetchEditorRecord(id: string): Promise<EditorRecord> {
  */
 export function useEditorRecord(id: string) {
   return useQuery({
-    queryKey: ["records", id, "editor"],
+    queryKey: editorRecordKey(id),
     queryFn: () => fetchEditorRecord(id),
     staleTime: Infinity,
     gcTime: 0,
