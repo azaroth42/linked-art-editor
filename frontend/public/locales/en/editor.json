@@ -8,7 +8,36 @@
   "history": {
     "title": "Revision history",
     "record_id": "Record {id}",
-    "editor_link": "Back to the editor"
+    "editor_link": "Back to the editor",
+    "loading": "Loading the published versions…",
+    "load_error": "The history of this record cannot be loaded right now.",
+    "none": "This record has not been published yet.",
+    "revert_help": "Reverting puts an earlier version into the draft. Nothing is published until you publish the draft.",
+    "caption": "{count, plural, one {# published version} other {# published versions}}",
+    "from": "From",
+    "to": "To",
+    "version": "Version",
+    "published": "Published",
+    "by": "By",
+    "summary": "Summary",
+    "actions": "Actions",
+    "compare_from": "Compare from version {version}",
+    "compare_to": "Compare to version {version}",
+    "version_number": "Version {version}",
+    "version_current": "Version {version} (current)",
+    "by_you": "You",
+    "by_other": "Another user",
+    "by_import": "Bulk import",
+    "no_summary": "No summary",
+    "view": "View version {version}",
+    "new_tab": "(opens in a new tab)",
+    "revert": "Revert to version {version}",
+    "diff_heading": "Changes from version {from} to version {to}",
+    "swap": "Swap the versions",
+    "choose_two": "Choose two different versions to compare.",
+    "diff_loading": "Comparing the versions…",
+    "diff_error": "These versions cannot be compared right now.",
+    "change_count": "{count, plural, =0 {The two versions are the same.} one {# change} other {# changes}}"
   },
   "connection": {
     "connecting": "Connecting to the draft…",
@@ -194,5 +223,14 @@
     "ref": "{label} ({class})",
     "node": "{class} “{summary}”",
     "unknown_class": "an entry"
+  },
+  "revert": {
+    "title": "Revert to version {version}?",
+    "body": "The draft is replaced by version {version} for everyone editing this record, and its unpublished changes are lost. Nothing is published: the public record stays as it is until you publish the draft.",
+    "confirm": "Revert",
+    "reverting": "Reverting…",
+    "cancel": "Cancel",
+    "failed": "The draft could not be reverted. Please try again.",
+    "notice": "The draft now holds version {version}. Nothing is published until you publish it."
   }
 }

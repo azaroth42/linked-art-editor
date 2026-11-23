@@ -807,3 +807,13 @@ steps. Notes for the steps that meet it, and two choices the owner may want to c
    by Hypothesis (`use_true_random=True`), because the Hypothesis-driven one swung between 2% and
    25% from run to run. Measured: 9.5% to 25.5% of examples over ten runs of 200, and 20.7%
    (1033 of 5000) in one run of 5000; the test requires at least 5%.
+
+## Step 1.20
+
+1. **Publishers are not named in the revision list.** `GET /api/records/{id}/revisions` gives
+   `published_by` and `authors` as user ids, and no endpoint turns a user id into a display name
+   (`GET /auth/me` names only the caller). The History page therefore shows "You" for the
+   signed-in user's versions, "Another user" for anyone else's, and "Bulk import" for a version
+   without a publisher (a bulk-loaded version 1). Naming people needs a small read endpoint (for
+   example user ids → display names, signed in), which the contract does not provide; this step
+   adds none (the admin UI's user directory may be a natural home for it).

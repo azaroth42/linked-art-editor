@@ -1,20 +1,21 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { Link, useNavigate, useParams } from "react-router";
+import { Link, useLocation, useNavigate, useParams } from "react-router";
 
-import { ApiError } from "../api/client.ts";
 import { useProfile, useVocabBundle } from "../api/hooks/editing.ts";
 import type { DiscardResult, PublishResult } from "../api/hooks/publishing.ts";
 import { useEditorRecord } from "../api/hooks/records.ts";
 import { PAGE_HEADING, PRIMARY_BUTTON, SECONDARY_BUTTON, STANDALONE_LINK } from "../app/styles.ts";
 import { useAuth } from "../app/useAuth.ts";
 import { useDocumentTitle } from "../app/useDocumentTitle.ts";
+import { useErrorMessage } from "../app/useErrorMessage.ts";
 import { project } from "../crdt/project.ts";
 import { RawInspector } from "../crdt/RawInspector.tsx";
 import type { JsonObject } from "../crdt/rules.ts";
 import { CLOSE_STALE_EPOCH, useRecordDoc } from "../crdt/useRecordDoc.ts";
 import { collectReferenceLabels } from "../widgets/vocab.ts";
 import { DiscardButton } from "./DiscardButton.tsx";
+import { historyPath, publicRecordPath, revertedFrom } from "./links.ts";
 import { PresenceList } from "./PresenceList.tsx";
 import { ProfileRenderer } from "./ProfileRenderer.tsx";
 import { PublishDialog } from "./PublishDialog.tsx";
@@ -25,18 +26,6 @@ import { ValidationDrawer } from "./ValidationDrawer.tsx";
 const INSPECTOR_ID = "raw-inspector";
 /** Final close codes the page explains (ADR-0027); others get a generic message. */
 const KNOWN_CLOSE_CODES = new Set([4400, 4401, 4403, 4404, 4410]);
-
-/** The localized message of a failed request. */
-function errorKey(error: unknown, fallback: string): string {
-  return error instanceof ApiError && error.code.startsWith("LAE-")
-    ? `errors:${error.code}`
-    : fallback;
-}
-
-/** The public page of a record (`/id/{uuid}`, the server-rendered reader). */
-export function publicRecordPath(id: string): string {
-  return `/id/${encodeURIComponent(id)}`;
-}
 
 /**
  * `/edit/:id`: the record editor. Step 1.17 connects it to the live draft (`useRecordDoc`):
@@ -49,11 +38,17 @@ export function publicRecordPath(id: string): string {
  * editor reloads the record (a new epoch, so a new document) instead of showing the stale-epoch
  * dialog. The page's one live region announces the validation summary and the publish result,
  * nothing else (spec §6.9).
+ *
+ * Opened by a revert (Step 1.20, navigation state `revertedFrom`), the page loads the new epoch
+ * like any other and says, for as long as that draft lasts, that the draft holds the old version
+ * and that nothing is published until it is.
  */
 export function EditorPage() {
   const { t } = useTranslation(["editor", "errors"]);
   const { id = "" } = useParams();
   const navigate = useNavigate();
+  const location = useLocation();
+  const errorMessage = useErrorMessage();
   const { user, can } = useAuth();
   useDocumentTitle(t("page.title"));
   const record = useEditorRecord(id);
@@ -82,6 +77,7 @@ export function EditorPage() {
   const usable = live.session !== null && live.synced && live.closeCode === null;
   const epoch = record.data?.draftEpoch ?? null;
   const doc = live.session?.doc ?? null;
+  const reverted = revertedFrom(location.state);
 
   // A new epoch is loaded: whatever this page ended is over.
   useEffect(() => {
@@ -147,6 +143,14 @@ export function EditorPage() {
       <div aria-live="polite" aria-atomic="true" className="sr-only" data-testid="announcer">
         {announcement}
       </div>
+      {reverted !== null && reverted.draftEpoch === epoch && (
+        <p
+          className="rounded border border-amber-300 bg-amber-50 px-3 py-2 text-slate-900"
+          data-testid="reverted"
+        >
+          {t("revert.notice", { version: reverted.version })}
+        </p>
+      )}
       {published !== null && (
         <p className="text-slate-700" data-testid="published">
           {t("publish.done", { version: published.version })}{" "}
@@ -161,7 +165,7 @@ export function EditorPage() {
         </p>
       )}
       {record.isError && (
-        <p className="text-red-800">{t(errorKey(record.error, "page.load_error"))}</p>
+        <p className="text-red-800">{errorMessage(record.error) ?? t("page.load_error")}</p>
       )}
       {live.session !== null && doc !== null && (
         <>
@@ -230,12 +234,7 @@ export function EditorPage() {
             />
           )}
           {profile.isError && (
-            <p className="text-red-800">
-              {t(
-                errorKey(profile.error, "profile.load_error"),
-                profile.error instanceof ApiError ? profile.error.params : {},
-              )}
-            </p>
+            <p className="text-red-800">{errorMessage(profile.error) ?? t("profile.load_error")}</p>
           )}
           {bundle.isError && <p className="text-red-800">{t("profile.vocab_error")}</p>}
           {profile.data !== undefined && (
@@ -265,7 +264,7 @@ export function EditorPage() {
           )}
         </>
       )}
-      <Link to={`/records/${encodeURIComponent(id)}/history`} className={STANDALONE_LINK}>
+      <Link to={historyPath(id)} className={STANDALONE_LINK}>
         {t("page.history_link")}
       </Link>
       {live.closeCode === CLOSE_STALE_EPOCH && !ending && !publishing && (

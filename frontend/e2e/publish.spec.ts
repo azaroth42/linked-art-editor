@@ -1,30 +1,11 @@
-import { type Browser, expect, type Page, test } from "@playwright/test";
+import { expect, test } from "@playwright/test";
 
-import { login } from "./auth.ts";
 import { expectNoAxeViolations } from "./axe.ts";
+import { createRecord, openEditor } from "./editing.ts";
 
 // Step 1.19: the validation drawer and the Publish dialog against the real `lae api` and
 // `crdt-ws`: an edit produces a finding, the finding leads to its field, the fix clears it, the
 // record is published with its warning accepted, and the new version is public.
-
-async function createRecord(browser: Browser, title: string): Promise<string> {
-  const context = await browser.newContext();
-  const response = await context.request.post("/api/records", {
-    data: {
-      type: "HumanMadeObject",
-      template: { _label: title, identified_by: [{ type: "Name", content: title }] },
-    },
-  });
-  expect(response.status()).toBe(201);
-  const created = (await response.json()) as { id: string };
-  await context.close();
-  return created.id;
-}
-
-async function openEditor(page: Page, id: string): Promise<void> {
-  await login(page, `/edit/${id}`);
-  await expect(page.getByTestId("connection-status")).toHaveText(/^Connected/);
-}
 
 test("an edit's finding leads to its field, and the fixed draft is published", async ({
   browser,
