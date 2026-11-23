@@ -77,7 +77,7 @@ async def test_sigterm_stops_the_process_cleanly(db_url: str, db_engine: AsyncEn
             await process.wait()
     assert code == 0
     started = next(e for e in seen if e["event"] == "scheduler_started")
-    assert started["jobs"] == ["reap_drafts"]
+    assert started["jobs"] == ["reap_drafts", "refresh_usage_counts"]
     assert any(e["event"] == "scheduler_stopping" and e["signal"] == "SIGTERM" for e in seen)
     state = await read_job_state(async_sessionmaker(db_engine), reaper.JOB_NAME)
     assert state.last_status == "ok"

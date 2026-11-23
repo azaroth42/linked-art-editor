@@ -1,0 +1,109 @@
+# yaml-language-server: $schema=_schema.json
+# Value Set vocab:statement_types and its bindings. Written by `lae vocab export`; edit it and run
+# `lae vocab import` (profiles/README.md, spec section 7).
+value_sets:
+  - id: vocab:statement_types
+    version: 1
+    label:
+      en: Statement types
+    scope_note:
+      en: Types of statements (Linked Art recommended statement types; their metatype is aat:300418049,
+        brief text).
+    mode: enumerated
+    enforcement: advisory
+    terms:
+      - uri: http://vocab.getty.edu/aat/300435416
+        label:
+          en: Description
+        scope_note:
+          en: A description of the entity.
+        is_default: true
+      - uri: http://vocab.getty.edu/aat/300027200
+        label:
+          en: Note
+        scope_note:
+          en: A general note about the entity.
+      - uri: http://vocab.getty.edu/aat/300133046
+        label:
+          en: Access Statement
+        scope_note:
+          en: How to get access to the entity.
+      - uri: http://vocab.getty.edu/aat/300026497
+        label:
+          en: Bibliography Statement
+        scope_note:
+          en: Citations of the entity, as a list.
+      - uri: http://vocab.getty.edu/aat/300311705
+        label:
+          en: Citation
+        scope_note:
+          en: A bibliographic reference about the entity.
+      - uri: http://vocab.getty.edu/aat/300435422
+        label:
+          en: Biography Statement
+        scope_note:
+          en: A short biography of a person or group.
+      - uri: http://vocab.getty.edu/aat/300435425
+        label:
+          en: Condition Statement
+        scope_note:
+          en: The physical condition of the object.
+      - uri: http://vocab.getty.edu/aat/300026687
+        label:
+          en: Credit Line
+        scope_note:
+          en: Who should be acknowledged for the object.
+      - uri: http://vocab.getty.edu/aat/300435430
+        label:
+          en: Dimensions Statement
+        scope_note:
+          en: The dimensions of the object, as text.
+      - uri: http://vocab.getty.edu/aat/300435424
+        label:
+          en: Exhibition Statement
+        scope_note:
+          en: Exhibitions the object has been in.
+      - uri: http://vocab.getty.edu/aat/300435414
+        label:
+          en: Inscription Statement
+        scope_note:
+          en: The inscriptions on the object.
+      - uri: http://vocab.getty.edu/aat/300435420
+        label:
+          en: Markings Statement
+        scope_note:
+          en: Markings other than inscriptions.
+      - uri: http://vocab.getty.edu/aat/300435429
+        label:
+          en: Materials Statement
+        scope_note:
+          en: The materials the object is made of.
+      - uri: http://vocab.getty.edu/aat/300435436
+        label:
+          en: Production Statement
+        scope_note:
+          en: How the object was produced.
+      - uri: http://vocab.getty.edu/aat/300435438
+        label:
+          en: Provenance Statement
+        scope_note:
+          en: The ownership history of the object.
+      - uri: http://vocab.getty.edu/aat/300435434
+        label:
+          en: Rights Statement
+        scope_note:
+          en: Copyright or licenses of the object.
+      - uri: http://vocab.getty.edu/aat/300028705
+        label:
+          en: Signature Statement
+        scope_note:
+          en: The artist's signature on the object.
+      - uri: http://vocab.getty.edu/aat/300026032
+        label:
+          en: Summary
+        scope_note:
+          en: A summary of the intellectual content.
+bindings:
+  - class: HumanMadeObject
+    path: referred_to_by[LinguisticObject].classified_as
+    value_set: vocab:statement_types

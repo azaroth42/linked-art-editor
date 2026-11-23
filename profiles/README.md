@@ -183,6 +183,10 @@ Enforcement compiles into validation (spec §7.3): `strict` is a violation that 
 
 A binding's `path` addresses the URI values being checked. For a `classification` slot it equals the slot path. For node widgets it is the slot path plus `.classified_as` (`identified_by[Name].classified_as`, `dimension.classified_as`) or another reference key (`dimension.unit`). Several Value Sets may bind to the same `(class, path)`: Gender, Occupation, and Nationality all bind to `Person` `classified_as` (spec §7.2). See `docs/questions.md`, Step 0.12, for how that interacts with Step 2.1's table constraint.
 
+### Import and export (Phase 2, Step 2.1)
+
+`lae vocab import` loads every file in `profiles/vocab/` (or `--dir DIR`) into the registry; `lae vocab export DIR` writes the registry back. Import validates every file first and writes nothing if one is invalid. It upserts: a Value Set in the files is created or replaced (its `terms` are the full ordered list), a binding is created or gets the file's `enforcement`; Value Sets and bindings that exist only in the database are kept, so one file can be imported on its own. Export writes one `<name>.yaml` per Value Set `vocab:<name>`, holding the set and the bindings that name it, plus `_schema.json`, keys in schema order, `en` first in every LangMap, and optional values that are absent or false left out. The files here are kept in exactly that form, so an import followed by an export reproduces this directory byte for byte; write new files the same way (or export them) and keep comments out of them, since export does not keep comments.
+
 ### Mapping to the vocabulary tables (Phase 2, Step 2.1)
 
 | YAML | Table column |
@@ -192,5 +196,5 @@ A binding's `path` addresses the URI values being checked. For a `classification
 | `terms[]` list order | `vocabulary_terms.position` |
 | `terms[].uri`, `is_default`, `deprecated`, `scope_note` | `vocabulary_terms` columns of the same names |
 | `terms[].label` | `vocabulary_terms.label_override` |
-| `terms[].flags` | `vocabulary_terms.flags` (Step 2.10) |
+| `terms[].flags` | `vocabulary_terms.flags` (created by migration `0010`; Step 2.10 reads `unique`) |
 | `bindings[].class`, `path`, `value_set`, `enforcement` | `slot_vocabulary_bindings.entity_class`, `property_path`, `vocabulary_id`, `enforcement` (absent = null = inherit) |

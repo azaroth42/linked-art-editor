@@ -21,7 +21,10 @@ request therefore asks both:
 
 Both rank a match the same way, so their results merge into one list: a label that starts with
 ``q`` (case-insensitively) comes before one that only has a word starting with it, and shorter
-labels come first (``rank_key``); ties go by URI. A URI found by both is listed once.
+labels come first (``rank_key``); ties go by URI. A URI found by both is listed once. The best
+``limit`` of that list are then ordered for display (``display_order``): still those starting with
+``q`` first, but within each group the entities records use most (``entity_labels.usage_count``,
+Phase 2 Step 2.1) come first, then shorter labels.
 
 **Labels and context.** Each result's ``label`` is chosen for the caller's locale chain
 (``Accept-Language``, with ``locale`` put first) from its ``entity_labels`` row with
@@ -280,6 +283,14 @@ def build_context_query(
 # --- merging and context ------------------------------------------------------------------------
 
 
+def display_order(hits: Iterable[Hit], usage: Mapping[str, int]) -> list[Hit]:
+    """``hits`` with those starting with ``q`` first, then most used, then by rank and URI."""
+    return sorted(
+        hits,
+        key=lambda hit: (hit.rank >= NOT_AT_START, -usage.get(hit.uri, 0), hit.rank, hit.uri),
+    )
+
+
 def merge_hits(indexed: Iterable[Hit], overlay: Iterable[Hit], limit: int) -> list[Hit]:
     """Both sources in one ranking, each URI once (its best rank; QLever's on a tie), ``limit``."""
     best: dict[str, Hit] = {}
@@ -350,6 +361,7 @@ class LabelRow:
     labels: dict[str, str]
     default_label: str
     source: str
+    usage_count: int
 
 
 async def watermark_time(session: AsyncSession) -> datetime | None:
@@ -388,6 +400,7 @@ async def overlay_rows(
             EntityLabel.labels,
             EntityLabel.default_label,
             EntityLabel.source,
+            EntityLabel.usage_count,
         )
         .where(
             EntityLabel.status == EntityLabelStatus.PUBLISHED,
@@ -419,6 +432,7 @@ async def label_rows(session: AsyncSession, uris: Iterable[str]) -> dict[str, La
             EntityLabel.labels,
             EntityLabel.default_label,
             EntityLabel.source,
+            EntityLabel.usage_count,
         ).where(EntityLabel.uri == any_(bindparam("uris", wanted, type_=ARRAY(Text))))
     )
     return {row.uri: LabelRow(*row) for row in rows}
@@ -581,6 +595,7 @@ async def autocomplete(
     contexts = collect_context(context_rows)
     parents = {parent for context in contexts.values() for parent in context.parents}
     rows = await label_rows(session, [*(hit.uri for hit in hits), *parents])
+    hits = display_order(hits, {uri: row.usage_count for uri, row in rows.items()})
 
     results = []
     for hit in hits:

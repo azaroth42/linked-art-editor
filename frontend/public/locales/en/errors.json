@@ -97,5 +97,6 @@
   "LAE-SHACL-020": "A concept should have at least one Name in identified_by.",
   "LAE-SHACL-021": "broader must refer to a concept (Type, Material, Language, MeasurementUnit or Currency).",
   "LAE-VALID-001": "Drafts cannot be read right now. Please try again later.",
-  "LAE-VALID-002": "This record has no draft to validate."
+  "LAE-VALID-002": "This record has no draft to validate.",
+  "LAE-VOCAB-001": "There is no value set {vocabulary_id}."
 }

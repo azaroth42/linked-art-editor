@@ -1,0 +1,95 @@
+# yaml-language-server: $schema=_schema.json
+# Value Set vocab:type_of_work and its bindings. Written by `lae vocab export`; edit it and run
+# `lae vocab import` (profiles/README.md, spec section 7).
+value_sets:
+  - id: vocab:type_of_work
+    version: 1
+    label:
+      en: Type of Work
+    scope_note:
+      en: Concepts whose metatype is type of work (aat:300435443).
+    mode: rule
+    enforcement: extensible
+    rule:
+      metatype_uris:
+        - http://vocab.getty.edu/aat/300435443
+      broader_roots: []
+      exclusions: []
+      classes: []
+    terms:
+      - uri: http://vocab.getty.edu/aat/300033618
+        label:
+          en: Painting
+      - uri: http://vocab.getty.edu/aat/300033973
+        label:
+          en: Drawing
+      - uri: http://vocab.getty.edu/aat/300041273
+        label:
+          en: Print
+      - uri: http://vocab.getty.edu/aat/300046300
+        label:
+          en: Photograph
+      - uri: http://vocab.getty.edu/aat/300047090
+        label:
+          en: Sculpture
+      - uri: http://vocab.getty.edu/aat/300028051
+        label:
+          en: Book
+      - uri: http://vocab.getty.edu/aat/300265483
+        label:
+          en: Manuscript
+      - uri: http://vocab.getty.edu/aat/300028094
+        label:
+          en: Map
+      - uri: http://vocab.getty.edu/aat/300037222
+        label:
+          en: Coin
+      - uri: http://vocab.getty.edu/aat/300411641
+        label:
+          en: Decorative Arts
+      - uri: http://vocab.getty.edu/aat/300037680
+        label:
+          en: Furniture
+      - uri: http://vocab.getty.edu/aat/300266639
+        label:
+          en: Clothing
+      - uri: http://vocab.getty.edu/aat/300209286
+        label:
+          en: Jewelry
+      - uri: http://vocab.getty.edu/aat/300041620
+        label:
+          en: Musical Instrument
+      - uri: http://vocab.getty.edu/aat/300263552
+        label:
+          en: Architecture
+      - uri: http://vocab.getty.edu/aat/300036745
+        label:
+          en: Armor
+      - uri: http://vocab.getty.edu/aat/300404391
+        label:
+          en: Frame
+      - uri: http://vocab.getty.edu/aat/300041379
+        label:
+          en: Lithograph
+      - uri: http://vocab.getty.edu/aat/300033936
+        label:
+          en: Miniature
+      - uri: http://vocab.getty.edu/aat/300015342
+        label:
+          en: Mosaic
+      - uri: http://vocab.getty.edu/aat/300263722
+        label:
+          en: Stained Glass
+      - uri: http://vocab.getty.edu/aat/300205002
+        label:
+          en: Tapestry
+bindings:
+  - class: HumanMadeObject
+    path: classified_as
+    value_set: vocab:type_of_work
+  - class: LinguisticObject
+    path: classified_as
+    value_set: vocab:type_of_work
+  - class: VisualItem
+    path: classified_as
+    value_set: vocab:type_of_work

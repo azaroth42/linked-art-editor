@@ -1,4 +1,4 @@
-"""SQLAlchemy 2 declarative models for the core schema (migration ``0001_core``).
+"""SQLAlchemy 2 declarative models for the core schema (``0001_core``) and its later migrations.
 
 The migrations under ``backend/migrations/`` are the source of truth for the database; these
 models mirror them exactly (``tests/db/test_migrations.py`` compares the two). Things the ORM
@@ -164,8 +164,13 @@ class EntityLabel(Base):
     """Label lookup row for a local record or a sidecar entity (spec §3.1, §3.2)."""
 
     __tablename__ = "entity_labels"
-    # Migration 0005: the autocomplete overlay reads the rows changed since the index was built.
-    __table_args__ = (Index("ix_entity_labels_updated_at", "updated_at"),)
+    __table_args__ = (
+        # Migration 0005: the autocomplete overlay reads the rows changed since the index was built.
+        Index("ix_entity_labels_updated_at", "updated_at"),
+        # Migration 0010: Value Set membership and metatype lookups (lae.vocab).
+        Index("ix_entity_labels_vocab_ids", "vocab_ids", postgresql_using="gin"),
+        Index("ix_entity_labels_metatype_uris", "metatype_uris", postgresql_using="gin"),
+    )
 
     uri: Mapped[str] = mapped_column(Text, primary_key=True)
     type: Mapped[str] = mapped_column(Text)
@@ -183,6 +188,8 @@ class EntityLabel(Base):
     updated_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=NOW, onupdate=NOW
     )
+    # Migration 0010: how often QLever's default graph points at the entity (lae.vocab.usage).
+    usage_count: Mapped[int] = mapped_column(Integer, server_default=text("0"))
 
 
 class CrdtDraft(Base):
@@ -311,3 +318,91 @@ class ApiToken(Base):
     expires_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=NOW)
+
+
+class VocabularyMode(StrEnum):
+    """``vocabularies.mode`` (spec §7.1)."""
+
+    ENUMERATED = "enumerated"
+    RULE = "rule"
+
+
+class Enforcement(StrEnum):
+    """``vocabularies.enforcement`` and ``slot_vocabulary_bindings.enforcement`` (spec §7.3)."""
+
+    STRICT = "strict"
+    EXTENSIBLE = "extensible"
+    ADVISORY = "advisory"
+
+
+NULLABLE_JSONB = JSONB(none_as_null=True)
+"""JSONB that stores Python ``None`` as SQL ``NULL`` rather than the JSON value ``null``."""
+
+ENFORCEMENT_TYPE = _pg_enum(Enforcement, "vocabularies_enforcement")
+"""The one Postgres enum type both enforcement columns use (migration ``0010``)."""
+
+
+class Vocabulary(Base):
+    """A Value Set (migration ``0010``; ``profiles/vocab/*.yaml``)."""
+
+    __tablename__ = "vocabularies"
+
+    id: Mapped[str] = mapped_column(Text, primary_key=True)
+    label: Mapped[dict[str, str]] = mapped_column(JSONB)
+    scope_note: Mapped[dict[str, str] | None] = mapped_column(NULLABLE_JSONB)
+    mode: Mapped[VocabularyMode] = mapped_column(_pg_enum(VocabularyMode, "vocabularies_mode"))
+    rule: Mapped[dict[str, list[str]] | None] = mapped_column(NULLABLE_JSONB)
+    enforcement: Mapped[Enforcement] = mapped_column(ENFORCEMENT_TYPE)
+    version: Mapped[int] = mapped_column(Integer, server_default=text("1"))
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=NOW)
+    updated_by: Mapped[uuid.UUID | None] = mapped_column(Uuid)
+
+
+class VocabularyTerm(Base):
+    """One term of a Value Set, at ``position`` in its ordered list."""
+
+    __tablename__ = "vocabulary_terms"
+
+    vocabulary_id: Mapped[str] = mapped_column(
+        ForeignKey("vocabularies.id", ondelete="CASCADE"), primary_key=True
+    )
+    uri: Mapped[str] = mapped_column(Text, primary_key=True)
+    position: Mapped[int] = mapped_column(Integer)
+    is_default: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
+    deprecated: Mapped[bool] = mapped_column(Boolean, server_default=text("false"))
+    scope_note: Mapped[dict[str, str] | None] = mapped_column(NULLABLE_JSONB)
+    label_override: Mapped[dict[str, str] | None] = mapped_column(NULLABLE_JSONB)
+    flags: Mapped[dict[str, Any] | None] = mapped_column(NULLABLE_JSONB)
+
+
+class SlotVocabularyBinding(Base):
+    """Binds a Value Set to the values at ``(entity_class, property_path)`` (register C4)."""
+
+    __tablename__ = "slot_vocabulary_bindings"
+    __table_args__ = (
+        UniqueConstraint(
+            "entity_class",
+            "property_path",
+            "vocabulary_id",
+            name="uq_slot_vocabulary_bindings_class_path_vocabulary",
+        ),
+    )
+
+    id: Mapped[int] = mapped_column(BigInteger, Identity(), primary_key=True)
+    entity_class: Mapped[str] = mapped_column(Text)
+    property_path: Mapped[str] = mapped_column(Text)
+    vocabulary_id: Mapped[str] = mapped_column(ForeignKey("vocabularies.id"))
+    enforcement: Mapped[Enforcement | None] = mapped_column(ENFORCEMENT_TYPE)
+    """``None``: the Value Set's own enforcement applies."""
+
+
+class VocabularyMembership(Base):
+    """A URI that belongs to a Value Set, as last computed by ``refresh_membership``."""
+
+    __tablename__ = "vocabulary_membership"
+
+    vocabulary_id: Mapped[str] = mapped_column(
+        ForeignKey("vocabularies.id", ondelete="CASCADE"), primary_key=True
+    )
+    uri: Mapped[str] = mapped_column(Text, primary_key=True)
+    refreshed_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=NOW)

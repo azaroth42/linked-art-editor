@@ -1,0 +1,89 @@
+# yaml-language-server: $schema=_schema.json
+# Value Set vocab:material and its bindings. Written by `lae vocab export`; edit it and run
+# `lae vocab import` (profiles/README.md, spec section 7).
+value_sets:
+  - id: vocab:material
+    version: 1
+    label:
+      en: Material
+    scope_note:
+      en: Concepts of class Material.
+    mode: rule
+    enforcement: extensible
+    rule:
+      metatype_uris: []
+      broader_roots: []
+      exclusions: []
+      classes:
+        - Material
+    terms:
+      - uri: http://vocab.getty.edu/aat/300015050
+        label:
+          en: oil paint
+      - uri: http://vocab.getty.edu/aat/300014078
+        label:
+          en: canvas
+      - uri: http://vocab.getty.edu/aat/300014109
+        label:
+          en: paper
+      - uri: http://vocab.getty.edu/aat/300015012
+        label:
+          en: ink
+      - uri: http://vocab.getty.edu/aat/300015045
+        label:
+          en: watercolor
+      - uri: http://vocab.getty.edu/aat/300015062
+        label:
+          en: tempera
+      - uri: http://vocab.getty.edu/aat/300011098
+        label:
+          en: graphite
+      - uri: http://vocab.getty.edu/aat/300011727
+        label:
+          en: chalk
+      - uri: http://vocab.getty.edu/aat/300011914
+        label:
+          en: wood
+      - uri: http://vocab.getty.edu/aat/300012264
+        label:
+          en: oak
+      - uri: http://vocab.getty.edu/aat/300010900
+        label:
+          en: metal
+      - uri: http://vocab.getty.edu/aat/300010957
+        label:
+          en: bronze
+      - uri: http://vocab.getty.edu/aat/300011020
+        label:
+          en: copper
+      - uri: http://vocab.getty.edu/aat/300011029
+        label:
+          en: silver
+      - uri: http://vocab.getty.edu/aat/300264831
+        label:
+          en: gold leaf
+      - uri: http://vocab.getty.edu/aat/300011176
+        label:
+          en: stone
+      - uri: http://vocab.getty.edu/aat/300011443
+        label:
+          en: marble
+      - uri: http://vocab.getty.edu/aat/300010439
+        label:
+          en: clay
+      - uri: http://vocab.getty.edu/aat/300010669
+        label:
+          en: terracotta
+      - uri: http://vocab.getty.edu/aat/300014922
+        label:
+          en: plaster
+      - uri: http://vocab.getty.edu/aat/300010797
+        label:
+          en: glass
+      - uri: http://vocab.getty.edu/aat/300011798
+        label:
+          en: bone
+bindings:
+  - class: HumanMadeObject
+    path: made_of
+    value_set: vocab:material

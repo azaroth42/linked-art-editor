@@ -18,7 +18,9 @@ batch, upserting the labels. With several streams, which of two equal URIs in di
 is kept is not defined.
 
 At the end, ``sync_state`` records ``bootstrap_context_version`` and
-``bootstrap_expander_version`` (ADR-0007), and both tables are analyzed.
+``bootstrap_expander_version`` (ADR-0007), the metatypes that records state inline on the concepts
+they reference are added to those concepts' ``entity_labels`` rows
+(``lae.vocab.metatypes.harvest_all_metatypes``, ADR-0032), and both tables are analyzed.
 """
 
 from __future__ import annotations
@@ -52,6 +54,7 @@ from lae.db.models import EntityLabelStatus, RecordStatus
 from lae.labels.upsert import LOCAL_SOURCE
 from lae.rdf import EXPANDER_VERSION
 from lae.settings import Settings
+from lae.vocab.metatypes import harvest_all_metatypes
 
 DEFAULT_BATCH: Final = 10_000
 DEFAULT_STREAMS: Final = 4
@@ -337,6 +340,7 @@ async def load(
             BOOTSTRAP_EXPANDER_VERSION: EXPANDER_VERSION,
         }
         await set_sync_state(conn, versions)
+        metatypes_harvested = await harvest_all_metatypes(conn)
         await conn.execute("ANALYZE records")
         await conn.execute("ANALYZE entity_labels")
         records_total = await conn.fetchval("SELECT count(*) FROM records")
@@ -359,5 +363,6 @@ async def load(
         "prepare_cpu_s": round(totals.prepare_cpu_s, 1),
         "copy_s": round(totals.copy_s, 1),
         "records_total": records_total,
+        "metatypes_harvested": metatypes_harvested,
         "sync_state": versions,
     }

@@ -1,0 +1,59 @@
+# yaml-language-server: $schema=_schema.json
+# Value Set vocab:work_title_types and its bindings. Written by `lae vocab export`; edit it and run
+# `lae vocab import` (profiles/README.md, spec section 7).
+value_sets:
+  - id: vocab:work_title_types
+    version: 1
+    label:
+      en: Title types
+    scope_note:
+      en: Types of the names (titles) of works and objects.
+    mode: enumerated
+    enforcement: extensible
+    terms:
+      - uri: http://vocab.getty.edu/aat/300404670
+        label:
+          en: Primary Name
+        scope_note:
+          en: The main title, at most one per language.
+        is_default: true
+      - uri: http://vocab.getty.edu/aat/300417193
+        label:
+          en: Title
+        scope_note:
+          en: A title without a more specific type.
+      - uri: http://vocab.getty.edu/aat/300312006
+        label:
+          en: Subtitle
+        scope_note:
+          en: A secondary part of the title.
+      - uri: http://vocab.getty.edu/aat/300417227
+        label:
+          en: Alternate Title
+        scope_note:
+          en: A title other than the primary one.
+      - uri: http://vocab.getty.edu/aat/300417194
+        label:
+          en: Translated Title
+        scope_note:
+          en: A title translated into another language.
+      - uri: http://vocab.getty.edu/aat/300404669
+        label:
+          en: Display Name
+        scope_note:
+          en: The name to use when displaying the entity.
+      - uri: http://vocab.getty.edu/aat/300451544
+        label:
+          en: Sort Name
+        scope_note:
+          en: The name to use when sorting the entity with others.
+bindings:
+  - class: HumanMadeObject
+    path: identified_by[Name].classified_as
+    value_set: vocab:work_title_types
+  - class: LinguisticObject
+    path: identified_by[Name].classified_as
+    value_set: vocab:work_title_types
+  - class: VisualItem
+    path: identified_by[Name].classified_as
+    value_set: vocab:work_title_types

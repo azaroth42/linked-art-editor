@@ -1,0 +1,110 @@
+# yaml-language-server: $schema=_schema.json
+# Value Set vocab:nationality and its bindings. Written by `lae vocab export`; edit it and run
+# `lae vocab import` (profiles/README.md, spec section 7).
+value_sets:
+  - id: vocab:nationality
+    version: 1
+    label:
+      en: Nationality
+    scope_note:
+      en: Concepts whose metatype is nationality (aat:300379842).
+    mode: rule
+    enforcement: extensible
+    rule:
+      metatype_uris:
+        - http://vocab.getty.edu/aat/300379842
+      broader_roots: []
+      exclusions: []
+      classes: []
+    terms:
+      - uri: http://vocab.getty.edu/aat/300107956
+        label:
+          en: American
+      - uri: http://vocab.getty.edu/aat/300111153
+        label:
+          en: Austrian
+      - uri: http://vocab.getty.edu/aat/300021861
+        label:
+          en: Australian
+      - uri: http://vocab.getty.edu/aat/300111156
+        label:
+          en: Belgian
+      - uri: http://vocab.getty.edu/aat/300111159
+        label:
+          en: British
+      - uri: http://vocab.getty.edu/aat/300107962
+        label:
+          en: Canadian
+      - uri: http://vocab.getty.edu/aat/300018322
+        label:
+          en: Chinese
+      - uri: http://vocab.getty.edu/aat/300111166
+        label:
+          en: Czech
+      - uri: http://vocab.getty.edu/aat/300111172
+        label:
+          en: Danish
+      - uri: http://vocab.getty.edu/aat/300111175
+        label:
+          en: Dutch
+      - uri: http://vocab.getty.edu/aat/300020251
+        label:
+          en: Egyptian
+      - uri: http://vocab.getty.edu/aat/300111184
+        label:
+          en: Flemish
+      - uri: http://vocab.getty.edu/aat/300111188
+        label:
+          en: French
+      - uri: http://vocab.getty.edu/aat/300111192
+        label:
+          en: German
+      - uri: http://vocab.getty.edu/aat/300264816
+        label:
+          en: Greek
+      - uri: http://vocab.getty.edu/aat/300111195
+        label:
+          en: Hungarian
+      - uri: http://vocab.getty.edu/aat/300018863
+        label:
+          en: Indian
+      - uri: http://vocab.getty.edu/aat/300111259
+        label:
+          en: Irish
+      - uri: http://vocab.getty.edu/aat/300111198
+        label:
+          en: Italian
+      - uri: http://vocab.getty.edu/aat/300018519
+        label:
+          en: Japanese
+      - uri: http://vocab.getty.edu/aat/300107963
+        label:
+          en: Mexican
+      - uri: http://vocab.getty.edu/aat/300021959
+        label:
+          en: New Zealander
+      - uri: http://vocab.getty.edu/aat/300111201
+        label:
+          en: Norwegian
+      - uri: http://vocab.getty.edu/aat/300111204
+        label:
+          en: Polish
+      - uri: http://vocab.getty.edu/aat/300111207
+        label:
+          en: Portuguese
+      - uri: http://vocab.getty.edu/aat/300111276
+        label:
+          en: Russian
+      - uri: http://vocab.getty.edu/aat/300111215
+        label:
+          en: Spanish
+      - uri: http://vocab.getty.edu/aat/300111218
+        label:
+          en: Swedish
+      - uri: http://vocab.getty.edu/aat/300111221
+        label:
+          en: Swiss
+bindings:
+  - class: Person
+    path: classified_as
+    value_set: vocab:nationality

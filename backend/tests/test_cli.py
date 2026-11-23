@@ -56,7 +56,15 @@ def test_package_has_version() -> None:
 
 
 def test_expected_commands_exist() -> None:
-    assert set(COMMANDS) == {"api", "crdt-ws", "sync-worker", "scheduler", "migrate", "bootstrap"}
+    assert set(COMMANDS) == {
+        "api",
+        "crdt-ws",
+        "sync-worker",
+        "scheduler",
+        "migrate",
+        "bootstrap",
+        "vocab",
+    }
 
 
 def test_every_command_has_exactly_one_implementation() -> None:

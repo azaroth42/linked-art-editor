@@ -1,0 +1,29 @@
+# yaml-language-server: $schema=_schema.json
+# Value Set vocab:gender and its bindings. Written by `lae vocab export`; edit it and run
+# `lae vocab import` (profiles/README.md, spec section 7).
+value_sets:
+  - id: vocab:gender
+    version: 1
+    label:
+      en: Gender
+    scope_note:
+      en: Concepts whose metatype is gender (aat:300055147).
+    mode: rule
+    enforcement: extensible
+    rule:
+      metatype_uris:
+        - http://vocab.getty.edu/aat/300055147
+      broader_roots: []
+      exclusions: []
+      classes: []
+    terms:
+      - uri: http://vocab.getty.edu/aat/300189557
+        label:
+          en: female
+      - uri: http://vocab.getty.edu/aat/300189559
+        label:
+          en: male
+bindings:
+  - class: Person
+    path: classified_as
+    value_set: vocab:gender
