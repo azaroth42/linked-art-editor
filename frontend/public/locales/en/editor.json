@@ -30,8 +30,90 @@
   },
   "undo": "Undo",
   "redo": "Redo",
-  "title_field": {
-    "label": "Title"
+  "profile": {
+    "add_details": "Add details",
+    "hide_details": "Hide details",
+    "load_error": "The editing form for this record cannot be loaded right now.",
+    "vocab_error": "The value lists cannot be loaded right now; type and term choices are unavailable."
+  },
+  "widgets": {
+    "required_label": "{label} (required)",
+    "empty": "Nothing recorded yet.",
+    "add": "Add to {label}",
+    "remove": "Remove {name}",
+    "entry": "{label} {number}",
+    "term": {
+      "none": "Not set"
+    },
+    "language": {
+      "none": "No language"
+    },
+    "text": {
+      "language": "Language of {name}",
+      "direction": "Text direction of {name}",
+      "direction_auto": "Automatic",
+      "direction_ltr": "Left to right",
+      "direction_rtl": "Right to left",
+      "type": "Type of {name}"
+    },
+    "dimension": {
+      "value": "Value of {name}",
+      "unit": "Unit of {name}",
+      "not_a_number": "Enter a number, for example 31.5."
+    },
+    "edtf": {
+      "syntax": "This is not an EDTF date. Examples: 1642, 1880~/1895?, -0479/-0469, 19XX.",
+      "range": "This interval ends before it starts.",
+      "bounds": "Earliest {begin}, latest {end}.",
+      "open": "open",
+      "no_bounds": "No dates recorded."
+    },
+    "entity_ref": {
+      "search": "Search to add to {label}",
+      "options": "Suggestions for {label}",
+      "class": "({class})",
+      "context": "{class}: {context}",
+      "create": "Create new {class} “{name}”…",
+      "too_short": "Type at least {count, plural, one {# character} other {# characters}}.",
+      "searching": "Searching…",
+      "search_failed": "Search is unavailable right now.",
+      "no_results": "No matching records. You can create a new one."
+    },
+    "classification": {
+      "terms": "{label} terms",
+      "other": "Other classifications",
+      "other_help": "Classifications that none of the value lists above include. They are kept as they are; you can remove them."
+    },
+    "production": {
+      "carried_out_by": "Carried out by ({name})",
+      "timespan": "Date ({name})",
+      "took_place_at": "Place ({name})"
+    },
+    "create_stub": {
+      "title": "Create a new {class}",
+      "name": "Name",
+      "create": "Create and add",
+      "cancel": "Cancel",
+      "failed": "The record could not be created. Please try again."
+    }
+  },
+  "classes": {
+    "HumanMadeObject": "Object",
+    "DigitalObject": "Digital object",
+    "LinguisticObject": "Text",
+    "VisualItem": "Visual work",
+    "Set": "Set",
+    "Person": "Person",
+    "Group": "Group",
+    "Place": "Place",
+    "Type": "Concept",
+    "Language": "Language",
+    "Material": "Material",
+    "MeasurementUnit": "Measurement unit",
+    "Currency": "Currency",
+    "Period": "Period",
+    "Event": "Event",
+    "Activity": "Activity"
   },
   "raw_inspector": {
     "show": "Show JSON-LD",

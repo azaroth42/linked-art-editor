@@ -175,14 +175,16 @@ def create_app(
 
     @asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-        # Validation's schemas and shapes (Step 1.9) and the Public Reader's template and strings
-        # (Step 1.21) are loaded now, so that a broken file stops the start instead of failing
-        # the first request.
+        # Validation's schemas and shapes (Step 1.9), the Public Reader's template and strings
+        # (Step 1.21) and the UI Profiles (Step 1.18) are loaded now, so that a broken file stops
+        # the start instead of failing the first request.
+        from lae.api.profiles import warm_up as warm_up_profiles
         from lae.reader.render import warm_up as warm_up_reader
         from lae.validation import warm_up
 
         await asyncio.to_thread(warm_up)
         await asyncio.to_thread(warm_up_reader)
+        await asyncio.to_thread(warm_up_profiles)
         engine = create_engine(settings.database_url)
         http_client = httpx.AsyncClient(timeout=HTTP_TIMEOUT_SECONDS, transport=http_transport)
         app.state.engine = engine

@@ -508,6 +508,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/profiles/{record_class}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Profile
+         * @description The UI Profile of ``record_class``.
+         */
+        get: operations["get_profile_api_profiles__record_class__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -709,6 +729,18 @@ export interface components {
              */
             expires_at: string;
         };
+        /**
+         * GridColumn
+         * @description A column of the grid view (Phase 2).
+         */
+        GridColumn: {
+            /** Slot */
+            slot: string;
+            /** Label */
+            label?: {
+                [key: string]: string;
+            } | null;
+        };
         /** HTTPValidationError */
         HTTPValidationError: {
             /** Detail */
@@ -742,6 +774,58 @@ export interface components {
             roles: string[];
             /** Permissions */
             permissions: string[];
+        };
+        /**
+         * ProfileSection
+         * @description An ordered group of slots; ``advanced`` sections sit behind "Add details".
+         */
+        ProfileSection: {
+            /** Id */
+            id: string;
+            /** Label */
+            label: {
+                [key: string]: string;
+            };
+            /**
+             * Advanced
+             * @default false
+             */
+            advanced: boolean;
+            /** Slots */
+            slots: components["schemas"]["ProfileSlot"][];
+        };
+        /**
+         * ProfileSlot
+         * @description One editable field bound to a path (``profiles/README.md``, "UI Profiles").
+         */
+        ProfileSlot: {
+            /** Id */
+            id: string;
+            /** Label */
+            label: {
+                [key: string]: string;
+            };
+            /** Help Text */
+            help_text?: {
+                [key: string]: string;
+            } | null;
+            /** Path */
+            path: string;
+            /**
+             * Widget
+             * @enum {string}
+             */
+            widget: "text" | "langtext" | "edtf" | "entity_ref" | "classification" | "dimension" | "identifier" | "statement" | "wkt" | "production";
+            /** Value Set */
+            value_set?: string | null;
+            /** Allowed Classes */
+            allowed_classes?: string[] | null;
+            /** Multiple */
+            multiple: boolean;
+            /** Required */
+            required: boolean;
+            /** Advanced */
+            advanced: boolean;
         };
         /**
          * ProviderInfo
@@ -903,6 +987,20 @@ export interface components {
              * Format: date-time
              */
             created_at: string;
+        };
+        /**
+         * UiProfile
+         * @description The editing form of one record class.
+         */
+        UiProfile: {
+            /** Class */
+            class: string;
+            /** Version */
+            version: number;
+            /** Sections */
+            sections: components["schemas"]["ProfileSection"][];
+            /** Grid Columns */
+            grid_columns?: components["schemas"]["GridColumn"][] | null;
         };
         /**
          * UserKind
@@ -1744,6 +1842,45 @@ export interface operations {
                 };
             };
             /** @description LAE-VOCAB-001 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_profile_api_profiles__record_class__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Record class, e.g. HumanMadeObject */
+                record_class: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["UiProfile"];
+                };
+            };
+            /** @description LAE-PROF-001 */
             404: {
                 headers: {
                     [name: string]: unknown;
