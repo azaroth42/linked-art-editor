@@ -34,6 +34,10 @@ CSV_ROW_INVALID: Final = "LAE-BOOT-009"
 
 QLEVER_INDEX_WATERMARK: Final = "qlever_index_watermark"
 """``sync_state`` key: id of the last outbox event reflected in the live QLever index."""
+QLEVER_INDEX_WATERMARK_TIME: Final = "qlever_index_watermark_time"
+"""``sync_state`` key: when the snapshot the live index was built from was taken (ISO 8601 with
+offset, as a JSON string; ``null`` if unknown). Rows of ``entity_labels`` updated later are not in
+QLever's text index, so autocomplete searches them in Postgres (Step 1.13)."""
 BOOTSTRAP_CONTEXT_VERSION: Final = "bootstrap_context_version"
 """``sync_state`` key: context version of the bulk load (ADR-0007)."""
 BOOTSTRAP_EXPANDER_VERSION: Final = "bootstrap_expander_version"

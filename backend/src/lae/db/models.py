@@ -154,6 +154,8 @@ class EntityLabel(Base):
     """Label lookup row for a local record or a sidecar entity (spec §3.1, §3.2)."""
 
     __tablename__ = "entity_labels"
+    # Migration 0005: the autocomplete overlay reads the rows changed since the index was built.
+    __table_args__ = (Index("ix_entity_labels_updated_at", "updated_at"),)
 
     uri: Mapped[str] = mapped_column(Text, primary_key=True)
     type: Mapped[str] = mapped_column(Text)

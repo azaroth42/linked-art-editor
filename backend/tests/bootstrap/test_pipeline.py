@@ -5,6 +5,7 @@ from __future__ import annotations
 import gzip
 import json
 import shutil
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
@@ -220,6 +221,9 @@ async def test_export_writes_every_record_sidecar_labels_and_the_watermark(
     out = tmp_path / f"export{suffix}"
     summary = await export_nt(out, settings=bootstrap_settings, workers=2, batch=2)
     assert summary["watermark"] == 3
+    # Every label row in the export was written before the snapshot (autocomplete's overlay).
+    [newest] = await fetch(bootstrap_settings, "SELECT max(updated_at) AS t FROM entity_labels")
+    assert datetime.fromisoformat(summary["snapshot_at"]) >= newest["t"]
     assert summary["records"] == 4
     assert summary["failures"] == {EXPANSION_FAILED: 1}
     assert summary["sidecar_rows"] == 1 and summary["sidecar_quads"] == 2
