@@ -18,6 +18,7 @@ from lae.search.autocomplete import (
     build_search_query,
     class_iris,
     collect_context,
+    display_order,
     life_dates,
     like_escape,
     merge_hits,
@@ -147,6 +148,20 @@ def test_merge_hits_ranks_both_sources_together_and_lists_each_uri_once() -> Non
     assert merged[1].label == "Rembrandt"  # a tie keeps QLever's hit
     assert [hit.uri for hit in merge_hits(indexed, overlay, 2)] == ["urn:new", "urn:a"]
     assert merge_hits([], [], 5) == []
+
+
+def test_display_order_puts_the_most_used_first_within_prefix_matches() -> None:
+    hits = [
+        Hit("urn:short", "Type", 5, "Paper"),
+        Hit("urn:used", "Type", 8, "Painting"),
+        Hit("urn:tie", "Type", 8, "Pastels"),
+        Hit("urn:word", "Type", NOT_AT_START + 9, "Oil paint"),
+    ]
+    usage = {"urn:used": 120, "urn:word": 900, "urn:short": 3}
+    ordered = display_order(hits, usage)
+    # A label starting with q still beats a better used one that only has a word starting with it.
+    assert [hit.uri for hit in ordered] == ["urn:used", "urn:short", "urn:tie", "urn:word"]
+    assert display_order(hits, {}) == sorted(hits, key=lambda hit: (hit.rank, hit.uri))
 
 
 @pytest.mark.parametrize(

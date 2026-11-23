@@ -1,0 +1,45 @@
+# yaml-language-server: $schema=_schema.json
+# Value Set vocab:identifier_types and its bindings. Written by `lae vocab export`; edit it and run
+# `lae vocab import` (profiles/README.md, spec section 7).
+value_sets:
+  - id: vocab:identifier_types
+    version: 1
+    label:
+      en: Identifier types
+    scope_note:
+      en: Types of identifiers (Linked Art recommended identifier types).
+    mode: enumerated
+    enforcement: extensible
+    terms:
+      - uri: http://vocab.getty.edu/aat/300312355
+        label:
+          en: Accession Number
+        scope_note:
+          en: The accession number of the object.
+        is_default: true
+        flags:
+          unique: true
+      - uri: http://vocab.getty.edu/aat/300404621
+        label:
+          en: Local Number
+        scope_note:
+          en: A number assigned by the institution that is not an accession or system number.
+      - uri: http://vocab.getty.edu/aat/300435704
+        label:
+          en: System Number
+        scope_note:
+          en: A number assigned by an automated system.
+      - uri: http://vocab.getty.edu/aat/300311706
+        label:
+          en: Call Number
+        scope_note:
+          en: Where the object is in the repository (libraries).
+      - uri: http://vocab.getty.edu/aat/300456575
+        label:
+          en: Sort Value
+        scope_note:
+          en: A value used only to sort the entity with others.
+bindings:
+  - class: HumanMadeObject
+    path: identified_by[Identifier].classified_as
+    value_set: vocab:identifier_types

@@ -1,0 +1,42 @@
+# yaml-language-server: $schema=_schema.json
+# Value Set vocab:person_name_parts and its bindings. Written by `lae vocab export`; edit it and run
+# `lae vocab import` (profiles/README.md, spec section 7).
+value_sets:
+  - id: vocab:person_name_parts
+    version: 1
+    label:
+      en: Name parts
+    scope_note:
+      en: Types of the parts of a person's name (Linked Art recommended name types).
+    mode: enumerated
+    enforcement: extensible
+    terms:
+      - uri: http://vocab.getty.edu/aat/300404651
+        label:
+          en: Given Name
+        scope_note:
+          en: The given or first name of a person.
+      - uri: http://vocab.getty.edu/aat/300404654
+        label:
+          en: Middle Name
+        scope_note:
+          en: The middle name of a person.
+      - uri: http://vocab.getty.edu/aat/300404652
+        label:
+          en: Family Name
+        scope_note:
+          en: The family name or surname of a person.
+      - uri: http://vocab.getty.edu/aat/300404845
+        label:
+          en: Prefix
+        scope_note:
+          en: A part placed before the name, such as an honorific.
+      - uri: http://vocab.getty.edu/aat/300404662
+        label:
+          en: Suffix
+        scope_note:
+          en: A part placed after the name, such as Jr. or III.
+bindings:
+  - class: Person
+    path: identified_by[Name].part[Name].classified_as
+    value_set: vocab:person_name_parts

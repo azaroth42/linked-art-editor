@@ -7,7 +7,9 @@ becomes ``uri = http://vocab.getty.edu/aat/<aat_code>``, ``type = 'Type'``,
 ``labels = {"en": preferred_name}``, ``default_label = preferred_name``, ``source = 'aat'``,
 ``status = 'published'``. Running it again updates those columns in place and leaves
 ``metatype_uris`` and ``vocab_ids`` alone (Phase 2 maintains them). A row without a numeric code
-or a name, or one that repeats a code, is reported and skipped.
+or a name, or one that repeats a code, is reported and skipped. At the end the metatypes that
+loaded records state inline on AAT concepts are added to the new rows
+(``lae.vocab.metatypes.harvest_all_metatypes``, ADR-0029): the load ran before those rows existed.
 
 ``lae bootstrap export-nt`` writes these rows to QLever graph ``urn:graph:sidecar:aat``.
 """
@@ -25,6 +27,7 @@ import asyncpg
 from lae.bootstrap.common import CSV_ROW_INVALID, Failure, Report, asyncpg_dsn
 from lae.db.models import EntityLabelStatus
 from lae.settings import Settings
+from lae.vocab.metatypes import harvest_all_metatypes
 
 STAGE: Final = "aat-labels"
 AAT_PREFIX: Final = "http://vocab.getty.edu/aat/"
@@ -105,6 +108,7 @@ async def load_aat_labels(
             rows = await conn.fetch(
                 _UPSERT, AAT_TYPE, AAT_SOURCE, EntityLabelStatus.PUBLISHED.value
             )
+            metatypes_harvested = await harvest_all_metatypes(conn)
         total = await conn.fetchval(
             "SELECT count(*) FROM entity_labels WHERE source = $1", AAT_SOURCE
         )
@@ -120,5 +124,6 @@ async def load_aat_labels(
         "rows_skipped": len(failures),
         "report": str(report_path),
         "aat_rows_total": total,
+        "metatypes_harvested": metatypes_harvested,
         "seconds": round(time.perf_counter() - started, 2),
     }

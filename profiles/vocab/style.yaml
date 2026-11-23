@@ -1,0 +1,28 @@
+# yaml-language-server: $schema=_schema.json
+# Value Set vocab:style and its bindings. Written by `lae vocab export`; edit it and run
+# `lae vocab import` (profiles/README.md, spec section 7).
+value_sets:
+  - id: vocab:style
+    version: 1
+    label:
+      en: Style
+    scope_note:
+      en: Concepts whose metatype is style (aat:300015646).
+    mode: rule
+    enforcement: extensible
+    rule:
+      metatype_uris:
+        - http://vocab.getty.edu/aat/300015646
+      broader_roots: []
+      exclusions: []
+      classes: []
+bindings:
+  - class: HumanMadeObject
+    path: classified_as
+    value_set: vocab:style
+  - class: LinguisticObject
+    path: classified_as
+    value_set: vocab:style
+  - class: VisualItem
+    path: classified_as
+    value_set: vocab:style

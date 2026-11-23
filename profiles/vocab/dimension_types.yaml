@@ -1,0 +1,68 @@
+# yaml-language-server: $schema=_schema.json
+# Value Set vocab:dimension_types and its bindings. Written by `lae vocab export`; edit it and run
+# `lae vocab import` (profiles/README.md, spec section 7).
+value_sets:
+  - id: vocab:dimension_types
+    version: 1
+    label:
+      en: Dimension types
+    scope_note:
+      en: What a dimension measures (Linked Art recommended dimension types).
+    mode: enumerated
+    enforcement: extensible
+    terms:
+      - uri: http://vocab.getty.edu/aat/300055644
+        label:
+          en: Height
+        scope_note:
+          en: From the top to the bottom.
+        is_default: true
+      - uri: http://vocab.getty.edu/aat/300055647
+        label:
+          en: Width
+        scope_note:
+          en: From left to right.
+      - uri: http://vocab.getty.edu/aat/300072633
+        label:
+          en: Depth
+        scope_note:
+          en: From the front to the back.
+      - uri: http://vocab.getty.edu/aat/300055624
+        label:
+          en: Diameter
+        scope_note:
+          en: Across a circular object.
+      - uri: http://vocab.getty.edu/aat/300055645
+        label:
+          en: Length
+        scope_note:
+          en: Along the longest horizontal extent.
+      - uri: http://vocab.getty.edu/aat/300055646
+        label:
+          en: Thickness
+        scope_note:
+          en: Between opposite surfaces.
+      - uri: http://vocab.getty.edu/aat/300056240
+        label:
+          en: Weight
+        scope_note:
+          en: The weight of the object.
+      - uri: http://vocab.getty.edu/aat/300404433
+        label:
+          en: Count
+        scope_note:
+          en: A number of things, such as pages.
+      - uri: http://vocab.getty.edu/aat/300080438
+        label:
+          en: Color
+        scope_note:
+          en: A color, as a value in a color space.
+      - uri: http://vocab.getty.edu/aat/300055642
+        label:
+          en: Unknown Physical Dimension
+        scope_note:
+          en: A physical dimension not known.
+bindings:
+  - class: HumanMadeObject
+    path: dimension.classified_as
+    value_set: vocab:dimension_types

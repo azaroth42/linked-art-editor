@@ -1,0 +1,86 @@
+# yaml-language-server: $schema=_schema.json
+# Value Set vocab:measurement_units and its bindings. Written by `lae vocab export`; edit it and run
+# `lae vocab import` (profiles/README.md, spec section 7).
+value_sets:
+  - id: vocab:measurement_units
+    version: 1
+    label:
+      en: Measurement units
+    scope_note:
+      en: Units of dimensions (Linked Art recommended measurement units).
+    mode: enumerated
+    enforcement: extensible
+    terms:
+      - uri: http://vocab.getty.edu/aat/300379098
+        label:
+          en: centimeters
+        is_default: true
+      - uri: http://vocab.getty.edu/aat/300379097
+        label:
+          en: millimeters
+      - uri: http://vocab.getty.edu/aat/300379099
+        label:
+          en: meters
+      - uri: http://vocab.getty.edu/aat/300379100
+        label:
+          en: inches
+      - uri: http://vocab.getty.edu/aat/300379101
+        label:
+          en: feet
+      - uri: http://vocab.getty.edu/aat/300379225
+        label:
+          en: grams
+      - uri: http://vocab.getty.edu/aat/300379226
+        label:
+          en: kilograms
+      - uri: http://vocab.getty.edu/aat/300379254
+        label:
+          en: pounds
+      - uri: http://vocab.getty.edu/aat/300265869
+        label:
+          en: bytes
+      - uri: http://vocab.getty.edu/aat/300265870
+        label:
+          en: kilobytes
+      - uri: http://vocab.getty.edu/aat/300265873
+        label:
+          en: megabytes
+      - uri: http://vocab.getty.edu/aat/300265874
+        label:
+          en: gigabytes
+      - uri: http://vocab.getty.edu/aat/300266190
+        label:
+          en: pixels
+      - uri: http://vocab.getty.edu/aat/300379239
+        label:
+          en: seconds
+      - uri: http://vocab.getty.edu/aat/300379240
+        label:
+          en: minutes
+      - uri: http://vocab.getty.edu/aat/300379241
+        label:
+          en: hours
+      - uri: http://vocab.getty.edu/aat/300379242
+        label:
+          en: days
+      - uri: http://vocab.getty.edu/aat/300379245
+        label:
+          en: months
+      - uri: http://vocab.getty.edu/aat/300379244
+        label:
+          en: years
+      - uri: http://vocab.getty.edu/aat/300404159
+        label:
+          en: parts
+      - uri: http://vocab.getty.edu/aat/300417377
+        label:
+          en: percent
+      - uri: http://vocab.getty.edu/aat/300266239
+        label:
+          en: RGB
+        scope_note:
+          en: Color values in the RGB color space.
+bindings:
+  - class: HumanMadeObject
+    path: dimension.unit
+    value_set: vocab:measurement_units

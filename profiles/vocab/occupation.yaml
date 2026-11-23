@@ -1,0 +1,47 @@
+# yaml-language-server: $schema=_schema.json
+# Value Set vocab:occupation and its bindings. Written by `lae vocab export`; edit it and run
+# `lae vocab import` (profiles/README.md, spec section 7).
+value_sets:
+  - id: vocab:occupation
+    version: 1
+    label:
+      en: Occupation
+    scope_note:
+      en: Concepts whose metatype is occupation (aat:300263369).
+    mode: rule
+    enforcement: extensible
+    rule:
+      metatype_uris:
+        - http://vocab.getty.edu/aat/300263369
+      broader_roots: []
+      exclusions: []
+      classes: []
+    terms:
+      - uri: http://vocab.getty.edu/aat/300025103
+        label:
+          en: artist
+      - uri: http://vocab.getty.edu/aat/300025234
+        label:
+          en: collector
+      - uri: http://vocab.getty.edu/aat/300025236
+        label:
+          en: dealer
+      - uri: http://vocab.getty.edu/aat/300024987
+        label:
+          en: architect
+      - uri: http://vocab.getty.edu/aat/300025492
+        label:
+          en: author
+      - uri: http://vocab.getty.edu/aat/300025671
+        label:
+          en: composer
+      - uri: http://vocab.getty.edu/aat/300025732
+        label:
+          en: printer
+      - uri: http://vocab.getty.edu/aat/300025574
+        label:
+          en: publisher
+bindings:
+  - class: Person
+    path: classified_as
+    value_set: vocab:occupation

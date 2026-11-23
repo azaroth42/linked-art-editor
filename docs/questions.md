@@ -611,3 +611,43 @@ Implemented as decided above (items 3 and 4). Points for a human:
    e2e test sets `LAE_ALLOWED_ORIGINS` to the preview origin); IndexedDB recovery after a browser
    restart (unit tests run without IndexedDB; the store name is tested, not the reload).
 
+## Step 2.1
+
+Started early, before Phase 1 is complete, because nothing in it depends on the remaining Phase 1
+steps. Notes for the steps that meet it, and two choices the owner may want to change:
+
+1. **Scheduling `refresh_usage_counts` is left to Step 1.15.** The job is
+   `lae.vocab.usage.refresh_usage_counts(session, qlever, context_version=...)` (name in
+   `lae.vocab.usage.JOB_NAME`); `lae vocab refresh-usage` runs it by hand. The `scheduler`
+   process should run it nightly and commit. No decision needed.
+2. **Inline metatypes are harvested into `entity_labels.metatype_uris` (ADR-0029).** Adds only,
+   to existing rows only. Step 1.10's publish gets it through `upsert_entity_labels_for_record`;
+   Step 2.14's sidecar loader must keep harvested metatypes when it rewrites a row (or run
+   `lae vocab harvest-metatypes` after the load) before it refreshes rule memberships. The
+   owner may prefer a provenance table, so that a metatype a record stops repeating goes away;
+   ADR-0029 explains why that was not done now.
+3. **Seed content (reversible, please review).** The twelve Value Sets use the Linked Art
+   recommended and required terms (linked.art `docs/model/vocab/`). Enforcement is `extensible`
+   everywhere except `vocab:statement_types`, which is `advisory` because Linked Art says statement
+   types cannot be enumerated; nothing is `strict`, so no existing record is blocked from
+   publishing once Step 2.2 enforces them. Rule sets carry the Linked Art recommended lists as
+   pinned shortlists (occupation, nationality, type of work, material) plus female/male for
+   gender; style has none. `vocab:material` is the rule "every concept of class `Material`"
+   (LUX globals.json has no material metatype); with the Phase 1 AAT stand-in, whose rows are all
+   `Type` (Step 1.9, item 7), it holds the 22 pinned materials and local `Material` records until
+   the AAT sidecar (Step 2.14) types materials as `Material`. Work title types include Display
+   Name and Sort Name, identifier types include Sort Value, and dimension types include Color,
+   because Linked Art requires those terms and a Step 2.2 warning on them would be wrong.
+   Spec §6.1/§7.2 also mention a Shape card; the guide's seed list has no Shape set, so none was
+   added.
+4. **For Step 1.18:** `GET /api/vocab/bundle` and the Name, Identifier, Statement, Dimension and
+   Measurement Unit sets exist, so `profiles/vocab/phase1_static.yaml` is not needed. The bundle
+   carries every Value Set (rule sets with their rule and pinned terms, so the client knows how
+   to render each binding) and every binding with its effective enforcement.
+5. **For Step 2.2:** membership and usage queries are built with `lae.sparql.terms.iri` (every
+   IRI checked); move them onto the vendored builder. The bundle's cache key is
+   `lae.vocab.service.registry_version` (max `updated_at` plus the Value Set count).
+6. **For Step 2.10:** `vocabulary_terms.flags` already exists (migration `0010`), so that import
+   and export are lossless; the seed marks Accession Number `{unique: true}`.
+7. **Migration number.** `0010` with `down_revision` `0005` (main's only head when this merged).
+   The in-flight `0004`, `0006`+ migrations rechain on top of it.
