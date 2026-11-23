@@ -34,6 +34,7 @@ from lae.bootstrap import cli as bootstrap_cli
 from lae.db import migrate
 from lae.logging import configure_logging
 from lae.settings import Settings, get_settings
+from lae.sync.worker import add_arguments as add_sync_worker_arguments
 from lae.vocab import cli as vocab_cli
 
 COMMANDS: dict[str, str] = {
@@ -52,6 +53,10 @@ PROCESS_MODULES: dict[str, tuple[str, str]] = {
     "scheduler": ("lae.scheduler.main", "1.15"),
 }
 """Processes whose module exposes ``main(settings)``: command → (module, guide step building it)."""
+
+PROCESS_ARGUMENTS: frozenset[str] = frozenset({"sync-worker"})
+"""Processes that take options; their ``main`` is called as ``main(settings, argv)`` with the
+arguments after the command name (``lae sync-worker --once``)."""
 
 NOT_IMPLEMENTED: dict[str, str] = {}
 """One-shot commands not built yet: command → guide step that builds it."""
@@ -73,6 +78,8 @@ def build_parser() -> argparse.ArgumentParser:
             bootstrap_cli.add_arguments(subparser)
         elif name == "vocab":
             vocab_cli.add_arguments(subparser)
+        elif name == "sync-worker":
+            add_sync_worker_arguments(subparser)
     return parser
 
 
@@ -134,15 +141,21 @@ def _import_process_module(module_name: str) -> ModuleType | None:
         raise
 
 
-def run_process(command: str) -> int:
-    """Run ``main(settings)`` of the module behind a long-running process command."""
+def run_process(command: str, argv: Sequence[str] = ()) -> int:
+    """Run ``main(settings)`` of the module behind a long-running process command.
+
+    A command in ``PROCESS_ARGUMENTS`` gets ``argv``, its arguments, as well.
+    """
     module_name, step = PROCESS_MODULES[command]
     module = _import_process_module(module_name)
     if module is None:
         return not_implemented(command, step)
     settings: Settings = get_settings()
     configure_logging(settings.log_level)
-    result = module.main(settings)
+    if command in PROCESS_ARGUMENTS:
+        result = module.main(settings, list(argv))
+    else:
+        result = module.main(settings)
     if inspect.iscoroutine(result):
         result = asyncio.run(result)
     return 0 if result is None else int(result)
@@ -159,13 +172,14 @@ HANDLERS: dict[str, Callable[[argparse.Namespace], int]] = {
 
 def main(argv: Sequence[str] | None = None) -> int:
     """Parse ``argv`` and run the selected sub-command; return the exit code."""
-    args = build_parser().parse_args(argv)
+    raw = list(sys.argv[1:] if argv is None else argv)
+    args = build_parser().parse_args(raw)
     command: str = args.command
     handler = HANDLERS.get(command)
     if handler is not None:
         return handler(args)
     if command in PROCESS_MODULES:
-        return run_process(command)
+        return run_process(command, raw[raw.index(command) + 1 :])
     return not_implemented(command, NOT_IMPLEMENTED[command])
 
 

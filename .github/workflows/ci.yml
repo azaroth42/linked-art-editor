@@ -1,5 +1,6 @@
 # Every PR must be green on all four jobs before it merges (docs/agent-workflow.md §6).
-# No Docker: services (PostgreSQL, later QLever) are installed natively on the runner.
+# No Docker: PostgreSQL is installed natively on the runner. QLever is never run in CI: its
+# integration tests run locally only (docs/conventions.md, owner decision 2026-11-23).
 name: CI
 
 on:
@@ -35,9 +36,8 @@ jobs:
         with:
           database: lae_test
 
-      # Phase 1 integration tests: install QLever natively here (no Docker), build a small
-      # index, start the server with --persist-updates on localhost:7010, and export
-      # LAE_QLEVER_URL / LAE_QLEVER_UPDATE_URL for pytest.
+      # QLever is not installed here: the tests that need it skip. Run them locally
+      # (backend/tests/sync/README.md).
 
       - uses: astral-sh/setup-uv@v10.4.0
         with:
