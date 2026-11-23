@@ -343,22 +343,26 @@ async def test_draft_diff_of_a_never_published_record(
     ]
 
 
-async def test_draft_diff_needs_publish(
+async def test_draft_diff_needs_edit_draft(
     served: Served, network: Network, db_engine: AsyncEngine
 ) -> None:
+    """Owner decision 2026-11-23: a Collaborator (``edit_draft`` only) may see the draft diff."""
     record_id, _, _ = await three_versions(db_engine)
     await network.rooms.open(record_id)
     path = f"/api/records/{record_id}/draft/diff"
     anonymous = await served.client.post(path)
     assert anonymous.status_code == 401
-    collaborator = await auth_headers(db_engine, "Collaborator", "edit_draft")
-    refused = await served.client.post(path, headers=collaborator)
+    viewer = await auth_headers(db_engine, "Viewer")
+    refused = await served.client.post(path, headers=viewer)
     assert refused.status_code == 403
     assert refused.json() == {
         "code": "LAE-AUTH-001",
         "path": path,
-        "params": {"required": ["publish"], "missing": ["publish"]},
+        "params": {"required": ["edit_draft"], "missing": ["edit_draft"]},
     }
+    collaborator = await auth_headers(db_engine, "Collaborator", "edit_draft")
+    allowed = await served.client.post(path, headers=collaborator)
+    assert allowed.status_code == 200
 
 
 async def test_draft_diff_without_a_draft_a_record_or_crdt_ws(

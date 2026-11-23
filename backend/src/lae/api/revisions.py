@@ -5,9 +5,10 @@ all under ``/api/records``:
 
 - ``GET /{id}/revisions/{m}/diff/{n}`` (signed in): the typed changes that turn version ``m``
   into version ``n``, in either direction; ``m = n`` gives none.
-- ``POST /{id}/draft/diff`` (``publish``; spec §4.3 gives the diff against the published
-  revision to the Editor): the changes that turn the published version into the live draft,
-  for the Publish dialog. The draft is read with ``CrdtWsClient.snapshot``.
+- ``POST /{id}/draft/diff`` (``edit_draft``; owner decision 2026-11-23: the diff reveals nothing
+  a Collaborator cannot already see in the draft and the published record): the changes that
+  turn the published version into the live draft, for the Publish dialog. The draft is read
+  with ``CrdtWsClient.snapshot``.
 - ``POST /{id}/revisions/{n}/revert`` (``publish``): replace the record's draft with revision
   ``n``. Nothing is published: revisions are append-only (decision B9), and the editor publishes
   the reverted draft as usual, with a summary such as "Revert to revision n".
@@ -144,7 +145,7 @@ async def diff_revisions(
 )
 async def diff_draft(
     record_id: UUID,
-    user: Annotated[CurrentUser, Depends(require("publish"))],
+    user: Annotated[CurrentUser, Depends(require("edit_draft"))],
     session: Annotated[AsyncSession, Depends(get_session)],
     chain: Annotated[list[str], Depends(locale_chain)],
     crdt: Annotated[CrdtWsClient, Depends(crdt_client)],

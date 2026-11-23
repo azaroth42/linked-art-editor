@@ -793,9 +793,8 @@ steps. Notes for the steps that meet it, and two choices the owner may want to c
    §6, recorded here as asked). The route needs `publish` (spec §4.3 gives the diff against the
    published revision to the Editor; ADR-0035 item 2). Phase 4 Step 4.2's graph overlay calls
    `draft/diff` to show what the draft changed, for users who may hold only `edit_draft`
-   (Collaborators); as built they get 403 `LAE-AUTH-001`. Whether to relax the permission to
-   `edit_draft` (the diff reveals nothing a Collaborator cannot already see in the draft and the
-   published record) is the owner's call.
+   (Collaborators); as built they got 403 `LAE-AUTH-001`.
+   **Resolved (owner, 2026-11-23): `edit_draft` only.** The route now requires `edit_draft`.
 2. **The `reorder` share of the property test** (contract §5 test 14 and §7 item 2). The WIP
    generator gave a `reorder` change in about 4% of edited corpus records. Measured cause, from
    3000 applications of the `reorder` edit alone: 63% of the picks were records with no array of
