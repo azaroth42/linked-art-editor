@@ -491,3 +491,71 @@ Implemented as decided above (items 3 and 4). Points for a human:
    fix every `made_of` and every `Name` `language` pointing at AAT was a violation as soon as
    the AAT labels were loaded. Phase 2 Value Sets are the real check of which concept may be
    used where.
+
+## Step 1.8
+
+1. **`records.draft_epoch` now also increments when a draft is discarded (ADR-0027).** Decision
+   B6 says "on every publish". Without the extra increment, a draft opened after a discard, a
+   reaped draft or a revert would be a second hydration at the same epoch, and a browser tab
+   that still held the old document would be merged into it. Please confirm the reading of B6;
+   Steps 1.10, 1.14 and 1.15 must delete drafts only through `CrdtWsClient.close(discard=True)`
+   or `lae.crdt.store.delete_draft`.
+2. **Compaction does not write plain `Doc.get_update()` when an update is pending (ADR-0027).**
+   `pycrdt` 0.14.13 leaves out updates whose dependencies have not arrived. The room merges
+   those into the compacted state. No decision needed unless the pinned pair changes.
+3. **`transact` and `revert` raise `NotImplementedError`,** as the guide says. They were not
+   implemented early because a transaction on the live document is broadcast before it can be
+   persisted (B5), and an undo stack that only lives in memory needs a decision about eviction
+   and restarts. Phase 3 Step 3.6 owns both; the route is in the docstring of
+   `InMemoryRoomManager.revert`.
+4. **`Origin` check on the WebSocket: added in the review (ADR-0027, item 10).** A browser
+   handshake is refused with HTTP 403 unless its `Origin` is the origin of `LAE_BASE_URI`, is in
+   the new `LAE_ALLOWED_ORIGINS` (comma-separated), or, with `LAE_ENV=development` only, is a
+   loopback origin. Clients that send no `Origin` (scripts, agents) are not affected. Please
+   confirm the default: an installation whose editor is not served from the origin of its
+   record URIs must set `LAE_ALLOWED_ORIGINS`.
+5. **A browser: verified in the review, not in CI.** Headless Chromium 1255 (Playwright
+   1.65.1) with Yjs 13.6.33 and `y-websocket` 3.1.0 against a real `lae crdt-ws`: sync with the
+   session cookie only, an edit persisted and credited to the cookie's user, stamped presence,
+   presence removed 4 ms after a tab close, a second tab converging, `4409` without a reconnect
+   loop, and a page on another origin refused with 403 although it held a valid token (11 of
+   11 checks). The script was a throwaway; Step 1.17's Playwright test is the permanent one.
+   The Node test (`tests/crdt/test_y_websocket.py`) now runs in the CI `backend` job, which
+   installs the frontend's Node modules for it.
+6. **A detached `lae crdt-ws` hanging on its first database connection: cause established, not
+   a defect of the server.** Postgres.app loads `auth_permission_dialog`: for a client whose
+   top-level process it has no stored decision for, the backend waits in `authentication` while
+   a `PostgresPermissionDialog` window asks the person at the screen. A process started as
+   `( uv run lae crdt-ws & )` is reparented to launchd, so its top-level process is `uv`, which
+   has an entry without a policy in `ClientApplicationPermissions`; the dialog was open and
+   nobody answered it (seen: backend `postgres: ... authentication`, `PostgresPermissionDialog
+   --client-pid <the server>`). Started from a terminal or from pytest the top-level process is
+   an application that is already allowed. Remedy on that machine: answer the dialog once
+   (Allow for `uv`), or start the process from a terminal. `crdt-ws` now connects during startup
+   (for its instance lock), so such a wait shows as `instance_lock_connecting` without
+   `instance_lock_acquired` in the log instead of as sockets that never sync.
+7. **Review findings that were fixed (ADR-0027, items 5 and 7 to 12).** Each has a test in
+   `tests/crdt/test_integrity.py`, `test_instance.py`, `test_origin.py` or `test_rooms.py`:
+   a publish could commit while a room was being loaded (second hydration at the old epoch);
+   a write and a publish deadlocked; `max(crdt_updates.id)` could not tell publish about an
+   edit that compaction had folded away (now `crdt_drafts.last_update_id` and
+   `store.draft_unchanged`); a commit whose answer was lost left the room's `Doc` behind the
+   database, and the next compaction deleted the row; two `crdt-ws` processes on one database
+   lost updates (now an advisory lock); a stale client created a new draft before it was
+   refused; a publish's late `close(discard=True)` discarded the next draft (now
+   `draft_epoch=`); a socket whose write was queued behind a failing room was told
+   `stale-epoch` (final) instead of being asked to reconnect.
+8. **Open: a client with `edit_draft` can make a draft unprojectable.** Any bytes that are a
+   valid Yjs update are accepted. In a fuzz run of 30,000 mutated updates, 3,591 were valid
+   updates and 1,564 of those left a document that `project` refuses (`LAE-PROJ-005`). The
+   draft's snapshot, validation and publish then fail with 422 `LAE-CRDT-008` until the draft
+   is discarded; nothing published is affected. Rejecting such an update would mean projecting
+   a copy of the document on every write. Should the server do that (cost: one projection per
+   update), or is "discard the draft" acceptable for a fault only a signed-in editor's client
+   can cause?
+9. **Open, for Step 1.15: a never-published record can be left without a draft.** `POST
+   /api/records` deletes its new row when `crdt-ws` cannot open the draft, but not when the
+   request itself is cancelled between the two steps (client disconnect). Such a row
+   (`version = 0`, no `crdt_drafts` row) is invisible and the reaper as specified never sees
+   it. The reaper should also delete `version = 0` records without a draft that are older than
+   the TTL.

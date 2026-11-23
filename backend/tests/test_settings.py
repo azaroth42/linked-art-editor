@@ -18,6 +18,10 @@ FIELDS = (
     "api_port",
     "log_level",
     "crdt_ws_url",
+    "crdt_ws_host",
+    "crdt_ws_port",
+    "crdt_room_idle_seconds",
+    "allowed_origins",
     "internal_token",
     "oidc_issuer",
     "oidc_client_id",
@@ -69,6 +73,7 @@ def test_defaults(clean_env: pytest.MonkeyPatch) -> None:
     assert settings.github_client_id is None
     assert settings.github_allowed_orgs == []
     assert settings.github_allowed_users == []
+    assert settings.allowed_origins == []
     assert settings.dev_user is None
     for secret in SECRETS:
         assert getattr(settings, secret) is None
@@ -123,6 +128,11 @@ def test_github_allowlists_are_comma_separated(
     settings = Settings()
     assert settings.github_allowed_orgs == expected
     assert settings.github_allowed_users == expected
+
+
+def test_allowed_origins_are_comma_separated(clean_env: pytest.MonkeyPatch) -> None:
+    clean_env.setenv("LAE_ALLOWED_ORIGINS", "https://editor.example.org, http://localhost:5173")
+    assert Settings().allowed_origins == ["https://editor.example.org", "http://localhost:5173"]
 
 
 @pytest.mark.parametrize("field", SECRETS)

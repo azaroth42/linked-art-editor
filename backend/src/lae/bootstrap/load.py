@@ -7,7 +7,7 @@ it with two binary ``COPY`` statements, ``records`` then ``entity_labels``, in o
 its own connection. At most ``--streams`` workers copy at the same time (Spike S6: four streams
 are 2.2x one on stock Postgres settings, eight add nothing). Rows are written as published
 version 1: ``version = 1``, ``status = 'active'``, ``context_version = settings.context_version``,
-and ``draft_epoch = 0`` once that column exists (migration 0004, Step 1.8; its default is 0).
+and ``draft_epoch = 0`` once that column exists (migration 0006, Step 1.8; its default is 0).
 Bulk-loaded records have no ``record_revisions`` row until they are first edited (spec §3.3).
 
 **Failures.** An input item that is not a record, has an id that cannot be repaired, or fails

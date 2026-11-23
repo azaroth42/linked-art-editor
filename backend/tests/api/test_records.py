@@ -7,7 +7,8 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from sqlalchemy import select
+from pycrdt import Doc
+from sqlalchemy import func, select
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 from uuid_utils.compat import uuid7
 
@@ -20,10 +21,12 @@ from lae.api.records import (
 )
 from lae.db.models import CrdtDraft, Record, RecordStatus
 from lae.ids import is_internal_node_iri
+from lae.projection import project
 from lae.rdf.context import load_context
 from tests.api.conftest import (
     BASE_URI,
     CONTEXT_URL,
+    Network,
     a_while_ago,
     auth_headers,
     id_of,
@@ -131,9 +134,32 @@ async def test_create_record(served: Served, db_engine: AsyncEngine) -> None:
     assert record.context_version == 1
     assert record.uri == body["uri"]
     async with AsyncSession(db_engine) as session:
-        # Step 1.8 opens the draft room; this step writes no draft row.
+        # The draft was opened in crdt-ws (Step 1.8): its row exists, hydrated from the record.
         draft = await session.scalar(select(CrdtDraft).where(CrdtDraft.record_id == record.id))
-        assert draft is None
+        assert draft is not None
+        assert (draft.draft_epoch, draft.base_version) == (0, 0)
+        assert draft.created_by is not None and draft.contributors == []
+        hydrated: Doc[Any] = Doc()
+        hydrated.apply_update(draft.state)
+        assert project(hydrated) == skeleton
+    # ... so the new record is readable at once.
+    read = await served.client.get(f"/api/records/{body['id']}", headers=headers)
+    assert read.status_code == 200 and read.json() == skeleton
+
+
+async def test_create_record_is_undone_when_the_draft_cannot_be_opened(
+    served: Served, network: Network, db_engine: AsyncEngine
+) -> None:
+    headers = await auth_headers(db_engine, "Collaborator", "edit_draft")
+    network.crdt_down = True
+    response = await served.client.post("/api/records", json={"type": "Currency"}, headers=headers)
+    assert response.status_code == 503
+    assert response.json()["code"] == "LAE-CRDT-009"
+    async with AsyncSession(db_engine) as session:
+        left = await session.scalar(
+            select(func.count()).select_from(Record).where(Record.type == "Currency")
+        )
+        assert left == 0
 
 
 async def test_create_record_with_template(served: Served, db_engine: AsyncEngine) -> None:
@@ -230,10 +256,14 @@ async def test_get_record_needs_authentication(served: Served, db_engine: AsyncE
     assert response.json()["code"] == "LAE-AUTH-002"
 
 
-async def test_get_unpublished_record_needs_a_draft(served: Served, db_engine: AsyncEngine) -> None:
+async def test_get_unpublished_record_needs_a_draft(
+    served: Served, network: Network, db_engine: AsyncEngine
+) -> None:
     headers = await auth_headers(db_engine, "Collaborator", "edit_draft")
     created = await served.client.post("/api/records", json={"type": "Place"}, headers=headers)
     record_id = created.json()["id"]
+    # Without the draft that POST opened, a never-published record is not found.
+    await network.rooms.close(id_of(created.json()["uri"]), discard=True)
 
     response = await served.client.get(f"/api/records/{record_id}", headers=headers)
     assert response.status_code == 404

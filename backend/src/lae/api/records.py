@@ -3,7 +3,7 @@
 Phase 1, Step 1.6 (spec §3.1, §3.4, §4.1). Routes, all under ``/api/records``:
 
 - ``POST /api/records`` (``edit_draft``): create a never-published record (``version = 0``) and
-  return ``{id, uri, draft_epoch}``.
+  open its draft in ``crdt-ws``; return ``{id, uri, draft_epoch}``.
 - ``GET /api/records/{id}`` (signed in): the published JSON-LD **with** internal node IRIs (the
   editor needs them), ``_label`` transcluded for the caller's locale chain.
 - ``GET /api/records/{id}/revisions`` and ``GET /api/records/{id}/revisions/{n}`` (signed in):
@@ -34,13 +34,14 @@ import orjson
 from fastapi import APIRouter, Depends, Response, status
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
-from sqlalchemy import exists, select
+from sqlalchemy import delete, exists, select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from lae.api.deps import locale_chain
 from lae.api.errors import ApiError
 from lae.app import get_app_settings
 from lae.auth import CurrentUser, current_user, require
+from lae.crdt.client import CrdtWsClient, crdt_client
 from lae.db.models import CrdtDraft, Record, RecordRevision, RecordStatus
 from lae.db.session import get_session
 from lae.ids import new_uuid7, record_uri
@@ -296,17 +297,20 @@ async def create_record(
     user: Annotated[CurrentUser, Depends(require("edit_draft"))],
     session: Annotated[AsyncSession, Depends(get_session)],
     settings: Annotated[Settings, Depends(get_app_settings)],
+    crdt: Annotated[CrdtWsClient, Depends(crdt_client)],
 ) -> RecordCreated:
     """Create a never-published record (``version = 0``) and return ``{id, uri, draft_epoch}``.
 
     The row holds the skeleton ``{"@context", "id", "type"}``, plus the ``template``'s content
     when one is given, with internal node IRIs assigned.
 
-    **Draft room (Step 1.8).** This endpoint does not open the draft yet and writes no
-    ``crdt_drafts`` row: Step 1.8 (``crdt-ws``, ``RoomManager.open``) wires room opening in here
-    and returns the room's ``draft_epoch``. Until then ``draft_epoch`` is that of a new record,
-    ``0`` (``records.draft_epoch``, migration ``0004``, defaults to 0). ``RoomManager.open``
-    hydrates the room from ``records.data``, so the template becomes the draft's content.
+    **Draft room (Step 1.8).** Once the row is committed the draft is opened in ``crdt-ws``
+    (``CrdtWsClient.open``): the room hydrates from ``records.data``, so the template becomes
+    the draft's content, and inserts the ``crdt_drafts`` row that makes the record readable
+    through ``GET /api/records/{id}``. ``draft_epoch`` is the room's; the editor passes it when
+    it connects to ``/ws/rooms/{id}``. If ``crdt-ws`` cannot open the draft, the new row is
+    deleted again and the error is passed on (503 ``LAE-CRDT-009`` when it is unreachable): a
+    never-published record without a draft would be invisible and never reaped.
     """
     if body.type not in RECORD_TYPES:
         raise ApiError(
@@ -339,9 +343,23 @@ async def create_record(
         )
     )
     await session.commit()
-    logger.info("record_created", type=body.type)
+    try:
+        opened = await crdt.open(record_id, created_by=user.id)
+    except Exception:
+        # Only a row that still has no draft: if the draft was created after all, it stays.
+        await session.execute(
+            delete(Record).where(
+                Record.id == record_id,
+                Record.version == 0,
+                ~exists().where(CrdtDraft.record_id == record_id),
+            )
+        )
+        await session.commit()
+        logger.warning("record_creation_undone", type=body.type)
+        raise
+    logger.info("record_created", type=body.type, draft_epoch=opened.draft_epoch)
     response.headers["Location"] = f"{router.prefix}/{record_id}"
-    return RecordCreated(id=record_id, uri=uri, draft_epoch=0)
+    return RecordCreated(id=record_id, uri=uri, draft_epoch=opened.draft_epoch)
 
 
 @router.get(

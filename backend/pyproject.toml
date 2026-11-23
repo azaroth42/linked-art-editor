@@ -82,6 +82,8 @@ dev = [
     "ruff>=0.17.6",
     "types-jsonschema>=4.26.0.20261006",
     "types-pyyaml>=6.0.12.20261122",
+    # WebSocket client for tests/crdt (the server side comes with uvicorn[standard]).
+    "websockets>=17.4",
 ]
 spike = [
     "psutil>=7.2.2",

@@ -7,16 +7,20 @@ from typing import Any
 from uuid import UUID
 
 import pytest
+from pycrdt import Doc
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
 from lae.api.validation import SNAPSHOT_SOURCE_STATE
 from lae.auth import ROLE_PERMISSIONS
-from lae.db.models import EntityLabel, Record, RecordStatus
+from lae.crdt.client import CrdtWsClient
+from lae.db.models import CrdtDraft, EntityLabel, Record, RecordStatus
 from lae.ids import new_uuid7, record_uri
+from lae.projection import ops
 from lae.projection.hydrate import assign_node_iris
 from lae.validation import engine
 from lae.validation.shacl import ShapesError
-from tests.auth.conftest import bearer, create_token, create_user, serve_app
+from tests.api.conftest import Network
+from tests.auth.conftest import Served, bearer, create_token, create_user, serve_app
 from tests.validation.conftest import base
 
 BASE_URI = "https://lae.test/id/"
@@ -272,11 +276,11 @@ async def test_draft_validate_without_a_draft_is_404(db_url: str, db_engine: Asy
 async def test_draft_validate_without_a_snapshot_source_is_503(
     db_url: str, db_engine: AsyncEngine
 ) -> None:
-    """Until Step 1.8's ``CrdtWsClient`` is installed on ``app.state``."""
+    """An application whose lifespan has not installed the ``CrdtWsClient``."""
     record_id = new_uuid7()
     headers = await token_for(db_engine, "Collaborator")
     async with serve_app(db_url, base_uri=BASE_URI) as served:
-        assert not hasattr(served.app.state, SNAPSHOT_SOURCE_STATE)
+        delattr(served.app.state, SNAPSHOT_SOURCE_STATE)
         response = await served.client.post(
             f"/api/records/{record_id}/draft/validate", headers=headers
         )
@@ -286,6 +290,72 @@ async def test_draft_validate_without_a_snapshot_source_is_503(
         "path": f"/api/records/{record_id}/draft/validate",
         "params": {},
     }
+
+
+# --- the live draft, through crdt-ws (Step 1.8) ----------------------------------------------
+
+
+async def test_draft_validate_reads_the_live_draft_from_crdt_ws(
+    served: Served, network: Network, db_engine: AsyncEngine
+) -> None:
+    """No fake: ``create_app`` installs the ``CrdtWsClient`` and the room answers."""
+    assert isinstance(getattr(served.app.state, SNAPSHOT_SOURCE_STATE), CrdtWsClient)
+    headers = await token_for(db_engine, "Collaborator")
+    created = await served.client.post(
+        "/api/records",
+        json={"type": "HumanMadeObject", "template": {"_label": "A new object"}},
+        headers=headers,
+    )
+    assert created.status_code == 201, created.text
+    record_id = UUID(created.json()["id"])
+    path = f"/api/records/{record_id}/draft/validate"
+
+    hydrated = await served.client.post(path, headers=headers)
+    assert hydrated.status_code == 200, hydrated.text
+    assert [item for item in summary(hydrated.json()) if item[1] == "violation"] == []
+
+    # An edit as a browser would send it: a Name whose content is blank.
+    room = await network.rooms.open(record_id)
+    replica: Doc[Any] = Doc()
+    replica.apply_update(room.ydoc.get_update())
+    before = replica.get_state()
+    ops.add_node(replica, "identified_by", {"type": "Name", "content": " "})
+    await network.rooms.apply_update(record_id, replica.get_update(before), None)
+
+    edited = await served.client.post(path, headers=headers)
+    assert edited.status_code == 200, edited.text
+    assert ("LAE-RULE-003", "violation", "/identified_by/0/content") in summary(edited.json())
+    assert edited.json()["ok"] is False
+    assert "/node/" not in edited.text
+
+    # The draft is read from memory or rebuilt from the rows: the same answer after eviction.
+    await network.rooms.close(record_id, discard=False)
+    assert not await network.rooms.is_open(record_id)
+    again = await served.client.post(path, headers=headers)
+    assert summary(again.json()) == summary(edited.json())
+
+
+async def test_draft_validate_through_crdt_ws_without_a_draft_and_without_crdt_ws(
+    served: Served, network: Network, db_engine: AsyncEngine
+) -> None:
+    headers = await token_for(db_engine, "Collaborator")
+    created = await served.client.post("/api/records", json={"type": "Person"}, headers=headers)
+    record_id = UUID(created.json()["id"])
+    await network.rooms.close(record_id, discard=True)
+
+    for missing in (record_id, new_uuid7()):  # a record without a draft, and no record at all
+        response = await served.client.post(
+            f"/api/records/{missing}/draft/validate", headers=headers
+        )
+        assert response.status_code == 404
+        assert response.json()["code"] == "LAE-VALID-002"
+    async with AsyncSession(db_engine) as session:
+        assert await session.get(CrdtDraft, record_id) is None, "validation creates no draft"
+
+    network.crdt_down = True
+    down = await served.client.post(f"/api/records/{record_id}/draft/validate", headers=headers)
+    assert down.status_code == 503
+    assert down.json()["code"] == "LAE-CRDT-009"
 
 
 # --- startup --------------------------------------------------------------------------------
