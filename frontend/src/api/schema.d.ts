@@ -425,6 +425,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/drafts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List Drafts
+         * @description List open drafts with their expiry: all for an Editor, one's own for a Collaborator.
+         */
+        get: operations["list_drafts_api_drafts_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/records/{record_id}/draft/extend": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Extend Draft
+         * @description Reset the draft's ``last_activity_at`` to now, postponing its expiry by a full TTL.
+         */
+        post: operations["extend_draft_api_records__record_id__draft_extend_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -478,6 +518,57 @@ export interface components {
              * @description True when no item has severity ``violation`` (warnings do not count).
              */
             readonly ok: boolean;
+        };
+        /**
+         * DraftContributor
+         * @description A user whose edits a draft contains.
+         */
+        DraftContributor: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Display Name */
+            display_name: string | null;
+            kind: components["schemas"]["UserKind"] | null;
+        };
+        /**
+         * DraftSummary
+         * @description One open draft (an entry of ``GET /api/drafts``).
+         */
+        DraftSummary: {
+            /**
+             * Record Id
+             * Format: uuid
+             */
+            record_id: string;
+            /** Uri */
+            uri: string;
+            /** Type */
+            type: string;
+            /** Label */
+            label: string;
+            /** Version */
+            version: number;
+            /** Draft Epoch */
+            draft_epoch: number;
+            /** Base Version */
+            base_version: number;
+            /** Created By */
+            created_by: string | null;
+            /** Contributors */
+            contributors: components["schemas"]["DraftContributor"][];
+            /**
+             * Last Activity At
+             * Format: date-time
+             */
+            last_activity_at: string;
+            /**
+             * Expires At
+             * Format: date-time
+             */
+            expires_at: string;
         };
         /** HTTPValidationError */
         HTTPValidationError: {
@@ -654,6 +745,12 @@ export interface components {
              */
             created_at: string;
         };
+        /**
+         * UserKind
+         * @description ``users.kind``: agents are service accounts (Phase 3 Step 3.4).
+         * @enum {string}
+         */
+        UserKind: "human" | "agent";
         /**
          * ValidateRequest
          * @description Body of ``POST /api/validate``.
@@ -1360,6 +1457,64 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content?: never;
+            };
+        };
+    };
+    list_drafts_api_drafts_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DraftSummary"][];
+                };
+            };
+        };
+    };
+    extend_draft_api_records__record_id__draft_extend_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DraftSummary"];
+                };
+            };
+            /** @description LAE-REC-001, LAE-CRDT-003 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
             };
         };
     };

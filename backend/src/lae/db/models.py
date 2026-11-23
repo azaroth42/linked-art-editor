@@ -109,6 +109,14 @@ class Record(Base):
     """A published (or never-published, ``version = 0``) Linked Art record."""
 
     __tablename__ = "records"
+    # Migration 0007: the draft reaper finds never-published records by age (Step 1.15).
+    __table_args__ = (
+        Index(
+            "ix_records_unpublished_created_at",
+            "created_at",
+            postgresql_where=text("version = 0"),
+        ),
+    )
 
     id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid7)
     uri: Mapped[str] = mapped_column(Text, unique=True)

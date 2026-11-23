@@ -15,6 +15,13 @@ Later phases add `embedder`, `reconcile`, and `llm` (commented out in `Procfile`
 and 1.15; until then each prints the step that builds it and exits with status 3, so honcho stops
 `make run` at once. Run `uv run --project backend lae api` on its own in the meantime.
 
+`lae scheduler` runs periodic jobs (Phase 1: the hourly draft reaper, which discards drafts idle
+for `LAE_DRAFT_TTL_DAYS`, default 5, through `crdt-ws` at `LAE_CRDT_WS_URL` with
+`LAE_INTERNAL_TOKEN`). Each job takes a PostgreSQL advisory lock while it runs, so a second
+scheduler never runs the same job at once; each records its last run in `sync_state` under
+`job:<name>` (`last_run`, `last_status`, `duration`, `last_error`, `result`, `next_run`). On
+`SIGTERM` it lets running jobs finish their current item (up to 30 s) and exits 0.
+
 Every `lae` process writes JSON log lines to stdout (journald in production), with `request_id`
 on every line of an HTTP request; `LAE_LOG_LEVEL` sets the level (default `info`). Probes:
 `GET /health/live` is always 200; `GET /health/ready` is 200 when PostgreSQL and (if
@@ -200,7 +207,8 @@ The unit templates in `systemd/` assume this layout; adjust paths and the user i
    LAE_BASE_URI=https://<your host>/id/
    # Required in production: signs the session cookie (shared by api and crdt-ws).
    LAE_SESSION_SECRET=<output of: openssl rand -hex 32>
-   # Required in production: shared secret of the internal RPC between api and crdt-ws.
+   # Required in production: shared secret of the internal RPC between api (and scheduler)
+   # and crdt-ws.
    LAE_INTERNAL_TOKEN=<output of: openssl rand -hex 32>
    # Where crdt-ws listens, and where api reaches it. Proxy /ws/ to it; never expose /internal/.
    # Run exactly one crdt-ws per database: a second one refuses to start (advisory lock).

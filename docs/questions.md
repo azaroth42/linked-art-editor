@@ -586,3 +586,5 @@ Implemented as decided above (items 3 and 4). Points for a human:
    (`version = 0`, no `crdt_drafts` row) is invisible and the reaper as specified never sees
    it. The reaper should also delete `version = 0` records without a draft that are older than
    the TTL.
+   **Resolved in Step 1.15:** it does (`lae.scheduler.reaper`, "abandoned creations": no draft,
+   `created_at` older than `draft_ttl_days`; partial index from migration 0007; ADR-0029).

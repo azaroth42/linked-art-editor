@@ -11,7 +11,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Annotated, Literal
 
-from pydantic import SecretStr, field_validator
+from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 Environment = Literal["development", "test", "staging", "production"]
@@ -44,8 +44,8 @@ class Settings(BaseSettings):
     context_version: int = 1
     """Version of the pinned Linked Art ``@context`` (``profiles/context/v<N>.json``)."""
 
-    draft_ttl_days: int = 5
-    """Days without activity after which a draft is discarded (decision B7)."""
+    draft_ttl_days: Annotated[int, Field(ge=1)] = 5
+    """Days without activity after which a draft is discarded (decision B7; at least 1)."""
 
     api_host: str = "127.0.0.1"
     """Interface ``lae api`` binds to."""
