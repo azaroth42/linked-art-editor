@@ -16,7 +16,10 @@ reading the batch and the transaction that records it.
 ``sync_state.qlever_index_watermark`` to the batch's highest id (never lower than it was). The
 watermark is compared on write: it is read before translating and again ``FOR UPDATE`` in that
 transaction; if someone changed it, the transaction is rolled back and the outcome is
-``stale_watermark`` (``run`` then catches up). A crash anywhere leaves each event ``pending``
+``stale_watermark`` (``run`` then catches up). A watermark lowered while no batch was in flight
+is noticed too: a ``done`` event above the watermark is one the live index may not hold, so
+``process_batch`` sends nothing and answers ``stale_watermark``, and the idle loop makes the same
+check on every poll. A crash anywhere leaves each event ``pending``
 (its update possibly applied, wholly or in part) or ``done`` with its update applied; sending a
 batch again is harmless because applying events in order is idempotent (contract §3 item 17).
 
@@ -177,6 +180,26 @@ def watermark_value(raw: str | None) -> int | None:
     if isinstance(value, bool) or not isinstance(value, int):
         raise WatermarkError(f"sync_state.{QLEVER_INDEX_WATERMARK} is {raw}, not an integer")
     return value
+
+
+async def _done_above(conn: asyncpg.Connection, watermark: int) -> bool:
+    """True if a ``done`` event has an id above ``watermark``: the live index needs a catch-up.
+
+    The worker alone never leaves one (it writes the watermark with the events it marks done), so
+    this means someone lowered the watermark: an index rebuilt from an older export, a restored
+    index directory (contract §3 items 14 and 15).
+    """
+    behind: bool = await conn.fetchval(
+        "SELECT EXISTS (SELECT 1 FROM outbox_events WHERE status = 'done' AND id > $1)",
+        watermark,
+    )
+    return behind
+
+
+async def _behind(conn: asyncpg.Connection) -> bool:
+    """``_done_above`` the stored watermark; ``False`` without the key (``WatermarkError`` too)."""
+    watermark = watermark_value(await _read_watermark(conn))
+    return watermark is not None and await _done_above(conn, watermark)
 
 
 async def _write_watermark(conn: asyncpg.Connection, expected: str | None, highest: int) -> str:
@@ -360,13 +383,19 @@ async def process_batch(
 ) -> BatchResult:
     """Send the next batch of pending events to the live index and record the outcome.
 
+    When a ``done`` event has an id above the watermark (it was lowered while no batch was in
+    flight), nothing is sent or written and the outcome is ``stale_watermark``: the caller must
+    ``catch_up`` first, or the batch would move the watermark past events the index never got.
+
     Raises ``WatermarkError`` (before anything is sent) if the watermark is not an integer,
     ``RecordingError`` if recording found an event no longer pending, ``ConnectionLostError`` if
     the connection closed before sending, and whatever ``asyncpg`` raises when the database is
     gone. The outcomes are described in the module docstring.
     """
     expected = await _read_watermark(conn)
-    watermark_value(expected)
+    watermark = watermark_value(expected)
+    if watermark is not None and await _done_above(conn, watermark):
+        return BatchResult("stale_watermark", (), None, False, 0, None)
     events = await _pending_events(conn, limit)
     if not events:
         return BatchResult("empty", (), None, False, 0, None)
@@ -604,15 +633,20 @@ async def _loop(
     await conn.add_listener(OUTBOX_CHANNEL, notified)
     outages = 0
     while not stop.is_set():
+        # Cleared before the count, not after: a notification that arrives while the count is
+        # being read must still end the wait below, or its event waits for the next poll.
+        wake.clear()
         await metrics.refresh(conn)
         if metrics.pending == 0:
-            wake.clear()
             await _wait_for_work(wake, stop, POLL_INTERVAL_S)
             woke = asyncio.get_running_loop().time()
             if stop.is_set():
                 break
             await metrics.refresh(conn)
             if metrics.pending == 0:
+                if await _behind(conn):  # the watermark was lowered while the queue was empty
+                    logger.warning("sync_stale_watermark", done=0)
+                    await _catch_up_until_done(conn, client, stop)
                 continue
             if metrics.pending < BATCH_SIZE:
                 await pause(woke + BATCH_WINDOW_S - asyncio.get_running_loop().time(), stop)

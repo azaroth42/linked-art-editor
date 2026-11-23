@@ -581,6 +581,160 @@ async def test_catch_up_replays_done_events_above_a_lowered_watermark(
         await catch_up(world.conn, untouched)
 
 
+async def test_a_watermark_lowered_between_batches_is_caught_up_before_any_pending_event(
+    world: World, db_url: str
+) -> None:
+    """Review of PR #148: the index is rebuilt while no batch is in flight (items 14 and 15).
+
+    The batch would otherwise find the lowered value both times it reads the watermark, write
+    its own highest id over it, and the ``done`` events in between would never reach the index.
+    """
+    records, ids = await five_events(world)
+    client = RecordingClient()
+    states = []
+    for _ in ids:
+        assert len((await process_batch(world.conn, client, limit=1)).done) == 1
+        states.append(copy_store(client.store))
+    await world.edit(records[2], rename("Gamma two"))
+    (pending,) = await pending_events(world.conn)
+    k = 1
+    rebuilt = RecordingClient(copy_store(states[k]))
+    await set_watermark(world.conn, ids[k])
+    before = await snapshot_tables(world.conn)
+
+    result = await process_batch(world.conn, rebuilt)
+
+    assert (result.outcome, result.done, result.updates_sent) == ("stale_watermark", (), 0)
+    assert rebuilt.sent == [] and await snapshot_tables(world.conn) == before
+
+    # The loop catches up after ``stale_watermark``, then applies the pending event.
+    stop = asyncio.Event()
+    started = worker.catch_up
+    calls = 0
+
+    async def catch_up_once_running(conn: asyncpg.Connection, c: QLeverClient) -> int:
+        nonlocal calls
+        calls += 1
+        return 0 if calls == 1 else await started(conn, c)  # nothing caught up at the start
+
+    async def until_applied(c: RecordingClient, sparql: str) -> None:
+        c.apply(sparql)
+        if "Gamma two" in sparql:
+            stop.set()
+
+    rebuilt.behaviour = until_applied
+    with pytest.MonkeyPatch.context() as patch:
+        patch.setattr(worker, "catch_up", catch_up_once_running)
+        run = worker.run(worker_settings(db_url), client=rebuilt, stop=stop)
+        assert await asyncio.wait_for(run, timeout=20) == 0
+    assert calls == 2 and len(rebuilt.sent) == 2  # the catch-up, then the pending event
+    assert triples_of(rebuilt.store) == await world.library(*records).expected()
+    assert await watermark(world.conn) == ("number", str(pending.id))
+
+
+async def test_the_idle_loop_catches_up_when_the_watermark_is_lowered(
+    world: World, db_url: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Review of PR #148: with an empty queue the rebuilt index is filled at the next poll."""
+    records, ids = await five_events(world)
+    client = RecordingClient()
+    states = []
+    for _ in ids:
+        assert len((await process_batch(world.conn, client, limit=1)).done) == 1
+        states.append(copy_store(client.store))
+    k = 2
+    stop = asyncio.Event()
+    waits = 0
+    wait_for_work = worker._wait_for_work
+
+    async def rebuild_while_idle(wake: asyncio.Event, stopping: asyncio.Event, s: float) -> None:
+        nonlocal waits
+        waits += 1
+        if waits == 1:  # the loop is past its start and found nothing pending
+            client.store = copy_store(states[k])
+            await set_watermark(world.conn, ids[k])
+            return
+        await wait_for_work(wake, stopping, s)
+
+    async def until_caught_up(c: RecordingClient, sparql: str) -> None:
+        c.apply(sparql)
+        stop.set()
+
+    monkeypatch.setattr(worker, "_wait_for_work", rebuild_while_idle)
+    monkeypatch.setattr(worker, "POLL_INTERVAL_S", 0.05)
+    client.sent.clear()
+    client.behaviour = until_caught_up
+
+    run = worker.run(worker_settings(db_url), client=client, stop=stop)
+    assert await asyncio.wait_for(run, timeout=20) == 0
+
+    assert len(client.sent) == 1
+    assert triples_of(client.store) == await world.library(*records).expected()
+    assert await watermark(world.conn) == ("number", str(ids[-1]))
+
+
+async def test_the_watermark_never_decreases(world: World, other: asyncpg.Connection) -> None:
+    """Review of PR #148 (item 13): an event that commits late has a lower id than the watermark."""
+    first = await world.new("Early")
+    client = RecordingClient()
+    assert (await process_batch(world.conn, client)).outcome == "done"
+    late = other.transaction()
+    await late.start()
+    late_id = await insert_event(other, first, "publish", 1, 1)  # not committed yet
+    await world.new("Later")
+    (later_id,) = [event.id for event in await pending_events(world.conn)]
+    assert late_id < later_id
+    assert (await process_batch(world.conn, client)).done == (later_id,)
+    assert await watermark(world.conn) == ("number", str(later_id))
+    await late.commit()
+
+    result = await process_batch(world.conn, client)
+
+    assert (result.outcome, result.done) == ("done", (late_id,))
+    assert await watermark(world.conn) == ("number", str(later_id))
+
+
+async def test_a_notification_during_the_pending_count_still_wakes_the_loop(
+    world: World, db_url: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Review of PR #148 (item 23): the wake flag is cleared before the count, not after it.
+
+    A publish commits while the idle loop is reading the number of pending events (which is
+    still 0 in its answer). The poll interval is a minute here, so only the notification can
+    wake the loop in time.
+    """
+    from lae.sync.metrics import Metrics
+
+    refresh = Metrics.refresh
+    calls = 0
+
+    async def publish_during_the_count(self: Metrics, conn: asyncpg.Connection) -> None:
+        nonlocal calls
+        calls += 1
+        await refresh(self, conn)
+        if calls == 1:
+            assert self.pending == 0
+            delivered = asyncio.Event()
+            await conn.add_listener(worker.OUTBOX_CHANNEL, lambda *_: delivered.set())
+            await world.new("Noticed")
+            await asyncio.wait_for(delivered.wait(), timeout=10)
+            await asyncio.sleep(0)  # the worker's own listener has run as well
+
+    monkeypatch.setattr(Metrics, "refresh", publish_during_the_count)
+    monkeypatch.setattr(worker, "POLL_INTERVAL_S", 60.0)
+    stop = asyncio.Event()
+    client = RecordingClient()
+
+    async def until_applied(c: RecordingClient, sparql: str) -> None:
+        c.apply(sparql)
+        stop.set()
+
+    client.behaviour = until_applied
+    run = worker.run(worker_settings(db_url), client=client, stop=stop)
+    assert await asyncio.wait_for(run, timeout=15) == 0
+    assert [row["status"] for row in await all_events(world.conn)] == ["done"]
+
+
 async def test_replay_and_apply_event_write_nothing_to_postgres(world: World) -> None:
     records, ids = await five_events(world)
     live = RecordingClient()

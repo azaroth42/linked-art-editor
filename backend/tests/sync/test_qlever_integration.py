@@ -460,8 +460,10 @@ async def test_delta_triples_grow_by_the_gross_change(
     """
     record_id, _ = await publish_new(served, editor, person("Delta"))
     exported = RecordingClient()  # the first event is in the export the index is built from
-    assert (await process_batch(conn, exported)).outcome == "done"
-    server = await start_qlever(await revision_lines(conn, record_id, 1))
+    first = await process_batch(conn, exported)
+    assert first.outcome == "done"
+    # The export's watermark covers that event; a lower one would ask for a catch-up.
+    server = await start_qlever(await revision_lines(conn, record_id, 1), watermark=first.done[-1])
     async with server.client() as client:
         before = await server.delta_triples()
         await publish_edit(served, network, editor, db_engine, record_id, rename("Delta two"))
