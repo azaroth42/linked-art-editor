@@ -7,7 +7,8 @@
 2. **Rules** (``lae.validation.rules``) and **SHACL** (``lae.validation.shacl``), on the document
    with internal node IRIs. A document that arrives without them (a pasted or imported record)
    gets temporary ones, which changes no path. A record that cannot be expanded to RDF is
-   reported with an ``LAE-RDF-*`` violation.
+   reported with an ``LAE-RDF-*`` violation, and each ``id`` that expansion has to
+   percent-encode with the warning ``LAE-RDF-006`` (ADR-0028).
 
 The result is ``Diagnostics``: every finding, ordered, with ``ok`` true when none is a
 violation. Paths are JSON Pointers into the document that was passed in.
@@ -39,6 +40,7 @@ from lae.labels.refs import reference_ids
 from lae.projection.hydrate import assign_node_iris
 from lae.settings import get_settings
 from lae.validation.diagnostics import Diagnostic, Diagnostics, has_no_violation, ordered
+from lae.validation.expansion import iri_repair_warnings
 from lae.validation.rules import validate_rules
 from lae.validation.schema import schema_validator, validate_schema
 from lae.validation.schema_map import PROVENANCE_SCHEMA, SCHEMA_BY_TYPE
@@ -100,6 +102,7 @@ def validate_document(
     root_id = jsonld.get("id")
     uri = record_uri if record_uri is not None else root_id if isinstance(root_id, str) else ""
     document = assign_node_iris(jsonld, uri) if uri else jsonld
+    found.extend(iri_repair_warnings(jsonld, uri))
     found.extend(validate_rules(document, facts.deleted))
     found.extend(validate_shacl(document, uri, facts.types, context_version=context_version))
     return Diagnostics(items=ordered(found))

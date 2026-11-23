@@ -37,8 +37,26 @@ an internal node IRI (assigned by the projection, Step 1.4). ``BlankNodeError`` 
 relative ``id`` or an undefined ``type`` against a default base, and writes ``INF`` for an
 overflowing float. Every IRI is therefore checked on the expanded document, before pyld can drop
 it, and every literal when it is written; a bad one raises (``InvalidIRIError``,
-``InvalidLiteralError``) instead of being repaired or skipped. Properties that the pinned context
+``InvalidLiteralError``) instead of being skipped. Properties that the pinned context
 does not define produce no triple; that is ordinary JSON-LD and is not an error.
+
+**Two repairs, in RDF only (ADR-0028).** Real data needs them, and neither changes the stored
+JSON-LD:
+
+- An ``id`` that is an absolute IRI except for characters an IRI may not contain (a space, ``<``,
+  ``>``, ``"``, ``{``, ``}``, ``|``, ``^``, a backslash, a backtick, a control character or any
+  other whitespace) is written with exactly those characters percent-encoded: UTF-8, upper-case hex
+  (``repair_iri``). ``.../Self Portrait.jpg`` becomes ``.../Self%20Portrait.jpg``. Nothing else
+  is touched: an existing ``%`` is not encoded again, and an ``id`` that is still not an absolute
+  IRI afterwards (relative, no scheme, a bare ``https:/``) raises ``InvalidIRIError`` as before.
+  Only node identifiers are repaired; a class or property IRI comes from the vocabulary, not from
+  data, and a bad one still raises. ``repaired_iris`` lists the repairs of a record, so that
+  validation can warn about each (``LAE-RDF-006``). The record URI itself is never repaired.
+- A node below the root may repeat the record's pinned context (``"@context": <pinned URL>``, or
+  the one-element array of it). That says nothing new and is dropped. Any other nested
+  ``@context`` raises ``ExpansionError``, because it could rename ``@id`` or any property.
+
+Both happen in ``rdf_triples``, which ``expand_to_ntriples`` and ``to_turtle`` share.
 
 Expansion is deterministic: the same JSON-LD and context version give the same set of lines in
 every process. ``EXPANDER_VERSION`` changes whenever that output could change for some input,
@@ -132,6 +150,12 @@ _CLASSIFIED_STUB_KEYS: Final = _STUB_KEYS | {"classified_as"}
 # pyld's test for an absolute IRI refuses any Unicode whitespace (U+00A0, U+2028, ...), which
 # N-Triples allows in an IRI; pyld would drop the triple without a word.
 _WHITESPACE: Final = re.compile(r"\s")
+# What ``repair_iri`` percent-encodes: every character ``_is_writable_iri`` refuses, and no other.
+# That is the set N-Triples forbids in an IRI (``lae.rdf.sanitize._IRI_CHAR``) plus whitespace.
+_UNWRITABLE_CHAR: Final = re.compile(r'[\x00-\x20<>"{}|^`\\]|\s')
+_NESTED_CONTEXT_ERROR: Final = (
+    "a node of the record carries its own @context; only the pinned context at the root is allowed"
+)
 _BLANK_PREFIX: Final = "_:"
 _LITERAL_KEYWORDS: Final = frozenset({"@value", "@language", "@direction", "@index"})
 
@@ -192,6 +216,32 @@ def _is_writable_iri(value: object) -> bool:
     return isinstance(value, str) and clean_iri(value) == value and not _WHITESPACE.search(value)
 
 
+def _percent_encode(match: re.Match[str]) -> str:
+    return "".join(f"%{byte:02X}" for byte in match.group().encode("utf-8"))
+
+
+def repair_iri(value: str) -> str | None:
+    """Return ``value`` as an IRI that can be written, or ``None`` if it cannot be made one.
+
+    A writable IRI is returned unchanged. Otherwise each character an IRI may not contain is
+    replaced by the percent-encoding of its UTF-8 bytes in upper-case hex, and the result is
+    returned if it is now a writable absolute IRI (module docstring, ADR-0028). The function is
+    pure and idempotent. It is not injective: ``a b`` and ``a%20b`` give the same IRI.
+    """
+    if _is_writable_iri(value):
+        return value
+    try:
+        repaired = _UNWRITABLE_CHAR.sub(_percent_encode, value)
+    except UnicodeEncodeError:  # a lone surrogate
+        return None
+    return repaired if _is_writable_iri(repaired) else None
+
+
+def _is_pinned_context(value: object, context_url: str | None) -> bool:
+    """True if a nested ``@context`` is just the record's pinned context again."""
+    return context_url is not None and (value == context_url or value == [context_url])
+
+
 def _is_owned(iri: str, record_uri: str) -> bool:
     """True if ``iri`` is the record URI or one of that record's internal node IRIs."""
     return iri == record_uri or is_internal_node_iri(iri, record_uri)
@@ -248,10 +298,16 @@ def _collect_embedded(value: Any, record_uri: str, found: set[str]) -> None:
 
 
 def _strip(
-    value: Any, record_uri: str, embedded: set[str], derived: dict[str, str], *, root: bool = False
+    value: Any,
+    record_uri: str,
+    embedded: set[str],
+    derived: dict[str, str],
+    context_url: str | None,
+    *,
+    root: bool = False,
 ) -> Any:
     if isinstance(value, list):
-        return [_strip(item, record_uri, embedded, derived) for item in value]
+        return [_strip(item, record_uri, embedded, derived, context_url) for item in value]
     if not isinstance(value, dict):
         return value
     id_key = _identifier_key(value)
@@ -266,33 +322,41 @@ def _strip(
     out: dict[str, Any] = {}
     for key, item in value.items():
         if key == "@context":
-            if not root:
-                raise ExpansionError(
-                    "a node of the record carries its own @context; only the pinned context "
-                    "at the root is allowed"
-                )
-            out[key] = item
+            if root:
+                out[key] = item
+            elif not _is_pinned_context(item, context_url):
+                raise ExpansionError(_NESTED_CONTEXT_ERROR)
         elif node_iri is not None and key == id_key:
             out[key] = node_iri
         else:
-            out[key] = _strip(item, record_uri, embedded, derived)
+            out[key] = _strip(item, record_uri, embedded, derived, context_url)
     return out
 
 
-def _rewrite(jsonld: dict[str, Any], record_uri: str) -> tuple[dict[str, Any], dict[str, str]]:
-    """Return the document expansion sees, and ``{derived node IRI: original id}`` for it."""
+def _rewrite(
+    jsonld: dict[str, Any], record_uri: str, context_url: str | None
+) -> tuple[dict[str, Any], dict[str, str]]:
+    """Return the document expansion sees, and ``{derived node IRI: original id}`` for it.
+
+    ``context_url`` is the pinned context a nested node may repeat (``None``: the root's own).
+    """
+    if context_url is None:
+        declared = jsonld.get("@context")
+        context_url = declared if isinstance(declared, str) else None
     root_id = _identifier(jsonld)
     if root_id is not None and root_id != record_uri:
         raise OwnershipError(f"root id {root_id!r} is not the record URI {record_uri!r}")
     embedded: set[str] = set()
     _collect_embedded(jsonld, record_uri, embedded)
     derived: dict[str, str] = {}
-    stripped = _strip(jsonld, record_uri, embedded, derived, root=True)
+    stripped = _strip(jsonld, record_uri, embedded, derived, context_url, root=True)
     assert isinstance(stripped, dict)
     return stripped, derived
 
 
-def strip_stub_attributes(jsonld: dict[str, Any], record_uri: str) -> dict[str, Any]:
+def strip_stub_attributes(
+    jsonld: dict[str, Any], record_uri: str, *, context_version: int | None = None
+) -> dict[str, Any]:
     """Return a copy in which every subject is the record's own; the input is not modified.
 
     An object is owned if its ``id`` is ``record_uri`` or an internal node IRI of that record, or
@@ -306,11 +370,89 @@ def strip_stub_attributes(jsonld: dict[str, Any], record_uri: str) -> dict[str, 
       becomes ``{"id": <derived node IRI>}``.
 
     The ``la:equivalent`` triple from a derived node to its original id is added by
-    ``expand_to_ntriples``, not here. Raises ``OwnershipError`` if the root ``id`` is not
-    ``record_uri``, and ``ExpansionError`` if a node other than the root has an ``@context`` of
-    its own (it could rename ``@id`` or any property; a reference's is dropped with the rest).
+    ``expand_to_ntriples``, not here, and no ``id`` is repaired here (``rdf_triples`` does that),
+    so every ``id`` that is kept is the one in ``jsonld``. Raises ``OwnershipError`` if the root
+    ``id`` is not ``record_uri``, and ``ExpansionError`` if a node other than the root has an
+    ``@context`` of its own (it could rename ``@id`` or any property; a reference's is dropped
+    with the rest). The one exception is a nested ``@context`` that repeats the record's pinned
+    context, which is dropped (ADR-0028): the pinned URL of ``context_version``, or without one
+    the root's own ``@context``.
     """
-    return _rewrite(jsonld, record_uri)[0]
+    context_url = None if context_version is None else _context_url(context_version)
+    return _rewrite(jsonld, record_uri, context_url)[0]
+
+
+def _is_foreign(obj: dict[str, Any], record_uri: str) -> bool:
+    identifier = _identifier(obj)
+    return identifier is not None and not _is_owned(identifier, record_uri)
+
+
+def strip_embedded_ids(jsonld: dict[str, Any], record_uri: str) -> dict[str, Any]:
+    """Return a copy without the ``id`` of any embedded node that brought one of its own.
+
+    For the JSON Schema check only (ADR-0028): the Linked Art schema does not allow ``id`` on a
+    ``Name``, ``Identifier``, ``TimeSpan`` or ``Dimension``, but ADR-0021 makes such a node part
+    of the record. Every object below the root is judged alone by ``_is_embedded``, the split
+    expansion uses: an embedded node loses its ``id`` (and ``@id``); a reference, an object with
+    an internal node IRI, and the root keep theirs. Nothing else changes, so every JSON Pointer
+    into the result is valid in ``jsonld``. Nothing inside ``@context`` is touched.
+    """
+    return {
+        key: item if key == "@context" else _without_embedded_ids(item, record_uri)
+        for key, item in jsonld.items()
+    }
+
+
+def _without_embedded_ids(value: Any, record_uri: str) -> Any:
+    if isinstance(value, list):
+        return [_without_embedded_ids(item, record_uri) for item in value]
+    if not isinstance(value, dict):
+        return value
+    drop = _ID_KEYS if _is_foreign(value, record_uri) and _is_embedded(value) else ()
+    return {
+        key: item if key == "@context" else _without_embedded_ids(item, record_uri)
+        for key, item in value.items()
+        if key not in drop
+    }
+
+
+def repaired_iris(
+    jsonld: dict[str, Any], record_uri: str
+) -> list[tuple[tuple[str | int, ...], str, str]]:
+    """Return ``(path, original id, repaired IRI)`` for every ``id`` expansion writes repaired.
+
+    ``path`` is the keys and positions from the root to the ``id``. Only what
+    ``expand_to_ntriples`` keeps is searched, as in ``_collect_embedded``: the ``id`` of a
+    reference counts, nothing inside the reference does. An ``id`` that cannot be repaired is
+    not listed; expansion raises for it.
+    """
+    found: list[tuple[tuple[str | int, ...], str, str]] = []
+    for key, item in jsonld.items():
+        if key != "@context" and key not in _ID_KEYS:
+            _collect_repairs(item, record_uri, (key,), found)
+    return found
+
+
+def _collect_repairs(
+    value: Any,
+    record_uri: str,
+    path: tuple[str | int, ...],
+    found: list[tuple[tuple[str | int, ...], str, str]],
+) -> None:
+    if isinstance(value, list):
+        for position, item in enumerate(value):
+            _collect_repairs(item, record_uri, (*path, position), found)
+    elif isinstance(value, dict):
+        id_key = _identifier_key(value)
+        if id_key is not None and not _is_owned(value[id_key], record_uri):
+            repaired = repair_iri(value[id_key])
+            if repaired is not None and repaired != value[id_key]:
+                found.append(((*path, id_key), value[id_key], repaired))
+            if not _is_embedded(value):
+                return
+        for key, item in value.items():
+            if key != "@context":
+                _collect_repairs(item, record_uri, (*path, key), found)
 
 
 def _walk_identifiers(value: Any) -> Iterator[str]:
@@ -396,6 +538,30 @@ def _check_expanded(value: Any, *, allow_blank_nodes: bool) -> None:
                 _check_expanded(item, allow_blank_nodes=allow_blank_nodes)
 
 
+def _prepare(value: Any, context_url: str, *, root: bool = False) -> Any:
+    """Return ``value`` as pyld should see it: the two repairs of ADR-0028 (module docstring).
+
+    A nested ``@context`` equal to the pinned one is dropped and any other raises; an ``id`` that
+    ``repair_iri`` can repair is replaced. An ``id`` it cannot repair is left for
+    ``_check_expanded``, which says what is wrong with it.
+    """
+    if isinstance(value, list):
+        return [_prepare(item, context_url) for item in value]
+    if not isinstance(value, dict):
+        return value
+    out: dict[str, Any] = {}
+    for key, item in value.items():
+        if key == "@context":
+            # The root's own was checked by the caller, which sets the pinned URL in its place.
+            if not root and not _is_pinned_context(item, context_url):
+                raise ExpansionError(_NESTED_CONTEXT_ERROR)
+        elif key in _ID_KEYS and isinstance(item, str):
+            out[key] = repair_iri(item) or item
+        else:
+            out[key] = _prepare(item, context_url)
+    return out
+
+
 def rdf_triples(
     jsonld: dict[str, Any], context_version: int, *, allow_blank_nodes: bool = False
 ) -> list[dict[str, Any]]:
@@ -403,8 +569,10 @@ def rdf_triples(
 
     Each triple is pyld's ``{"subject", "predicate", "object"}`` dict of terms. Triples from every
     graph are returned and the graph name is dropped. The document's own root ``@context`` must be
-    absent or the pinned URL of ``context_version``. Shared by ``expand_to_ntriples`` and
-    ``lae.rdf.serialize``; it does no ownership stripping or checking.
+    absent or the pinned URL of ``context_version``; a nested one must repeat it and is ignored,
+    and each ``id`` with characters an IRI may not contain is percent-encoded (``_prepare``).
+    Shared by ``expand_to_ntriples`` and ``lae.rdf.serialize``; it does no ownership stripping
+    or checking.
     """
     url = _context_url(context_version)
     declared = jsonld.get("@context")
@@ -414,11 +582,11 @@ def rdf_triples(
             f"of context version {context_version}"
         )
     options = {"documentLoader": document_loader, "contextResolver": _RESOLVER}
+    document = _prepare(jsonld, url, root=True)
+    document["@context"] = url
     try:
         with _PYLD_LOCK:
-            expanded = pyld_jsonld.expand(
-                {**jsonld, "@context": url}, {**options, "base": _RELATIVE_BASE}
-            )
+            expanded = pyld_jsonld.expand(document, {**options, "base": _RELATIVE_BASE})
             _check_expanded(expanded, allow_blank_nodes=allow_blank_nodes)
             dataset = pyld_jsonld.to_rdf(expanded, options)
     except pyld_jsonld.JsonLdError as error:
@@ -489,6 +657,8 @@ def expand_to_ntriples(
     (``strip_stub_attributes``), so callers pass the stored JSON-LD with its internal node IRIs.
     Each embedded node that has an id of its own is emitted under its derived node IRI, with one
     ``la:equivalent`` triple to that id (ADR-0021).
+    An ``id`` with characters an IRI may not contain is written percent-encoded, and a nested
+    ``@context`` that repeats the pinned one is ignored (ADR-0028).
     Raises ``BlankNodeError`` for a node without an IRI, ``OwnershipError`` for a subject the
     record does not own, ``InvalidIRIError`` / ``InvalidLiteralError`` for a term that cannot be
     written safely, and ``ExpansionError`` for anything else pyld rejects.
@@ -500,14 +670,15 @@ def expand_to_ntriples(
         record_uri = root_id
     if not _is_writable_iri(record_uri):
         raise InvalidIRIError(f"not a valid absolute IRI: {record_uri!r}")
-    doc, derived = _rewrite(jsonld, record_uri)
+    doc, derived = _rewrite(jsonld, record_uri, _context_url(context_version))
 
     lines: set[str] = set()
     for node_iri, original in derived.items():
-        # The original id no longer passes through pyld, so it is checked here.
-        if not _is_writable_iri(original):
+        # The original id no longer passes through pyld, so it is checked (and repaired) here.
+        equivalent = repair_iri(original)
+        if equivalent is None:
             raise InvalidIRIError(f"not a valid absolute IRI: {original!r}")
-        lines.add(f"<{node_iri}> <{LA_EQUIVALENT}> <{original}> .")
+        lines.add(f"<{node_iri}> <{LA_EQUIVALENT}> <{equivalent}> .")
     owned: set[str] = set()
     for triple in rdf_triples(doc, context_version):
         subject = _iri_term(triple["subject"])

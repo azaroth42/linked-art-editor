@@ -31,6 +31,7 @@ from referencing.exceptions import Unresolvable
 
 REPO = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(REPO / "backend" / "src"))
+from lae.rdf import strip_embedded_ids  # noqa: E402
 from lae.validation.schema_map import (  # noqa: E402
     SCHEMA_BASE_URI,
     load_registry,
@@ -75,6 +76,21 @@ def git_rev(path: Path) -> str:
         return rev + (" (with uncommitted changes)" if dirty else "")
     except (OSError, subprocess.CalledProcessError):
         return "unknown"
+
+
+def ignored_ids_of(raw: Any, checked: Any, path: tuple[Any, ...] = ()) -> list[tuple[str, str]]:
+    """``(pointer, type)`` of each node whose ``id`` ``strip_embedded_ids`` removed."""
+    found: list[tuple[str, str]] = []
+    if isinstance(raw, list):
+        for position, (before, after) in enumerate(zip(raw, checked, strict=True)):
+            found += ignored_ids_of(before, after, (*path, position))
+    elif isinstance(raw, dict):
+        if "id" in raw and "id" not in checked:
+            found.append((pointer(path), str(raw.get("type"))))
+        for key, value in raw.items():
+            if key in checked:
+                found += ignored_ids_of(value, checked[key], (*path, key))
+    return found
 
 
 def schema_location(error: ValidationError, registry: Any, root_name: str) -> str:
@@ -211,13 +227,19 @@ def main() -> int:
     )
 
     rows: list[dict[str, Any]] = []
+    ignored_ids: list[tuple[str, str, str]] = []
     for path in sorted((CORPUS / "linkedart").glob("*.json")) + sorted(
         (CORPUS / "institutional").glob("*.json")
     ):
         raw = path.read_bytes()
-        record = json.loads(raw)
+        as_stored = json.loads(raw)
+        # As ``lae.validation.validate_schema`` checks it: an ``id`` on an embedded node is
+        # ignored (ADR-0028). What that hides from the lists below is reported on its own.
+        record = strip_embedded_ids(as_stored, as_stored.get("id", ""))
         schema = schema_name_for(record)
         validator = validator_for(schema, registry)
+        for where, node_type in ignored_ids_of(as_stored, record):
+            ignored_ids.append((path.relative_to(REPO).as_posix(), where, node_type))
         errors: list[dict[str, str]] = []
         try:
             found = sorted(validator.iter_errors(record), key=lambda e: list(e.absolute_path))
@@ -358,6 +380,20 @@ def main() -> int:
                 )
                 if e["alt"]:
                     w(f"    - {e['alt']}")
+        w("")
+    if ignored_ids:
+        w("## `id` on embedded nodes (not counted above)")
+        w("")
+        w(
+            "Laertes ignores the `id` of an embedded node when it checks the schema (ADR-0028), so an error that "
+            "such an `id` causes is not in the lists and counts above. The schema allows no `id` on a `Name`, "
+            "`Identifier`, `TimeSpan` or `Dimension`; where an example gives one, that is still a mismatch "
+            "upstream: either the schema allows `id` there, or the example drops it. Every embedded node "
+            "with an `id` of its own in the corpus:"
+        )
+        w("")
+        for corpus_path, where, node_type in ignored_ids:
+            w(f"- [ ] `{corpus_path}` — `{where}` (`{node_type}`)")
         w("")
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text("\n".join(out))

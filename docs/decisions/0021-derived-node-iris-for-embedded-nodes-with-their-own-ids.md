@@ -1,6 +1,6 @@
 # ADR-0021: Embedded nodes that arrive with their own id are indexed under derived node IRIs
 
-**Status:** Accepted · **Date:** 2026-11-22 · **Decided by:** Claude Fable 5.2 as the critical-step reviewer of Phase 1 Step 1.3, under the owner's delegation (Rob Sanderson may override) · **Recorded by:** Claude · **Reviewed by:** Claude Fable 5.2
+**Status:** Accepted · **Date:** 2026-11-22 · **Decided by:** Claude Fable 5.2 as the critical-step reviewer of Phase 1 Step 1.3, under the owner's delegation (Rob Sanderson may override) · **Recorded by:** Claude · **Reviewed by:** Claude Fable 5.2 · **Amended by:** ADR-0028 (a nested `@context` equal to the pinned one is ignored; an `id` may be percent-encoded in RDF)
 
 ## Context
 Spec §3.3 and decision A12 say a record emits only triples whose subject it owns (its URI and its `<record_uri>/node/<uuidv7>` IRIs), and that every other object is reduced to `{"id": uri}` before expansion. Step 1.3 as first written applied that to every object whose `id` is not in the record's namespace.

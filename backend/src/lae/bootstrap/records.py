@@ -7,7 +7,9 @@ For each document, in order:
    is reported (``LAE-BOOT-002`` for the root, ``LAE-BOOT-003`` below it).
 3. Validate its public form against the JSON Schema for its ``type``
    (``lae.validation.schema_map``): the document without internal node IRIs
-   (``strip_internal_iris``), as ``/id/{uuid}`` would serve it. The schemas forbid ``id`` on
+   (``strip_internal_iris``), as ``/id/{uuid}`` would serve it, and without the ids that
+   embedded nodes brought with them (``lae.rdf.strip_embedded_ids``, ADR-0028), as
+   ``lae.validation.validate_schema`` checks it. The schemas forbid ``id`` on
    many embedded nodes (129 of the 184 valid corpus records fail with node IRIs added), and an
    input may already carry node IRIs (an export of this system, the Spike S6 generator).
    JSON Schema only, no SHACL.
@@ -51,6 +53,7 @@ from lae.ids import new_uuid7, record_id_from_uri
 from lae.labels.extract import labels_from_record
 from lae.labels.upsert import primary_classification
 from lae.projection import assign_node_iris, canonical_json, strip_internal_iris
+from lae.rdf import strip_embedded_ids
 from lae.validation.schema_map import load_registry, schema_name_for, validator_for
 
 STAGE: Final = "load"
@@ -143,7 +146,7 @@ def prepare(item: SourceItem, base_uri: str) -> tuple[PreparedRecord | None, Fai
     document = cleaned.document
     uri: str = document["id"]
     try:
-        errors = schema_errors(strip_internal_iris(document, uri))
+        errors = schema_errors(strip_internal_iris(strip_embedded_ids(document, uri), uri))
     except ValueError as error:
         return None, Failure(STAGE, item.source, UNKNOWN_TYPE, uri, [str(error)]), 0
     if errors:

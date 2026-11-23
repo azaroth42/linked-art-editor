@@ -1,7 +1,8 @@
 # Corpus files that do not validate against the vendored JSON Schema
 
 `backend/tests/test_corpus_schema.py` validates every corpus file against the entry-point schema
-for its `type` (`lae.validation.schema_map`). Each file in the table below fails and is a strict
+for its `type` (`lae.validation.schema_map`), ignoring the `id` of embedded nodes as
+`lae.validation` does (ADR-0028). Each file in the table below fails and is a strict
 expected failure: if one starts to validate, the test fails until its row is removed. A file not
 listed here must validate. Corpus files are never edited or deleted to make them pass.
 
@@ -60,7 +61,7 @@ per file).
 | `linkedart/object-12.json` | HumanMadeObject | `object.json` | 2 | `/ required: '_label' is a required property`<br>`/referred_to_by/0 additionalProperties: Additional properties are not allowed ('subject_to' was unexpected)` |
 | `linkedart/object-13.json` | HumanMadeObject | `object.json` | 1 | `/ required: '_label' is a required property` |
 | `linkedart/object-2.json` | HumanMadeObject | `object.json` | 1 | `/ additionalProperties: Additional properties are not allowed ('part' was unexpected)` |
-| `linkedart/object-3.json` | HumanMadeObject | `object.json` | 2 | `/ required: '_label' is a required property`<br>`/identified_by/0 anyOf: matches none of the allowed shapes` |
+| `linkedart/object-3.json` | HumanMadeObject | `object.json` | 1 | `/ required: '_label' is a required property` |
 | `linkedart/object-7.json` | HumanMadeObject | `object.json` | 1 | `/ required: '_label' is a required property` |
 | `linkedart/object-8.json` | HumanMadeObject | `object.json` | 2 | `/ required: '_label' is a required property`<br>`/dimension/0/assigned_by/0/carried_out_by/0 anyOf: matches none of the allowed shapes` |
 | `linkedart/object-9.json` | HumanMadeObject | `object.json` | 2 | `/ required: '_label' is a required property`<br>`/identified_by/0 anyOf: matches none of the allowed shapes` |

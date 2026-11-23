@@ -16,6 +16,7 @@
   "LAE-RDF-003": "This record contains an identifier or term that is not a valid absolute IRI. Details: {detail}",
   "LAE-RDF-004": "This record contains a value that is not valid for its datatype. Details: {detail}",
   "LAE-RDF-005": "This record cannot be converted to linked data. Details: {detail}",
+  "LAE-RDF-006": "This web address contains characters that are not allowed in one, such as spaces. It is kept here as written and published as linked data in encoded form: {encoded}",
   "LAE-REC-001": "No such record.",
   "LAE-REC-002": "This record has been deleted.",
   "LAE-REC-003": "This record has been merged into {merged_into}.",

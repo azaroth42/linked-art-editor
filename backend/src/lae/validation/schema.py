@@ -17,10 +17,16 @@
   told: the code and path of the first error in the one alternative whose ``type`` the instance
   has.
 
-Internal node IRIs are stripped first: the public schema does not allow ``id`` on embedded nodes.
+The ``id`` of every embedded node is removed first, because the public schema does not allow
+``id`` on most of them: an internal node IRI (``strip_internal_iris``), and an id the node
+brought with it from elsewhere (``lae.rdf.strip_embedded_ids``, ADR-0028; such a node is part of
+the record, ADR-0021). A reference and the root keep their ``id``. Only the schema check ignores
+these ids: storage, RDF, the rules and SHACL see them.
+
 Formats are checked for ``date-time`` and ``uri`` only, with this project's own checkers:
 ``date-time`` accepts signed (BCE) years, which RFC 3339 does not, and ``uri`` is exactly what RDF
-expansion accepts (``lae.rdf.sanitize``).
+expansion can write (``lae.rdf.repair_iri``): an absolute IRI, also one with characters that
+expansion percent-encodes, which the pipeline reports as the warning ``LAE-RDF-006``.
 """
 
 from __future__ import annotations
@@ -36,7 +42,7 @@ from referencing import Registry
 from referencing.exceptions import Unresolvable
 
 from lae.projection.project import strip_internal_iris
-from lae.rdf.sanitize import clean_iri
+from lae.rdf import repair_iri, strip_embedded_ids
 from lae.validation.datetimes import is_datetime
 from lae.validation.diagnostics import Diagnostic, diagnostic, pointer
 from lae.validation.schema_map import (
@@ -91,7 +97,6 @@ sub-schemas."""
 
 _MAX_TEXT: Final = 120
 _MAX_ITEMS: Final = 20
-_WHITESPACE: Final = re.compile(r"\s")
 
 FORMAT_CHECKER: Final = FormatChecker(formats=())
 """Checks ``date-time`` and ``uri`` only (module docstring); every other format is annotation."""
@@ -104,9 +109,7 @@ def _check_datetime(value: object) -> bool:
 
 @FORMAT_CHECKER.checks("uri")
 def _check_uri(value: object) -> bool:
-    return not isinstance(value, str) or (
-        clean_iri(value) == value and not _WHITESPACE.search(value)
-    )
+    return not isinstance(value, str) or repair_iri(value) is not None
 
 
 def schema_codes() -> frozenset[str]:
@@ -268,7 +271,8 @@ def validate_schema(jsonld: Any, record_uri: str | None = None) -> list[Diagnost
     """Return the JSON Schema violations of a record, in document order; ``[]`` if it is valid.
 
     ``record_uri`` (default: the root ``id``) says which internal node IRIs to strip before
-    validating. The input is not modified.
+    validating; the ids of embedded nodes that have one of their own are ignored too (module
+    docstring). The input is not modified, and every path is a pointer into it.
     """
     record_type = jsonld.get("type") if isinstance(jsonld, Mapping) else None
     try:
@@ -279,7 +283,10 @@ def validate_schema(jsonld: Any, record_uri: str | None = None) -> list[Diagnost
         params = {"type": record_type if isinstance(record_type, str) else None}
         return [diagnostic(SCHEMA_RECORD_TYPE, "/type" if record_type else "", "violation", params)]
     uri = record_uri if record_uri is not None else jsonld.get("id")
-    document = strip_internal_iris(jsonld, uri) if isinstance(uri, str) and uri else jsonld
+    owner = uri if isinstance(uri, str) else ""
+    document = strip_embedded_ids(jsonld, owner)
+    if owner:
+        document = strip_internal_iris(document, owner)
     found: list[Diagnostic] = []
     try:
         found.extend(_diagnostics(validator.iter_errors(document)))
