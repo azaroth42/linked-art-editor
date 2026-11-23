@@ -16,7 +16,8 @@ from sqlalchemy.engine import make_url
 NOT_A_RECORD: Final = "LAE-BOOT-001"
 """The input is not a JSON object (or not valid JSON)."""
 NO_RECORD_URI: Final = "LAE-BOOT-002"
-"""The record has no root ``id``, or its root ``id`` cannot be made a valid IRI."""
+"""The record has no root ``id``, or its root ``id`` cannot be made a valid IRI, or it is a node
+IRI of a record of this installation (which cannot be the alias of another record)."""
 INVALID_ID: Final = "LAE-BOOT-003"
 """An ``id`` below the root cannot be made a valid IRI."""
 UNKNOWN_TYPE: Final = "LAE-BOOT-004"

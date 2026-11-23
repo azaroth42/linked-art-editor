@@ -13,7 +13,10 @@ expensive work. For each document, in order:
 4. **Re-mint** (ADR-0030). A source URI of the form ``<base_uri><uuid>`` is kept and its UUID is
    the record id. Any other gets a new UUIDv7 id and the URI ``<base_uri><uuidv7>``;
    ``lae.bootstrap.remint.remint`` rewrites the document and adds the source URI to
-   ``equivalent``, and the source URI becomes a ``record_aliases`` row.
+   ``equivalent``, and the source URI becomes a ``record_aliases`` row. A root ``id`` that is a
+   node IRI of a local record (``<base_uri><uuid>/node/<uuid>``) is rejected (``LAE-BOOT-002``):
+   ``lae.ids`` already resolves it to the record that owns the node, so it cannot be an alias
+   of another one.
 5. Assign internal node IRIs (``lae.projection.assign_node_iris``, Spike S3 rule R4).
 6. **Expand to RDF** with ``lae.rdf.expand_to_ntriples``, the production expansion. A record it
    refuses is rejected (``LAE-BOOT-007``) and never reaches PostgreSQL, so PostgreSQL and QLever
@@ -54,7 +57,7 @@ from lae.bootstrap.findings import schema_findings
 from lae.bootstrap.remint import local_record_id, remint
 from lae.bootstrap.sanitize import clean_ids
 from lae.bootstrap.source import SourceItem
-from lae.ids import new_uuid7, record_uri
+from lae.ids import new_uuid7, record_id_from_uri, record_uri
 from lae.labels.extract import labels_from_record
 from lae.labels.upsert import primary_classification
 from lae.projection import assign_node_iris, canonical_json
@@ -133,6 +136,10 @@ def _build(parsed: ParsedItem, base_uri: str, context_version: int) -> PreparedR
         return Failure(STAGE, parsed.source, UNKNOWN_TYPE, source_uri, [str(error)])
     record_id = local_record_id(source_uri, base_uri)
     alias: str | None = None
+    if record_id is None and record_id_from_uri(source_uri, base_uri=base_uri) is not None:
+        # A node IRI of a local record: as an alias it would name two records at once.
+        detail = "the root id is a node IRI of a record of this installation"
+        return Failure(STAGE, parsed.source, NO_RECORD_URI, source_uri, [detail])
     if record_id is None:
         record_id = new_uuid7()
         alias = source_uri

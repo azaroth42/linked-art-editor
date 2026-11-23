@@ -9,8 +9,11 @@ A finding is keyed by ``(code, record_id, node_id)``; the unique index treats a 
 ``node_id`` as a value (``NULLS NOT DISTINCT``, PostgreSQL 15+), so the key also holds for
 findings about a whole record.
 
-Revision ID: 0007
-Revises: 0006
+Numbered 0008 although it revises 0010: the scheduler took 0007 and the vocabulary registry
+(0010, Phase 2) merged first, and a migration goes on top of the head it meets.
+
+Revision ID: 0008
+Revises: 0010
 Create Date: 2026-11-22
 """
 
@@ -20,8 +23,8 @@ import sqlalchemy as sa
 from alembic import op
 from sqlalchemy.dialects import postgresql
 
-revision: str = "0007"
-down_revision: str | Sequence[str] | None = "0006"
+revision: str = "0008"
+down_revision: str | Sequence[str] | None = "0010"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

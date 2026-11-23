@@ -19,8 +19,9 @@ PostgreSQL, this pass goes over the loaded rows again, in batches, in the same w
 
 **Which rows.** Only rows still exactly as a bulk load wrote them: ``version = 1``, active, no
 ``record_revisions`` row and no open draft. A record that has been published through the editor
-is never changed here: its history and QLever already hold the published form. The update also
-compares the ``etag`` read, so a row changed in between is left alone.
+is never changed here: its history and QLever already hold the published form. The update
+repeats these conditions and compares the ``etag`` read, so a row that was changed, or for which
+a draft was opened, after the batch was selected is left alone.
 
 **Scope and recovery.** ``lae bootstrap load`` runs the pass over the rows created since the
 load began. While a load is unfinished ``sync_state.bootstrap_rewrite_since`` holds that time;
@@ -32,7 +33,9 @@ point old rows at records a later load brought in. The pass is idempotent.
 
 **Order of the stages.** The pass changes stored JSON-LD without an outbox event, like the load
 itself, so it belongs before ``export-nt`` and ``build-index``. After any ``load`` or
-``rewrite-refs`` on a database that already has an index, export and build the index again.
+``rewrite-refs`` on a database that already has an index, export and build the index again;
+both commands say so (``index_rebuild_needed`` in the summary, and a line on stderr) when they
+changed anything and ``sync_state`` has an index watermark.
 
 **Why this cannot make a record unexpandable.** The first pass rejected every record that
 ``expand_to_ntriples`` refuses. This pass only (a) replaces, below the root, one valid absolute
@@ -63,6 +66,7 @@ from lae.api.records import record_etag
 from lae.bootstrap.common import (
     BOOTSTRAP_REWRITE_SINCE,
     LOAD_LOCK,
+    QLEVER_INDEX_WATERMARK,
     BootstrapError,
     asyncpg_dsn,
     get_sync_state,
@@ -75,6 +79,7 @@ from lae.labels.refs import iter_references
 from lae.labels.upsert import primary_classification
 from lae.projection import canonical_json
 from lae.settings import Settings
+from lae.vocab.metatypes import harvest_all_metatypes
 
 STAGE: Final = "rewrite"
 DEFAULT_BATCH: Final = 10_000
@@ -101,8 +106,10 @@ WHERE a.alias_uri = ANY($1::text[])
 """
 _KNOWN: Final = "SELECT uri FROM entity_labels WHERE uri = ANY($1::text[])"
 _UPDATE: Final = """
-UPDATE records SET data = $2::jsonb, etag = $3
-WHERE id = $1 AND etag = $4 AND version = 1 AND status = 'active'
+UPDATE records r SET data = $2::jsonb, etag = $3
+WHERE r.id = $1 AND r.etag = $4 AND r.version = 1 AND r.status = 'active'
+  AND NOT EXISTS (SELECT 1 FROM record_revisions v WHERE v.record_id = r.id)
+  AND NOT EXISTS (SELECT 1 FROM crdt_drafts d WHERE d.record_id = r.id)
 """
 _UPDATE_CLASSIFICATION: Final = (
     "UPDATE entity_labels SET primary_classification = $2 WHERE uri = $1"
@@ -260,6 +267,22 @@ async def has_column(conn: asyncpg.Connection, table: str, column: str) -> bool:
     return found
 
 
+async def index_is_stale(conn: asyncpg.Connection, *, changed: bool) -> bool:
+    """Whether a QLever index exists that no longer matches ``records`` (says so on stderr).
+
+    ``load`` and ``rewrite-refs`` write no outbox events, so the sync worker cannot bring an
+    index that was built before them up to date: only ``export-nt`` and ``build-index`` can.
+    """
+    stale = changed and await get_sync_state(conn, QLEVER_INDEX_WATERMARK) is not None
+    if stale:
+        print(
+            "lae bootstrap: records changed after the QLever index was built; "
+            "run export-nt and build-index again",
+            file=sys.stderr,
+        )
+    return stale
+
+
 async def finish(conn: asyncpg.Connection, *, changed: bool) -> None:
     """Clear the unfinished-load marker and refresh statistics (vacuum if rows were updated)."""
     await conn.execute("DELETE FROM sync_state WHERE key = $1", BOOTSTRAP_REWRITE_SINCE)
@@ -299,7 +322,10 @@ async def rewrite_refs(
             ),
         ) as pool:
             summary = await rewrite_pass(conn, pool, since=None, batch=batch, inflight=workers + 1)
+        # References now name their targets by their final URIs: harvest again (ADR-0032).
+        metatypes_harvested = await harvest_all_metatypes(conn) if summary["changed"] else 0
         await finish(conn, changed=summary["changed"] > 0)
+        stale = await index_is_stale(conn, changed=summary["changed"] > 0)
     finally:
         await conn.close()
     return {
@@ -309,4 +335,6 @@ async def rewrite_refs(
         "batch": batch,
         "completed_interrupted_load": pending_since is not None,
         **summary,
+        "metatypes_harvested": metatypes_harvested,
+        "index_rebuild_needed": stale,
     }

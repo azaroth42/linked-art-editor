@@ -305,8 +305,9 @@ def without_lux_keys(value: Any) -> Any:
 def test_lux_records_validate_without_an_engine_failure() -> None:
     """The 32 LUX records of PR #130, among them a BCE-dated ``HumanMadeObject``.
 
-    As fetched, every one fails the schema for LUX's ``_links``. Without LUX's own keys 29 are
-    publishable; none makes expansion or pyshacl fail (the BCE tetradrachm crashed the Spike S4
+    As fetched, every one fails the schema for LUX's ``_links``. Without LUX's own keys 30 are
+    publishable (one of them, a ``Period`` whose ``equivalent`` is a ``Period``, since ADR-0030
+    §6); none makes expansion or pyshacl fail (the BCE tetradrachm crashed the Spike S4
     harness, whose shapes compared ``xsd:dateTime`` literals; the pipeline compares dates in
     Python).
     """
@@ -329,13 +330,12 @@ def test_lux_records_validate_without_an_engine_failure() -> None:
         if result.ok:
             ok.append(path.name)
     assert len(paths) == 32
-    assert len(ok) == 29
+    assert len(ok) == 30
     assert "object-c1b6648b-caf8-4a1f-b28d-43ce8c83a852.json" in ok, "the BCE tetradrachm"
     assert codes == {
         "LAE-RDF-006": 8,
         "LAE-SCHEMA-additionalProperties": 2,
         "LAE-SCHEMA-anyOf": 2,
-        "LAE-SCHEMA-const": 1,
         "LAE-SHACL-002": 3,
         "LAE-SHACL-014": 1,
     }

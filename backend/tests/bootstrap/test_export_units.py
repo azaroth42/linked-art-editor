@@ -41,7 +41,7 @@ def test_the_batch_is_exactly_the_records_expansions() -> None:
     rows = stored_rows()
     batch = expand_batch(rows, compress=False)
     assert batch.failures == []
-    assert batch.records == len(rows) == 244
+    assert batch.records == len(rows) == 276
     lines = batch.data.decode().splitlines()
     assert len(lines) == batch.triples
     expected: set[str] = set()

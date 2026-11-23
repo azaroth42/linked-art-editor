@@ -119,6 +119,18 @@ def test_a_local_uri_is_kept_with_its_uuid_and_gets_no_alias() -> None:
     assert json.loads(record.data)["equivalent"] == corpus(BROWN_TEA_POT)["equivalent"]
 
 
+def test_a_root_id_that_is_a_node_iri_of_a_local_record_is_rejected() -> None:
+    """``lae.ids`` resolves such an IRI to the record that owns the node, so as an alias it would
+    name two records, and the second pass could replace the owner's own node id by it."""
+    node = f"{BASE_URI}{new_uuid7()}/node/{new_uuid7()}"
+    record, failure = prepare(item({**corpus(BROWN_TEA_POT), "id": node}), BASE_URI, 1)
+    assert record is None and failure is not None
+    assert (failure.code, failure.uri) == (NO_RECORD_URI, node)
+    # Anything else under the base URI is an ordinary source URI.
+    slug = prepared({**corpus(BROWN_TEA_POT), "id": f"{BASE_URI}object/7"})
+    assert slug.alias == f"{BASE_URI}object/7"
+
+
 def test_a_reminted_record_that_is_loaded_again_as_exported_is_unchanged() -> None:
     """Stored JSON-LD (with node IRIs) is valid input: nothing is minted or added twice."""
     record = prepared(corpus("linkedart/visual-nightwatch-1.json"))

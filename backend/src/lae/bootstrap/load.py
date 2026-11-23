@@ -24,7 +24,8 @@ earlier load that did not finish.
 codes) and skipped when it is not a record (001), has an id that cannot be repaired (002, 003),
 is of no Linked Art record class (004), cannot be expanded to RDF (007), or fails in a way
 nothing else covers (010). So is a record that is already loaded (006): its source URI is a
-``records.uri`` or a ``record_aliases.alias_uri``, or occurred earlier in the input. Loading the
+``records.uri`` or a ``record_aliases.alias_uri``, or that of a record loaded earlier from the
+input (an earlier item that was rejected does not count). Loading the
 same input again therefore writes nothing. Two equal source URIs in batches that two workers
 write at the same moment are caught by the unique indexes (``COPY`` fails, and the worker looks
 again and writes the rest); which of the two is kept is not defined.
@@ -77,7 +78,13 @@ from lae.bootstrap.records import (
     build_batch,
     parse_batch,
 )
-from lae.bootstrap.rewrite import acquire_load_lock, finish, has_column, rewrite_pass
+from lae.bootstrap.rewrite import (
+    acquire_load_lock,
+    finish,
+    has_column,
+    index_is_stale,
+    rewrite_pass,
+)
 from lae.bootstrap.source import SourceItem, iter_source
 from lae.bootstrap.worker import Worker, current, init_worker
 from lae.db.models import EntityLabelStatus, QaFindingSeverity, RecordStatus
@@ -226,17 +233,32 @@ async def _loaded(conn: asyncpg.Connection, source_uris: list[str]) -> set[str]:
 def _split_new(
     items: Iterable[ParsedItem], loaded: set[str]
 ) -> tuple[list[ParsedItem], list[ParsedItem]]:
-    """Split parsed items into the first of each new source URI, and the duplicates."""
-    keep: list[ParsedItem] = []
+    """Split parsed items into those whose source URI is not loaded yet, and the duplicates."""
+    new: list[ParsedItem] = []
     duplicates: list[ParsedItem] = []
-    seen: set[str] = set()
     for item in items:
-        if item.source_uri in loaded or item.source_uri in seen:
-            duplicates.append(item)
+        (duplicates if item.source_uri in loaded else new).append(item)
+    return new, duplicates
+
+
+def _first_of_each(
+    records: Iterable[PreparedRecord],
+) -> tuple[list[PreparedRecord], list[PreparedRecord]]:
+    """Split a batch's records into the first with each source URI, and the repeats.
+
+    This runs after the records were built, so an item that was rejected does not make a later,
+    good item with the same URI a duplicate of something that was never loaded.
+    """
+    keep: list[PreparedRecord] = []
+    repeats: list[PreparedRecord] = []
+    seen: set[str] = set()
+    for record in records:
+        if record.source_uri in seen:
+            repeats.append(record)
         else:
-            seen.add(item.source_uri)
-            keep.append(item)
-    return keep, duplicates
+            seen.add(record.source_uri)
+            keep.append(record)
+    return keep, repeats
 
 
 async def _copy_without_duplicates(
@@ -285,13 +307,14 @@ def load_batch(items: list[SourceItem]) -> LoadedBatch:
     failures.extend(_duplicate(p.source, p.source_uri) for p in known)
     prepared = build_batch(new, worker.base_uri, worker.context_version)
     failures.extend(prepared.failures)
+    records, repeats = _first_of_each(prepared.records)
     started = time.perf_counter()
     with worker.write_slots:
-        duplicates: list[PreparedRecord] = worker.run(_write(worker, prepared.records))
+        duplicates: list[PreparedRecord] = worker.run(_write(worker, records))
     copy_s = time.perf_counter() - started
-    failures.extend(_duplicate(r.source, r.source_uri) for r in duplicates)
+    failures.extend(_duplicate(r.source, r.source_uri) for r in (*repeats, *duplicates))
     skipped = {id(r) for r in duplicates}
-    written = [r for r in prepared.records if id(r) not in skipped]
+    written = [r for r in records if id(r) not in skipped]
     findings: dict[str, int] = {}
     for record in written:
         for code, _ in record.findings:
@@ -439,6 +462,7 @@ async def load(
         await finish(conn, changed=rewrite["changed"] > 0)
         finish_s = time.perf_counter() - finish_started
         records_total = await conn.fetchval("SELECT count(*) FROM records")
+        stale = await index_is_stale(conn, changed=totals.written > 0 or rewrite["changed"] > 0)
     finally:
         await conn.close()
     seconds = time.perf_counter() - started
@@ -467,5 +491,6 @@ async def load(
         "finish_seconds": round(finish_s, 2),
         "records_total": records_total,
         "metatypes_harvested": metatypes_harvested,
+        "index_rebuild_needed": stale,
         "sync_state": versions,
     }

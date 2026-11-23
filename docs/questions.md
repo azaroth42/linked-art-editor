@@ -380,7 +380,7 @@ Implemented as decided above (items 3 and 4). Points for a human:
 6. **Not verified in CI: the 32 LUX records.** They are not on main (PR #130), so the two tests
    that read `tests/corpus/lux/` skip there. Locally, with the files of that branch: 32 of 32
    expand and serialize as Turtle (7 948 triples; 9 ids encoded; 11 nested contexts ignored);
-   as fetched all 32 fail the schema for LUX's `_links`; without LUX's own keys 29 are
+   as fetched all 32 fail the schema for LUX's `_links`; without LUX's own keys 29 (30 since ADR-0030 §6 accepts a `Period` equivalent on a `Period`) are
    publishable and 3 have other schema violations. When PR #130 is rebased, its corpus counts
    and its `KNOWN_FAILURES.md` rows must be regenerated against this gate.
    **Done (PR #130):** counts and rows regenerated (92 of 276 files fail the schema, all 32 LUX
@@ -419,7 +419,8 @@ implemented as ADR-0030:
    aliases on the editor's host redirected (ADR-0030 §1). `owner_of` recognises every record
    again, so Phase 2 Step 2.7 needs no special case.
 2. **JSON Schema skipped a large share of real-looking data.** **Resolved: load and flag.** All
-   244 corpus records load (60 flagged); the 1M synthetic set keeps the 37 % it used to skip.
+   276 corpus records load (92 flagged: the 60 known failures and the 32 LUX records, for LUX's
+   `_links`); the 1M synthetic set keeps the 37 % it used to skip.
    Each failure is a `qa_findings` row (ADR-0030 §2).
 3. **Records in Postgres but not in QLever.** **Resolved: rejected at load** when RDF expansion
    refuses them (`LAE-BOOT-007`, listed in the report), so the two stores hold the same records
@@ -451,7 +452,24 @@ Points from the rework for a human:
 10. **A load after the index was built needs a rebuild.** `load` and `rewrite-refs` change
     `records` without outbox events, as the first load does; run `export-nt` and `build-index`
     afterwards. Phase 2's import path (through publish) is the way to add records to a live
-    system.
+    system. Both commands print `index_rebuild_needed` (reviewer addition).
+11. **Reviewer changes (critical-model review of PR #136).** (a) A root `id` that is a node IRI of
+    a local record is rejected (`LAE-BOOT-002`) instead of becoming an alias that names two
+    records. (b) Duplicates inside one batch are found after the records are built, so a
+    rejected item no longer makes a later good item with the same URI "already loaded". (c) The
+    second pass's `UPDATE` itself checks that the row has no revision and no draft. (d)
+    `rewrite-refs` runs the metatype harvest (ADR-0032) when it changed anything. (e) The
+    migration is `0008` and revises `0010` (the scheduler took `0007`, and `0010` merged first).
+12. **For Step 1.10 (publish), not built yet.** Publish must (a) replace reference ids that are
+    aliases by the record's URI (`lae.aliases.resolve_aliases`) before `normalize_refs`, and (b)
+    set the record's open `LAE-SCHEMA-*` `qa_findings` to `resolved` in the publish transaction.
+    Until then a finding stays open for as long as its record is unpublished, which is correct.
+    The Step 1.10 guide text says both.
+13. **A sidecar label row whose URI is later loaded as a record stays.** If AAT is seeded as
+    sidecar labels and AAT concept records are then bulk-loaded, the concept gets a local URI,
+    references are rewritten to it, and the `entity_labels` row for the `vocab.getty.edu` URI
+    remains, so autocomplete offers both. 12(a) makes either choice end at the local record. Say
+    if the load should delete sidecar rows whose URI became an alias.
 
 ## Step 1.9
 

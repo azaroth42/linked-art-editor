@@ -453,8 +453,8 @@ Checks on the served index and the database:
 - The corpus (244 files, institutional sample included) loads completely: 244 written, 60
   flagged (exactly `tests/corpus/KNOWN_FAILURES.md`), none rejected; its 5 references between
   corpus records all resolve in QLever as `<new URI> p <new URI>`; a second load writes nothing.
-  There are no LUX records on `main` yet (`tests/corpus/lux/` is not merged), so none were
-  loaded.
+  The 32 LUX records merged afterwards: the corpus is now 276 files, all loaded, 92 flagged
+  (the 60 and the 32 LUX records, for LUX's `_links`), none rejected (reviewer run, 2026-11-23).
 
 ### What it costs, and the projection to 10M
 
@@ -475,3 +475,35 @@ out would not save the second expansion, because pass 2 changes the reference IR
 if the load ever needs to be faster, the candidate is to skip `rdf_triples`' double pyld
 expansion (`expand`, then `to_rdf`, which expands again), which is Step 1.3 code.
 
+
+### Reviewer check at `EXPANDER_VERSION` 2 (2026-11-23)
+
+The table above was measured at expander version 1, before ADR-0028 and before the metatype
+harvest (ADR-0032) joined the end of `load`. The full 1M run was **not** repeated for the review
+(to save machine time); instead the first 100,000 records of the same generator (same seed) were
+loaded on the final code (expander version 2, the review's changes, AAT labels first), on the
+same machine with a load average of 3.4:
+
+| | 100k, final code | 1M table above |
+| :-- | --: | --: |
+| Pass 1 worker CPU per record | 3.8 ms | 4.8 ms |
+| Pass 2 | 4.4 s, 22,639 records/s (worker CPU 0.14 ms per record) | 28,874 records/s (0.15 ms) |
+| Metatype harvest (one SQL statement over `records`) | about 3.2 s | not in that run |
+| Vacuum and analyze | 1.8 s | 8.1 s |
+| Whole `load` | 53.5 s (99,998 written, 2 rejected, 37,068 flagged) | 371.4 s |
+| Second `load` of the same file | 5.5 s, nothing written | 13.6 s |
+
+Per-record costs are the same or lower, so ADR-0028 and the review's changes (two more index
+probes per updated row in pass 2; duplicate detection after building) do not move the 1M
+figures. A 100k run has only ten batches for 18 workers, so its wall-clock rate (2,274 records/s
+in pass 1) understates a long run and is not comparable. The one new cost is the harvest: scaled
+linearly it adds about 30 s per 1M records to `load` (roughly 8 %), and about 5 minutes to the
+10M projection, which stays near 2.2 h. Repeat the 1M run if a figure in the table is needed at
+expander version 2 exactly.
+
+Crash tests on the same 100k file (`kill -9` of the whole process group): during pass 1, the
+database held exactly the committed batches (30,000 records, aliases and labels; no partial
+batch), and `bootstrap_rewrite_since` stayed; during pass 2, the next `load` wrote nothing new,
+ran pass 2 from the kept time and left no reference to an alias (checked with a join of every
+`id` below the root against `record_aliases`); `rewrite-refs` afterwards changed nothing. No
+worker process or database session survived the kill.

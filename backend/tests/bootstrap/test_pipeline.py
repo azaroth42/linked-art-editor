@@ -14,6 +14,7 @@ import orjson
 import pytest
 
 import lae.bootstrap.load
+import lae.bootstrap.rewrite
 from lae.api.records import record_etag
 from lae.bootstrap.aat import load_aat_labels
 from lae.bootstrap.common import (
@@ -225,11 +226,33 @@ async def test_loading_again_reports_duplicates_and_changes_nothing(
         source, settings=bootstrap_settings, report_path=tmp_path / "2.jsonl", workers=1
     )
     assert summary["records_written"] == 0
+    assert summary["index_rebuild_needed"] is False
     # The six records of the first run; the unexpandable one is rejected again, not a duplicate.
     assert summary["failures"] == {NOT_A_RECORD: 1, DUPLICATE_URI: 6, EXPANSION_FAILED: 1}
     assert summary["rewrite"]["changed"] == 0
     assert await fetch(bootstrap_settings, rows) == before
     assert await fetch(bootstrap_settings, counts) == counted
+
+
+async def test_a_rejected_item_does_not_make_a_later_one_a_duplicate(
+    bootstrap_settings: Settings, tmp_path: Path
+) -> None:
+    """Three items with one source URI in one batch: unexpandable, good, good again."""
+    good = {**json.loads(UNEXPANDABLE), "produced_by": {"type": "Production"}}
+    source = tmp_path / "in.jsonl"
+    source.write_bytes(b"\n".join([UNEXPANDABLE, orjson.dumps(good), orjson.dumps(good)]) + b"\n")
+    report = tmp_path / "report.jsonl"
+    summary = await load(source, settings=bootstrap_settings, report_path=report, workers=1)
+    assert summary["records_written"] == 1
+    assert summary["failures"] == {DUPLICATE_URI: 1, EXPANSION_FAILED: 1}
+    assert [(line["source"], line["code"]) for line in report_lines(report)] == [
+        ("in.jsonl:1", EXPANSION_FAILED),
+        ("in.jsonl:3", DUPLICATE_URI),
+    ]
+    assert set(await stored(bootstrap_settings)) == {UNEXPANDABLE_URI}
+    again = await load(source, settings=bootstrap_settings, report_path=report, workers=1)
+    assert again["records_written"] == 0
+    assert again["failures"] == {DUPLICATE_URI: 3}
 
 
 async def test_references_between_loaded_records_are_rewritten(
@@ -298,9 +321,15 @@ async def test_rewrite_refs_points_old_rows_at_later_records_and_is_idempotent(
     records = await stored(bootstrap_settings)
     assert set_source in references(records[corpus(YCBA_OBJECT)["id"]]["data"])
 
+    # An index was built in between: what the pass changes is not in it.
+    await fetch(
+        bootstrap_settings,
+        "INSERT INTO sync_state (key, value) VALUES ('qlever_index_watermark', '0')",
+    )
     summary = await rewrite_refs(settings=bootstrap_settings, workers=1)
     assert (summary["records"], summary["changed"]) == (2, 1)
     assert summary["references_rewritten"] == 1
+    assert summary["index_rebuild_needed"] is True
     records = await stored(bootstrap_settings)
     row = records[corpus(YCBA_OBJECT)["id"]]
     assert records[set_source]["uri"] in references(row["data"])
@@ -308,7 +337,7 @@ async def test_rewrite_refs_points_old_rows_at_later_records_and_is_idempotent(
     assert row["etag"] == record_etag(row["data"])
 
     again = await rewrite_refs(settings=bootstrap_settings, workers=1)
-    assert (again["records"], again["changed"]) == (2, 0)
+    assert (again["records"], again["changed"], again["index_rebuild_needed"]) == (2, 0, False)
     assert await stored(bootstrap_settings) == records
 
 
@@ -406,6 +435,32 @@ async def test_published_and_drafted_records_are_not_rewritten(
     for key in (corpus(YCBA_OBJECT)["id"], corpus(YUAG_OBJECT)["id"]):
         assert after[key]["data"] == records[key]["data"]
     await fetch(bootstrap_settings, "TRUNCATE record_revisions, crdt_drafts")
+
+
+async def test_the_update_skips_a_row_that_got_a_draft_after_it_was_selected(
+    bootstrap_settings: Settings, tmp_path: Path
+) -> None:
+    """The pass selects its rows first; a draft opened before the write must still win."""
+    source = write_jsonl(tmp_path / "in.jsonl", [corpus(YCBA_OBJECT), corpus(YUAG_OBJECT)])
+    await load(source, settings=bootstrap_settings, report_path=tmp_path / "1.jsonl", workers=1)
+    records = await stored(bootstrap_settings)
+    drafted, plain = records[corpus(YCBA_OBJECT)["id"]], records[corpus(YUAG_OBJECT)["id"]]
+    await fetch(
+        bootstrap_settings,
+        "INSERT INTO crdt_drafts (record_id, draft_epoch, base_version, state) "
+        "VALUES ($1, 0, 1, '')",
+        drafted["id"],
+    )
+    conn = await asyncpg.connect(asyncpg_dsn(bootstrap_settings.database_url))
+    try:
+        for row in (drafted, plain):
+            await conn.execute(lae.bootstrap.rewrite._UPDATE, row["id"], "{}", "new", row["etag"])
+    finally:
+        await conn.close()
+    after = await stored(bootstrap_settings)
+    assert after[corpus(YCBA_OBJECT)["id"]]["etag"] == drafted["etag"]
+    assert after[corpus(YUAG_OBJECT)["id"]]["etag"] == "new"
+    await fetch(bootstrap_settings, "TRUNCATE crdt_drafts")
 
 
 async def test_only_one_load_runs_at_a_time(bootstrap_settings: Settings, tmp_path: Path) -> None:
