@@ -263,3 +263,42 @@ async def test_compaction_racing_with_writers_loses_nothing(db_engine: AsyncEngi
         snapshot = await restarted.snapshot(record_id)
         assert sorted(names(snapshot.jsonld)[1:]) == expected
         assert names(snapshot.jsonld)[0] == "First name"
+
+
+async def test_a_late_close_after_a_publish_spares_the_draft_opened_since(
+    db_engine: AsyncEngine,
+) -> None:
+    """Publish commits, someone opens the next draft, and only then the publish's close arrives.
+
+    Without ``draft_epoch`` that close discarded the new draft and threw its editors out.
+    """
+    record_id, _ = await create_record(db_engine, version=1, draft_epoch=0)
+    sessions = sessions_of(db_engine)
+    async with manager_for(db_engine) as manager:
+        old = await manager.open(record_id)
+        async with sessions() as session, session.begin():
+            await publish(session, record_id, "Version 2")
+        fresh = await manager.open(record_id)  # the next editor is quicker than the close
+        assert fresh is not old and fresh.draft_epoch == 1
+        await manager.apply_update(
+            record_id, change(replica_of(fresh.ydoc), add_name("In the new draft")), None
+        )
+
+        await manager.close(record_id, discard=True, draft_epoch=0)  # the publish's close
+        assert await manager.get(record_id) is fresh and not fresh.closed
+        assert await record_epoch(db_engine, record_id) == 1
+        row = await draft_row(db_engine, record_id)
+        assert row is not None and row.draft_epoch == 1
+        assert names((await manager.snapshot(record_id)).jsonld) == [
+            "First name",
+            "In the new draft",
+        ]
+
+        # The same call for the draft that is current does discard it; so does one without.
+        await manager.close(record_id, discard=True, draft_epoch=1)
+        assert await draft_row(db_engine, record_id) is None
+        assert await record_epoch(db_engine, record_id) == 2
+        assert fresh.closed
+        await manager.open(record_id)
+        await manager.close(record_id, discard=True)
+        assert await record_epoch(db_engine, record_id) == 3

@@ -508,20 +508,54 @@ Implemented as decided above (items 3 and 4). Points for a human:
    persisted (B5), and an undo stack that only lives in memory needs a decision about eviction
    and restarts. Phase 3 Step 3.6 owns both; the route is in the docstring of
    `InMemoryRoomManager.revert`.
-4. **No `Origin` check on the WebSocket.** A session cookie is `SameSite=Lax`, which keeps other
-   sites from opening an authenticated socket, but not another origin of the same site. An
-   allowlist needs a setting (the public origin of the editor), which no step defines yet.
-   Should Step 1.16/1.17 or Phase 4 add `LAE_PUBLIC_ORIGIN` and enforce it here?
-5. **Not verified: a browser.** The guide's Verify says to connect the S2 browser page. The
-   check was made with the same libraries (Yjs 13.6.33, `y-websocket` 3.1.0) in Node 26
-   (`scripts/crdt/y_websocket_check.mjs`, run by `tests/crdt/test_y_websocket.py`), not in
-   Chromium, and that test is skipped in the CI `backend` job, which has no Node modules.
-   Step 1.17's Playwright test will be the first run in a real browser.
-6. **Observed, cause not established: a detached `lae crdt-ws` hangs on its first database
-   connection on the development machine.** Started as `( lae crdt-ws > log 2>&1 & )`, the
-   process accepted WebSockets and then never opened a PostgreSQL session (`pg_stat_activity`
-   showed none; three runs out of three). Started as a direct child of the shell or of pytest
-   it connected at once (every other run, including the crash test's subprocess). The likely
-   cause is Postgres.app's per-application client permission, which cannot attribute an
-   orphaned process, but that was not confirmed. Nothing in the server depends on how it is
-   launched; noted so the next agent does not lose time on it.
+4. **`Origin` check on the WebSocket: added in the review (ADR-0027, item 10).** A browser
+   handshake is refused with HTTP 403 unless its `Origin` is the origin of `LAE_BASE_URI`, is in
+   the new `LAE_ALLOWED_ORIGINS` (comma-separated), or, with `LAE_ENV=development` only, is a
+   loopback origin. Clients that send no `Origin` (scripts, agents) are not affected. Please
+   confirm the default: an installation whose editor is not served from the origin of its
+   record URIs must set `LAE_ALLOWED_ORIGINS`.
+5. **A browser: verified in the review, not in CI.** Headless Chromium 1255 (Playwright
+   1.65.1) with Yjs 13.6.33 and `y-websocket` 3.1.0 against a real `lae crdt-ws`: sync with the
+   session cookie only, an edit persisted and credited to the cookie's user, stamped presence,
+   presence removed 4 ms after a tab close, a second tab converging, `4409` without a reconnect
+   loop, and a page on another origin refused with 403 although it held a valid token (11 of
+   11 checks). The script was a throwaway; Step 1.17's Playwright test is the permanent one.
+   The Node test (`tests/crdt/test_y_websocket.py`) now runs in the CI `backend` job, which
+   installs the frontend's Node modules for it.
+6. **A detached `lae crdt-ws` hanging on its first database connection: cause established, not
+   a defect of the server.** Postgres.app loads `auth_permission_dialog`: for a client whose
+   top-level process it has no stored decision for, the backend waits in `authentication` while
+   a `PostgresPermissionDialog` window asks the person at the screen. A process started as
+   `( uv run lae crdt-ws & )` is reparented to launchd, so its top-level process is `uv`, which
+   has an entry without a policy in `ClientApplicationPermissions`; the dialog was open and
+   nobody answered it (seen: backend `postgres: ... authentication`, `PostgresPermissionDialog
+   --client-pid <the server>`). Started from a terminal or from pytest the top-level process is
+   an application that is already allowed. Remedy on that machine: answer the dialog once
+   (Allow for `uv`), or start the process from a terminal. `crdt-ws` now connects during startup
+   (for its instance lock), so such a wait shows as `instance_lock_connecting` without
+   `instance_lock_acquired` in the log instead of as sockets that never sync.
+7. **Review findings that were fixed (ADR-0027, items 5 and 7 to 12).** Each has a test in
+   `tests/crdt/test_integrity.py`, `test_instance.py`, `test_origin.py` or `test_rooms.py`:
+   a publish could commit while a room was being loaded (second hydration at the old epoch);
+   a write and a publish deadlocked; `max(crdt_updates.id)` could not tell publish about an
+   edit that compaction had folded away (now `crdt_drafts.last_update_id` and
+   `store.draft_unchanged`); a commit whose answer was lost left the room's `Doc` behind the
+   database, and the next compaction deleted the row; two `crdt-ws` processes on one database
+   lost updates (now an advisory lock); a stale client created a new draft before it was
+   refused; a publish's late `close(discard=True)` discarded the next draft (now
+   `draft_epoch=`); a socket whose write was queued behind a failing room was told
+   `stale-epoch` (final) instead of being asked to reconnect.
+8. **Open: a client with `edit_draft` can make a draft unprojectable.** Any bytes that are a
+   valid Yjs update are accepted. In a fuzz run of 30,000 mutated updates, 3,591 were valid
+   updates and 1,564 of those left a document that `project` refuses (`LAE-PROJ-005`). The
+   draft's snapshot, validation and publish then fail with 422 `LAE-CRDT-008` until the draft
+   is discarded; nothing published is affected. Rejecting such an update would mean projecting
+   a copy of the document on every write. Should the server do that (cost: one projection per
+   update), or is "discard the draft" acceptable for a fault only a signed-in editor's client
+   can cause?
+9. **Open, for Step 1.15: a never-published record can be left without a draft.** `POST
+   /api/records` deletes its new row when `crdt-ws` cannot open the draft, but not when the
+   request itself is cancelled between the two steps (client disconnect). Such a row
+   (`version = 0`, no `crdt_drafts` row) is invisible and the reaper as specified never sees
+   it. The reaper should also delete `version = 0` records without a draft that are older than
+   the TTL.

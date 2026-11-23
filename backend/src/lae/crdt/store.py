@@ -273,12 +273,17 @@ async def compact(
     return True
 
 
-async def delete_draft(session: AsyncSession, record_id: UUID) -> int | None:
+async def delete_draft(
+    session: AsyncSession, record_id: UUID, *, only_epoch: int | None = None
+) -> int | None:
     """Delete the record's draft and updates and end the draft's epoch.
 
     Returns ``records.draft_epoch`` afterwards (``None`` if the record does not exist). If a
     draft row was deleted, ``records.draft_epoch`` is raised to one more than that draft's epoch
     unless it is already greater. Without a draft row nothing is incremented.
+
+    With ``only_epoch`` the draft is deleted only if it has that epoch; a draft of another
+    epoch (a newer one, opened since the caller looked) is left alone.
 
     The publish transaction (Step 1.10) increments ``records.draft_epoch`` itself and then calls
     this; in that order the epoch goes up by exactly one. ``records.updated_at`` is not touched.
@@ -289,6 +294,10 @@ async def delete_draft(session: AsyncSession, record_id: UUID) -> int | None:
     )
     if current is None:
         return None  # no record, so no draft rows either (they cascade)
+    if only_epoch is not None:
+        draft = await load_draft(session, record_id, for_update=True)
+        if draft is None or draft.draft_epoch != only_epoch:
+            return current
     epoch: int | None = await session.scalar(
         delete(CrdtDraft).where(CrdtDraft.record_id == record_id).returning(CrdtDraft.draft_epoch)
     )

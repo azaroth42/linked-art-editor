@@ -2,8 +2,7 @@
 
 ``scripts/crdt/y_websocket_check.mjs`` runs the real ``WebsocketProvider`` in Node; this test
 plays the server and a ``pycrdt`` peer. It needs ``node`` and ``frontend/node_modules`` (``make
-setup``) and is skipped without them, which is the case in the CI ``backend`` job; the result of
-a local run is recorded in the pull request of Step 1.8.
+setup``) and is skipped without them; the CI ``backend`` job installs them for this test.
 """
 
 from __future__ import annotations

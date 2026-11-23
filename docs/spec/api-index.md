@@ -116,7 +116,9 @@ Generated from the phase guides by `scripts/gen_api_index.py` (kept in the scrat
 | `POST /internal/embed` | Phase 3 Step 3.1 |
 | `POST /internal/rooms/{id}/apply` | Phase 1 Step 1.8 |
 | `POST /internal/rooms/{id}/close` | Phase 1 Step 1.8 |
+| `POST /internal/rooms/{id}/open` | Phase 1 Step 1.8 |
 | `POST /internal/system/broadcast` | Phase 2 Step 2.17 |
+| `POST /internal/users/{id}/eject` | Phase 1 Step 1.8 |
 | `POST /reconcile` | Phase 3 Step 3.11 |
 | `POST/GET /sparql/vector` | Phase 3 Step 3.3 |
 | `POST/GET /sparql` | Phase 2 Step 2.17 |

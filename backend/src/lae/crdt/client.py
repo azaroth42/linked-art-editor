@@ -19,16 +19,25 @@ Stable contract (Steps 1.6, 1.9, 1.10, 1.14, 1.15 and Phase 3 call these; signat
 
 - ``snapshot(record_id) -> Snapshot | None``: the draft projected to JSON-LD **with internal
   node IRIs** plus ``contributors``, ``draft_epoch``, ``base_version`` and ``last_update_id``.
-  ``None`` means the record has no draft (nothing is created). Validation strips the IRIs
-  itself where a schema requires it.
+  ``None`` means the record has no draft, or does not exist (nothing is created). Validation
+  strips the IRIs itself where a schema requires it.
 - ``open(record_id, *, content=None, created_by=None) -> OpenedRoom``: make sure the record has
   a draft and return its ``draft_epoch`` (``POST /api/records`` returns that number to the
   editor). ``content`` hydrates a *new* draft from other JSON-LD than ``records.data``
-  (revert-to-revision: ``close(discard=True)`` first, then ``open(content=...)``).
-- ``close(record_id, *, discard)``: ``discard=True`` deletes the draft, closes its sockets with
-  4409 and makes sure ``records.draft_epoch`` is beyond the deleted draft's epoch. Call it
-  *after* the publish transaction has committed, and *instead of* deleting draft rows anywhere
-  else (ADR-0027).
+  (revert-to-revision: ``close(discard=True)`` first, then ``open(content=...)``; 409
+  ``LAE-CRDT-004`` if somebody opened a draft in between).
+- ``close(record_id, *, discard, draft_epoch=None)``: ``discard=True`` deletes the draft, closes
+  its sockets with 4409 and makes sure ``records.draft_epoch`` is beyond the deleted draft's
+  epoch. Use it *instead of* deleting draft rows anywhere else (ADR-0027).
+
+**Publish (Step 1.10), in this order:** ``snapshot`` → validate → one transaction that locks
+the ``records`` row ``FOR UPDATE``, then requires
+``lae.crdt.store.draft_unchanged(session, id, snapshot.draft_epoch, snapshot.last_update_id)``
+(``False``: the draft was edited or replaced since the snapshot; start again), writes the
+record with ``draft_epoch + 1`` and calls ``lae.crdt.store.delete_draft(session, id)`` → commit
+→ ``close(id, discard=True, draft_epoch=snapshot.draft_epoch)`` (best effort; the epoch limits
+it to the published draft, so it cannot discard a draft opened since).
+
 - ``apply_update(record_id, update, user_id)``: a Yjs update, persisted then broadcast.
 - ``list_rooms()``, ``eject(user_id)``.
 
@@ -148,9 +157,18 @@ class CrdtWsClient:
         response = await self._call("POST", f"/internal/rooms/{record_id}/open", json=body)
         return OpenedRoom.model_validate_json(response.content)
 
-    async def close(self, record_id: UUID, *, discard: bool) -> None:
-        """Drop the room from memory; with ``discard`` delete the draft and end its epoch."""
-        await self._call("POST", f"/internal/rooms/{record_id}/close", json={"discard": discard})
+    async def close(
+        self, record_id: UUID, *, discard: bool, draft_epoch: int | None = None
+    ) -> None:
+        """Drop the room from memory; with ``discard`` delete the draft and end its epoch.
+
+        ``draft_epoch`` limits a discard to the draft of that epoch (pass the published
+        snapshot's ``draft_epoch`` after a publish).
+        """
+        body: dict[str, Any] = {"discard": discard}
+        if draft_epoch is not None:
+            body["draft_epoch"] = draft_epoch
+        await self._call("POST", f"/internal/rooms/{record_id}/close", json=body)
 
     async def apply_update(self, record_id: UUID, update: bytes, user_id: UUID | None) -> None:
         """Persist, apply and broadcast a Yjs update on behalf of ``user_id``."""

@@ -694,8 +694,13 @@ class RoomManager(Protocol):
         """Project the record's draft; raise ``DraftNotFoundError`` if it has none."""
         ...
 
-    async def close(self, record_id: UUID, *, discard: bool) -> None:
-        """Drop the room from memory; with ``discard`` also delete the draft and end its epoch."""
+    async def close(
+        self, record_id: UUID, *, discard: bool, draft_epoch: int | None = None
+    ) -> None:
+        """Drop the room from memory; with ``discard`` also delete the draft and end its epoch.
+
+        ``draft_epoch`` limits a discard to the draft of that epoch.
+        """
         ...
 
     async def apply_update(self, record_id: UUID, update: bytes, user_id: UUID | None) -> None:
@@ -956,13 +961,19 @@ class InMemoryRoomManager:
         room = await self.open(record_id, create=False)
         return room.snapshot()
 
-    async def close(self, record_id: UUID, *, discard: bool) -> None:
+    async def close(
+        self, record_id: UUID, *, discard: bool, draft_epoch: int | None = None
+    ) -> None:
         """Drop the room from memory, closing its sockets first.
 
         ``discard=False`` compacts the draft and closes sockets with 1012 (they reconnect and
         the room rehydrates). ``discard=True`` closes them with 4409, deletes the draft rows and
         ends the draft's epoch (``store.delete_draft``); it is safe to call after a publish has
         already deleted the rows, and for a record that has no draft or does not exist.
+
+        ``draft_epoch`` (with ``discard``) names the draft that is meant: a room or a draft row
+        of another epoch is left alone. Publish passes the epoch of the draft it published, so
+        that its close, arriving late, cannot discard the draft somebody has opened since.
         """
         async with self._record_lock(record_id):
             room = self._rooms.get(record_id)
@@ -970,11 +981,11 @@ class InMemoryRoomManager:
                 if room is not None:
                     await self._retire(room, CLOSE_ROOM_CLOSED, REASON_ROOM_CLOSED, compact=True)
                 return
-            if room is not None:
+            if room is not None and draft_epoch in (None, room.draft_epoch):
                 await self._retire(room, CLOSE_STALE_EPOCH, REASON_STALE_EPOCH)
             async with self._sessions() as session:
                 async with session.begin():
-                    await store.delete_draft(session, record_id)
+                    await store.delete_draft(session, record_id, only_epoch=draft_epoch)
 
     async def apply_update(self, record_id: UUID, update: bytes, user_id: UUID | None) -> None:
         """Persist, apply and broadcast a Yjs update on behalf of ``user_id``.

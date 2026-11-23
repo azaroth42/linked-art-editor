@@ -477,6 +477,8 @@ async def test_internal_rpc_through_the_client(db_url: str, db_engine: AsyncEngi
         snapshot = await crdt.snapshot(record_id)  # rehydrated from the draft row
         assert snapshot is not None and names(snapshot.jsonld) == ["First name", "Via RPC"]
 
+        await crdt.close(record_id, discard=True, draft_epoch=7)  # not this draft's epoch
+        assert await crdt.snapshot(record_id) is not None
         await crdt.close(record_id, discard=True)
         assert await crdt.snapshot(record_id) is None
         assert await record_epoch(db_engine, record_id) == 2
