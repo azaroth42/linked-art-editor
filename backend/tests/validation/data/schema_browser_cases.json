@@ -1,0 +1,3561 @@
+{
+ "cases": [
+  {
+   "document": {
+    "@context": "https://linked.art/ns/v1/linked-art.json",
+    "_label": "Test Painting",
+    "dimension": [
+     {
+      "classified_as": [
+       {
+        "_label": "height",
+        "id": "http://vocab.getty.edu/aat/300055644",
+        "type": "Type"
+       }
+      ],
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000003",
+      "type": "Dimension",
+      "unit": {
+       "_label": "centimeters",
+       "id": "http://vocab.getty.edu/aat/300379098",
+       "type": "MeasurementUnit"
+      },
+      "value": 50.5
+     }
+    ],
+    "id": "https://example.org/object/1",
+    "identified_by": [
+     {
+      "classified_as": [
+       {
+        "_label": "Primary Name",
+        "id": "http://vocab.getty.edu/aat/300404670",
+        "type": "Type"
+       }
+      ],
+      "content": "Test Painting",
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000000",
+      "language": [
+       {
+        "_label": "English",
+        "id": "http://vocab.getty.edu/aat/300388277",
+        "type": "Language"
+       }
+      ],
+      "type": "Name"
+     },
+     {
+      "classified_as": [
+       {
+        "_label": "Primary Name",
+        "id": "http://vocab.getty.edu/aat/300404670",
+        "type": "Type"
+       }
+      ],
+      "content": "Tableau d'essai",
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000001",
+      "language": [
+       {
+        "_label": "French",
+        "id": "http://vocab.getty.edu/aat/300388306",
+        "type": "Language"
+       }
+      ],
+      "type": "Name"
+     },
+     {
+      "content": "1990.1",
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000002",
+      "type": "Identifier"
+     }
+    ],
+    "made_of": [
+     {
+      "_label": "oil paint",
+      "id": "http://vocab.getty.edu/aat/300015050",
+      "type": "Material"
+     }
+    ],
+    "part_of": {
+     "_label": "Parent object",
+     "id": "https://example.org/object/0",
+     "type": "HumanMadeObject"
+    },
+    "produced_by": {
+     "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000006",
+     "part": [
+      {
+       "carried_out_by": [
+        {
+         "_label": "Artist",
+         "id": "https://example.org/person/1",
+         "type": "Person"
+        }
+       ],
+       "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000005",
+       "type": "Production"
+      }
+     ],
+     "timespan": {
+      "begin_of_the_begin": "1642-01-01T00:00:00Z",
+      "end_of_the_end": "1642-12-31T23:59:59Z",
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000004",
+      "type": "TimeSpan"
+     },
+     "type": "Production"
+    },
+    "type": "HumanMadeObject"
+   },
+   "expected": [],
+   "name": "valid object"
+  },
+  {
+   "document": {
+    "@context": "https://linked.art/ns/v1/linked-art.json",
+    "dimension": [
+     {
+      "classified_as": [
+       {
+        "_label": "height",
+        "id": "http://vocab.getty.edu/aat/300055644",
+        "type": "Type"
+       }
+      ],
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000003",
+      "type": "Dimension",
+      "unit": {
+       "_label": "centimeters",
+       "id": "http://vocab.getty.edu/aat/300379098",
+       "type": "MeasurementUnit"
+      },
+      "value": 50.5
+     }
+    ],
+    "id": "https://example.org/object/1",
+    "identified_by": [
+     {
+      "classified_as": [
+       {
+        "_label": "Primary Name",
+        "id": "http://vocab.getty.edu/aat/300404670",
+        "type": "Type"
+       }
+      ],
+      "content": "Test Painting",
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000000",
+      "language": [
+       {
+        "_label": "English",
+        "id": "http://vocab.getty.edu/aat/300388277",
+        "type": "Language"
+       }
+      ],
+      "type": "Name"
+     },
+     {
+      "classified_as": [
+       {
+        "_label": "Primary Name",
+        "id": "http://vocab.getty.edu/aat/300404670",
+        "type": "Type"
+       }
+      ],
+      "content": "Tableau d'essai",
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000001",
+      "language": [
+       {
+        "_label": "French",
+        "id": "http://vocab.getty.edu/aat/300388306",
+        "type": "Language"
+       }
+      ],
+      "type": "Name"
+     },
+     {
+      "content": "1990.1",
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000002",
+      "type": "Identifier"
+     }
+    ],
+    "made_of": [
+     {
+      "_label": "oil paint",
+      "id": "http://vocab.getty.edu/aat/300015050",
+      "type": "Material"
+     }
+    ],
+    "part_of": {
+     "_label": "Parent object",
+     "id": "https://example.org/object/0",
+     "type": "HumanMadeObject"
+    },
+    "produced_by": {
+     "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000006",
+     "part": [
+      {
+       "carried_out_by": [
+        {
+         "_label": "Artist",
+         "id": "https://example.org/person/1",
+         "type": "Person"
+        }
+       ],
+       "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000005",
+       "type": "Production"
+      }
+     ],
+     "timespan": {
+      "begin_of_the_begin": "1642-01-01T00:00:00Z",
+      "end_of_the_end": "1642-12-31T23:59:59Z",
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000004",
+      "type": "TimeSpan"
+     },
+     "type": "Production"
+    },
+    "type": "HumanMadeObject"
+   },
+   "expected": [
+    {
+     "code": "LAE-SCHEMA-required",
+     "missing": [
+      "_label"
+     ],
+     "path": ""
+    }
+   ],
+   "name": "missing root _label"
+  },
+  {
+   "document": {
+    "@context": "https://linked.art/ns/v1/linked-art.json",
+    "_label": "Test Painting",
+    "dimension": [
+     {
+      "classified_as": [
+       {
+        "_label": "height",
+        "id": "http://vocab.getty.edu/aat/300055644",
+        "type": "Type"
+       }
+      ],
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000003",
+      "type": "Dimension",
+      "unit": {
+       "_label": "centimeters",
+       "id": "http://vocab.getty.edu/aat/300379098",
+       "type": "MeasurementUnit"
+      },
+      "value": 50.5
+     }
+    ],
+    "id": "https://example.org/object/1",
+    "identified_by": [
+     {
+      "classified_as": [
+       {
+        "_label": "Primary Name",
+        "id": "http://vocab.getty.edu/aat/300404670",
+        "type": "Type"
+       }
+      ],
+      "content": 42,
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000000",
+      "language": [
+       {
+        "_label": "English",
+        "id": "http://vocab.getty.edu/aat/300388277",
+        "type": "Language"
+       }
+      ],
+      "type": "Name"
+     },
+     {
+      "classified_as": [
+       {
+        "_label": "Primary Name",
+        "id": "http://vocab.getty.edu/aat/300404670",
+        "type": "Type"
+       }
+      ],
+      "content": "Tableau d'essai",
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000001",
+      "language": [
+       {
+        "_label": "French",
+        "id": "http://vocab.getty.edu/aat/300388306",
+        "type": "Language"
+       }
+      ],
+      "type": "Name"
+     },
+     {
+      "content": "1990.1",
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000002",
+      "type": "Identifier"
+     }
+    ],
+    "made_of": [
+     {
+      "_label": "oil paint",
+      "id": "http://vocab.getty.edu/aat/300015050",
+      "type": "Material"
+     }
+    ],
+    "part_of": {
+     "_label": "Parent object",
+     "id": "https://example.org/object/0",
+     "type": "HumanMadeObject"
+    },
+    "produced_by": {
+     "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000006",
+     "part": [
+      {
+       "carried_out_by": [
+        {
+         "_label": "Artist",
+         "id": "https://example.org/person/1",
+         "type": "Person"
+        }
+       ],
+       "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000005",
+       "type": "Production"
+      }
+     ],
+     "timespan": {
+      "begin_of_the_begin": "1642-01-01T00:00:00Z",
+      "end_of_the_end": "1642-12-31T23:59:59Z",
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000004",
+      "type": "TimeSpan"
+     },
+     "type": "Production"
+    },
+    "type": "HumanMadeObject"
+   },
+   "expected": [
+    {
+     "code": "LAE-SCHEMA-anyOf",
+     "path": "/identified_by/0"
+    }
+   ],
+   "name": "content of the wrong JSON type"
+  },
+  {
+   "document": {
+    "@context": "https://linked.art/ns/v1/linked-art.json",
+    "_label": "Test Painting",
+    "colour": "red",
+    "dimension": [
+     {
+      "classified_as": [
+       {
+        "_label": "height",
+        "id": "http://vocab.getty.edu/aat/300055644",
+        "type": "Type"
+       }
+      ],
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000003",
+      "type": "Dimension",
+      "unit": {
+       "_label": "centimeters",
+       "id": "http://vocab.getty.edu/aat/300379098",
+       "type": "MeasurementUnit"
+      },
+      "value": 50.5
+     }
+    ],
+    "id": "https://example.org/object/1",
+    "identified_by": [
+     {
+      "classified_as": [
+       {
+        "_label": "Primary Name",
+        "id": "http://vocab.getty.edu/aat/300404670",
+        "type": "Type"
+       }
+      ],
+      "content": "Test Painting",
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000000",
+      "language": [
+       {
+        "_label": "English",
+        "id": "http://vocab.getty.edu/aat/300388277",
+        "type": "Language"
+       }
+      ],
+      "type": "Name"
+     },
+     {
+      "classified_as": [
+       {
+        "_label": "Primary Name",
+        "id": "http://vocab.getty.edu/aat/300404670",
+        "type": "Type"
+       }
+      ],
+      "content": "Tableau d'essai",
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000001",
+      "language": [
+       {
+        "_label": "French",
+        "id": "http://vocab.getty.edu/aat/300388306",
+        "type": "Language"
+       }
+      ],
+      "type": "Name"
+     },
+     {
+      "content": "1990.1",
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000002",
+      "type": "Identifier"
+     }
+    ],
+    "made_of": [
+     {
+      "_label": "oil paint",
+      "id": "http://vocab.getty.edu/aat/300015050",
+      "type": "Material"
+     }
+    ],
+    "part_of": {
+     "_label": "Parent object",
+     "id": "https://example.org/object/0",
+     "type": "HumanMadeObject"
+    },
+    "produced_by": {
+     "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000006",
+     "part": [
+      {
+       "carried_out_by": [
+        {
+         "_label": "Artist",
+         "id": "https://example.org/person/1",
+         "type": "Person"
+        }
+       ],
+       "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000005",
+       "type": "Production"
+      }
+     ],
+     "timespan": {
+      "begin_of_the_begin": "1642-01-01T00:00:00Z",
+      "end_of_the_end": "1642-12-31T23:59:59Z",
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000004",
+      "type": "TimeSpan"
+     },
+     "type": "Production"
+    },
+    "shape": "round",
+    "type": "HumanMadeObject"
+   },
+   "expected": [
+    {
+     "code": "LAE-SCHEMA-additionalProperties",
+     "extra": [
+      "colour",
+      "shape"
+     ],
+     "path": ""
+    }
+   ],
+   "name": "two properties the schema does not allow"
+  },
+  {
+   "document": {
+    "@context": "https://linked.art/ns/v1/linked-art.json",
+    "_label": "Test Painting",
+    "dimension": [
+     {
+      "classified_as": [
+       {
+        "_label": "height",
+        "id": "http://vocab.getty.edu/aat/300055644",
+        "type": "Type"
+       }
+      ],
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000003",
+      "type": "Dimension",
+      "unit": {
+       "_label": "centimeters",
+       "id": "http://vocab.getty.edu/aat/300379098",
+       "type": "MeasurementUnit"
+      },
+      "value": 50.5
+     }
+    ],
+    "id": "https://example.org/object/1",
+    "identified_by": [
+     {
+      "classified_as": [
+       {
+        "_label": "Primary Name",
+        "id": "http://vocab.getty.edu/aat/300404670",
+        "type": "Type"
+       }
+      ],
+      "content": "Test Painting",
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000000",
+      "language": [
+       {
+        "_label": "English",
+        "id": "http://vocab.getty.edu/aat/300388277",
+        "type": "Language"
+       }
+      ],
+      "type": "Name"
+     },
+     {
+      "classified_as": [
+       {
+        "_label": "Primary Name",
+        "id": "http://vocab.getty.edu/aat/300404670",
+        "type": "Type"
+       }
+      ],
+      "content": "Tableau d'essai",
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000001",
+      "language": [
+       {
+        "_label": "French",
+        "id": "http://vocab.getty.edu/aat/300388306",
+        "type": "Language"
+       }
+      ],
+      "type": "Name"
+     },
+     {
+      "content": "1990.1",
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000002",
+      "type": "Identifier"
+     },
+     {
+      "type": "Name"
+     }
+    ],
+    "made_of": [
+     {
+      "_label": "oil paint",
+      "id": "http://vocab.getty.edu/aat/300015050",
+      "type": "Material"
+     }
+    ],
+    "part_of": {
+     "_label": "Parent object",
+     "id": "https://example.org/object/0",
+     "type": "HumanMadeObject"
+    },
+    "produced_by": {
+     "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000006",
+     "part": [
+      {
+       "carried_out_by": [
+        {
+         "_label": "Artist",
+         "id": "https://example.org/person/1",
+         "type": "Person"
+        }
+       ],
+       "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000005",
+       "type": "Production"
+      }
+     ],
+     "timespan": {
+      "begin_of_the_begin": "1642-01-01T00:00:00Z",
+      "end_of_the_end": "1642-12-31T23:59:59Z",
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000004",
+      "type": "TimeSpan"
+     },
+     "type": "Production"
+    },
+    "type": "HumanMadeObject"
+   },
+   "expected": [
+    {
+     "code": "LAE-SCHEMA-anyOf",
+     "path": "/identified_by/3"
+    }
+   ],
+   "name": "a Name without content"
+  },
+  {
+   "document": {
+    "@context": "https://linked.art/ns/v1/linked-art.json",
+    "_label": "Test Painting",
+    "dimension": [
+     {
+      "classified_as": [
+       {
+        "_label": "height",
+        "id": "http://vocab.getty.edu/aat/300055644",
+        "type": "Type"
+       }
+      ],
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000003",
+      "type": "Dimension",
+      "unit": {
+       "_label": "centimeters",
+       "id": "http://vocab.getty.edu/aat/300379098",
+       "type": "MeasurementUnit"
+      },
+      "value": 50.5
+     }
+    ],
+    "id": "https://example.org/object/1",
+    "identified_by": [
+     {
+      "classified_as": [
+       {
+        "_label": "Primary Name",
+        "id": "http://vocab.getty.edu/aat/300404670",
+        "type": "Type"
+       }
+      ],
+      "content": "Test Painting",
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000000",
+      "language": [
+       {
+        "_label": "English",
+        "id": "http://vocab.getty.edu/aat/300388277",
+        "type": "Language"
+       }
+      ],
+      "type": "Name"
+     },
+     {
+      "classified_as": [
+       {
+        "_label": "Primary Name",
+        "id": "http://vocab.getty.edu/aat/300404670",
+        "type": "Type"
+       }
+      ],
+      "content": "Tableau d'essai",
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000001",
+      "language": [
+       {
+        "_label": "French",
+        "id": "http://vocab.getty.edu/aat/300388306",
+        "type": "Language"
+       }
+      ],
+      "type": "Name"
+     },
+     {
+      "content": "1990.1",
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000002",
+      "type": "Identifier"
+     }
+    ],
+    "made_of": [
+     {
+      "_label": "oil paint",
+      "id": "http://vocab.getty.edu/aat/300015050",
+      "type": "Material"
+     }
+    ],
+    "part_of": {
+     "_label": "Parent object",
+     "id": "https://example.org/object/0",
+     "type": "HumanMadeObject"
+    },
+    "produced_by": {
+     "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000006",
+     "part": [
+      {
+       "carried_out_by": [
+        {
+         "_label": "Artist",
+         "id": "https://example.org/person/1",
+         "type": "Person"
+        }
+       ],
+       "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000005",
+       "type": "Production"
+      }
+     ],
+     "timespan": {
+      "begin_of_the_begin": "-0479-01-01T00:00:00Z",
+      "end_of_the_end": "1642-13-01T00:00:00Z",
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000004",
+      "type": "TimeSpan"
+     },
+     "type": "Production"
+    },
+    "type": "HumanMadeObject"
+   },
+   "expected": [
+    {
+     "code": "LAE-SCHEMA-format",
+     "path": "/produced_by/timespan/end_of_the_end"
+    }
+   ],
+   "name": "a BCE date and a month 13"
+  },
+  {
+   "document": {
+    "@context": "https://linked.art/ns/v1/linked-art.json",
+    "_label": "Test Painting",
+    "dimension": [
+     {
+      "classified_as": [
+       {
+        "_label": "height",
+        "id": "http://vocab.getty.edu/aat/300055644",
+        "type": "Type"
+       }
+      ],
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000003",
+      "type": "Dimension",
+      "unit": {
+       "_label": "centimeters",
+       "id": "http://vocab.getty.edu/aat/300379098",
+       "type": "MeasurementUnit"
+      },
+      "value": 50.5
+     }
+    ],
+    "id": "https://example.org/object/1",
+    "identified_by": [
+     {
+      "classified_as": [
+       {
+        "_label": "Primary Name",
+        "id": "http://vocab.getty.edu/aat/300404670",
+        "type": "Type"
+       }
+      ],
+      "content": "Test Painting",
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000000",
+      "language": [
+       {
+        "_label": "English",
+        "id": "http://vocab.getty.edu/aat/300388277",
+        "type": "Language"
+       }
+      ],
+      "type": "Name"
+     },
+     {
+      "classified_as": [
+       {
+        "_label": "Primary Name",
+        "id": "http://vocab.getty.edu/aat/300404670",
+        "type": "Type"
+       }
+      ],
+      "content": "Tableau d'essai",
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000001",
+      "language": [
+       {
+        "_label": "French",
+        "id": "http://vocab.getty.edu/aat/300388306",
+        "type": "Language"
+       }
+      ],
+      "type": "Name"
+     },
+     {
+      "content": "1990.1",
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000002",
+      "type": "Identifier"
+     }
+    ],
+    "made_of": [
+     {
+      "_label": "oil paint",
+      "id": "http://vocab.getty.edu/aat/300015050",
+      "type": "Material"
+     },
+     {
+      "id": "not an iri",
+      "type": "Material"
+     },
+     {
+      "id": "http://example.org/with space",
+      "type": "Material"
+     }
+    ],
+    "part_of": {
+     "_label": "Parent object",
+     "id": "https://example.org/object/0",
+     "type": "HumanMadeObject"
+    },
+    "produced_by": {
+     "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000006",
+     "part": [
+      {
+       "carried_out_by": [
+        {
+         "_label": "Artist",
+         "id": "https://example.org/person/1",
+         "type": "Person"
+        }
+       ],
+       "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000005",
+       "type": "Production"
+      }
+     ],
+     "timespan": {
+      "begin_of_the_begin": "1642-01-01T00:00:00Z",
+      "end_of_the_end": "1642-12-31T23:59:59Z",
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000004",
+      "type": "TimeSpan"
+     },
+     "type": "Production"
+    },
+    "type": "HumanMadeObject"
+   },
+   "expected": [
+    {
+     "code": "LAE-SCHEMA-format",
+     "path": "/made_of/1/id"
+    }
+   ],
+   "name": "a reference that is not an IRI and one that is repaired"
+  },
+  {
+   "document": {
+    "@context": "https://linked.art/ns/v1/linked-art.json",
+    "_label": "Test Painting",
+    "dimension": [
+     {
+      "classified_as": [
+       {
+        "_label": "height",
+        "id": "http://vocab.getty.edu/aat/300055644",
+        "type": "Type"
+       }
+      ],
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000003",
+      "type": "Dimension",
+      "unit": {
+       "_label": "centimeters",
+       "id": "http://vocab.getty.edu/aat/300379098",
+       "type": "MeasurementUnit"
+      },
+      "value": 50.5
+     }
+    ],
+    "id": "https://example.org/object/1",
+    "identified_by": [
+     {
+      "classified_as": [
+       {
+        "_label": "Primary Name",
+        "id": "http://vocab.getty.edu/aat/300404670",
+        "type": "Type"
+       }
+      ],
+      "content": "Test Painting",
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000000",
+      "language": [
+       {
+        "_label": "English",
+        "id": "http://vocab.getty.edu/aat/300388277",
+        "type": "Language"
+       }
+      ],
+      "type": "Name"
+     },
+     {
+      "classified_as": [
+       {
+        "_label": "Primary Name",
+        "id": "http://vocab.getty.edu/aat/300404670",
+        "type": "Type"
+       }
+      ],
+      "content": "Tableau d'essai",
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000001",
+      "language": [
+       {
+        "_label": "French",
+        "id": "http://vocab.getty.edu/aat/300388306",
+        "type": "Language"
+       }
+      ],
+      "type": "Name"
+     },
+     {
+      "content": "1990.1",
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000002",
+      "type": "Identifier"
+     },
+     {
+      "content": "x",
+      "type": "Nonsense"
+     }
+    ],
+    "made_of": [
+     {
+      "_label": "oil paint",
+      "id": "http://vocab.getty.edu/aat/300015050",
+      "type": "Material"
+     }
+    ],
+    "part_of": {
+     "_label": "Parent object",
+     "id": "https://example.org/object/0",
+     "type": "HumanMadeObject"
+    },
+    "produced_by": {
+     "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000006",
+     "part": [
+      {
+       "carried_out_by": [
+        {
+         "_label": "Artist",
+         "id": "https://example.org/person/1",
+         "type": "Person"
+        }
+       ],
+       "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000005",
+       "type": "Production"
+      }
+     ],
+     "timespan": {
+      "begin_of_the_begin": "1642-01-01T00:00:00Z",
+      "end_of_the_end": "1642-12-31T23:59:59Z",
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000004",
+      "type": "TimeSpan"
+     },
+     "type": "Production"
+    },
+    "type": "HumanMadeObject"
+   },
+   "expected": [
+    {
+     "code": "LAE-SCHEMA-anyOf",
+     "path": "/identified_by/3"
+    }
+   ],
+   "name": "an identified_by of no allowed class"
+  },
+  {
+   "document": {
+    "@context": "https://linked.art/ns/v1/linked-art.json",
+    "_label": "Test Painting",
+    "dimension": [
+     {
+      "classified_as": [
+       {
+        "_label": "height",
+        "id": "http://vocab.getty.edu/aat/300055644",
+        "type": "Type"
+       }
+      ],
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000003",
+      "type": "Dimension",
+      "unit": {
+       "_label": "centimeters",
+       "id": "http://vocab.getty.edu/aat/300379098",
+       "type": "MeasurementUnit"
+      },
+      "value": 50.5
+     }
+    ],
+    "id": "https://example.org/object/1",
+    "identified_by": [
+     {
+      "classified_as": [
+       {
+        "_label": "Primary Name",
+        "id": "http://vocab.getty.edu/aat/300404670",
+        "type": "Type"
+       }
+      ],
+      "content": "Test Painting",
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000000",
+      "language": [
+       {
+        "_label": "English",
+        "id": "http://vocab.getty.edu/aat/300388277",
+        "type": "Language"
+       }
+      ],
+      "type": "Name"
+     },
+     {
+      "classified_as": [
+       {
+        "_label": "Primary Name",
+        "id": "http://vocab.getty.edu/aat/300404670",
+        "type": "Type"
+       }
+      ],
+      "content": "Tableau d'essai",
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000001",
+      "language": [
+       {
+        "_label": "French",
+        "id": "http://vocab.getty.edu/aat/300388306",
+        "type": "Language"
+       }
+      ],
+      "type": "Name"
+     },
+     {
+      "content": "1990.1",
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000002",
+      "type": "Identifier"
+     },
+     {
+      "content": "Foreign",
+      "id": "https://elsewhere.example/name/1",
+      "type": "Name"
+     }
+    ],
+    "made_of": [
+     {
+      "_label": "oil paint",
+      "id": "http://vocab.getty.edu/aat/300015050",
+      "type": "Material"
+     }
+    ],
+    "part_of": {
+     "_label": "Parent object",
+     "id": "https://example.org/object/0",
+     "type": "HumanMadeObject"
+    },
+    "produced_by": {
+     "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000006",
+     "part": [
+      {
+       "carried_out_by": [
+        {
+         "_label": "Artist",
+         "id": "https://example.org/person/1",
+         "type": "Person"
+        }
+       ],
+       "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000005",
+       "type": "Production"
+      }
+     ],
+     "timespan": {
+      "begin_of_the_begin": "1642-01-01T00:00:00Z",
+      "end_of_the_end": "1642-12-31T23:59:59Z",
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000004",
+      "type": "TimeSpan"
+     },
+     "type": "Production"
+    },
+    "type": "HumanMadeObject"
+   },
+   "expected": [],
+   "name": "an embedded Name with a foreign id"
+  },
+  {
+   "document": {
+    "@context": "https://linked.art/ns/v1/linked-art.json",
+    "_label": "Test Painting",
+    "dimension": [
+     {
+      "classified_as": [
+       {
+        "_label": "height",
+        "id": "http://vocab.getty.edu/aat/300055644",
+        "type": "Type"
+       }
+      ],
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000003",
+      "type": "Dimension",
+      "unit": {
+       "_label": "centimeters",
+       "id": "http://vocab.getty.edu/aat/300379098",
+       "type": "MeasurementUnit"
+      },
+      "value": 50.5
+     }
+    ],
+    "id": "https://example.org/object/1",
+    "identified_by": [
+     {
+      "@context": "https://linked.art/ns/v1/linked-art.json",
+      "classified_as": [
+       {
+        "_label": "Primary Name",
+        "id": "http://vocab.getty.edu/aat/300404670",
+        "type": "Type"
+       }
+      ],
+      "content": "Test Painting",
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000000",
+      "language": [
+       {
+        "_label": "English",
+        "id": "http://vocab.getty.edu/aat/300388277",
+        "type": "Language"
+       }
+      ],
+      "type": "Name"
+     },
+     {
+      "classified_as": [
+       {
+        "_label": "Primary Name",
+        "id": "http://vocab.getty.edu/aat/300404670",
+        "type": "Type"
+       }
+      ],
+      "content": "Tableau d'essai",
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000001",
+      "language": [
+       {
+        "_label": "French",
+        "id": "http://vocab.getty.edu/aat/300388306",
+        "type": "Language"
+       }
+      ],
+      "type": "Name"
+     },
+     {
+      "content": "1990.1",
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000002",
+      "type": "Identifier"
+     }
+    ],
+    "made_of": [
+     {
+      "_label": "oil paint",
+      "id": "http://vocab.getty.edu/aat/300015050",
+      "type": "Material"
+     }
+    ],
+    "part_of": {
+     "_label": "Parent object",
+     "id": "https://example.org/object/0",
+     "type": "HumanMadeObject"
+    },
+    "produced_by": {
+     "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000006",
+     "part": [
+      {
+       "carried_out_by": [
+        {
+         "_label": "Artist",
+         "id": "https://example.org/person/1",
+         "type": "Person"
+        }
+       ],
+       "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000005",
+       "type": "Production"
+      }
+     ],
+     "timespan": {
+      "begin_of_the_begin": "1642-01-01T00:00:00Z",
+      "end_of_the_end": "1642-12-31T23:59:59Z",
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000004",
+      "type": "TimeSpan"
+     },
+     "type": "Production"
+    },
+    "type": "HumanMadeObject"
+   },
+   "expected": [],
+   "name": "a nested context that repeats the root context"
+  },
+  {
+   "document": {
+    "@context": "https://linked.art/ns/v1/linked-art.json",
+    "_label": "Test Painting",
+    "dimension": [
+     {
+      "classified_as": [
+       {
+        "_label": "height",
+        "id": "http://vocab.getty.edu/aat/300055644",
+        "type": "Type"
+       }
+      ],
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000003",
+      "type": "Dimension",
+      "unit": {
+       "_label": "centimeters",
+       "id": "http://vocab.getty.edu/aat/300379098",
+       "type": "MeasurementUnit"
+      },
+      "value": 50.5
+     }
+    ],
+    "equivalent": [
+     {
+      "id": "https://elsewhere.example/object/1",
+      "type": "HumanMadeObject"
+     }
+    ],
+    "id": "https://example.org/object/1",
+    "identified_by": [
+     {
+      "classified_as": [
+       {
+        "_label": "Primary Name",
+        "id": "http://vocab.getty.edu/aat/300404670",
+        "type": "Type"
+       }
+      ],
+      "content": "Test Painting",
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000000",
+      "language": [
+       {
+        "_label": "English",
+        "id": "http://vocab.getty.edu/aat/300388277",
+        "type": "Language"
+       }
+      ],
+      "type": "Name"
+     },
+     {
+      "classified_as": [
+       {
+        "_label": "Primary Name",
+        "id": "http://vocab.getty.edu/aat/300404670",
+        "type": "Type"
+       }
+      ],
+      "content": "Tableau d'essai",
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000001",
+      "language": [
+       {
+        "_label": "French",
+        "id": "http://vocab.getty.edu/aat/300388306",
+        "type": "Language"
+       }
+      ],
+      "type": "Name"
+     },
+     {
+      "content": "1990.1",
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000002",
+      "type": "Identifier"
+     }
+    ],
+    "made_of": [
+     {
+      "_label": "oil paint",
+      "id": "http://vocab.getty.edu/aat/300015050",
+      "type": "Material"
+     }
+    ],
+    "part_of": {
+     "_label": "Parent object",
+     "id": "https://example.org/object/0",
+     "type": "HumanMadeObject"
+    },
+    "produced_by": {
+     "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000006",
+     "part": [
+      {
+       "carried_out_by": [
+        {
+         "_label": "Artist",
+         "id": "https://example.org/person/1",
+         "type": "Person"
+        }
+       ],
+       "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000005",
+       "type": "Production"
+      }
+     ],
+     "timespan": {
+      "begin_of_the_begin": "1642-01-01T00:00:00Z",
+      "end_of_the_end": "1642-12-31T23:59:59Z",
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000004",
+      "type": "TimeSpan"
+     },
+     "type": "Production"
+    },
+    "type": "HumanMadeObject"
+   },
+   "expected": [],
+   "name": "an equivalent of the record's own class"
+  },
+  {
+   "document": {
+    "@context": "https://linked.art/ns/v1/linked-art.json",
+    "_label": "Test Painting",
+    "dimension": [
+     {
+      "classified_as": [
+       {
+        "_label": "height",
+        "id": "http://vocab.getty.edu/aat/300055644",
+        "type": "Type"
+       }
+      ],
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000003",
+      "type": "Dimension",
+      "unit": {
+       "_label": "centimeters",
+       "id": "http://vocab.getty.edu/aat/300379098",
+       "type": "MeasurementUnit"
+      },
+      "value": 50.5
+     }
+    ],
+    "id": "https://example.org/object/1",
+    "identified_by": [
+     {
+      "classified_as": [
+       {
+        "_label": "Primary Name",
+        "id": "http://vocab.getty.edu/aat/300404670",
+        "type": "Type"
+       }
+      ],
+      "content": "Test Painting",
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000000",
+      "language": [
+       {
+        "_label": "English",
+        "id": "http://vocab.getty.edu/aat/300388277",
+        "type": "Language"
+       }
+      ],
+      "type": "Name"
+     },
+     {
+      "classified_as": [
+       {
+        "_label": "Primary Name",
+        "id": "http://vocab.getty.edu/aat/300404670",
+        "type": "Type"
+       }
+      ],
+      "content": "Tableau d'essai",
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000001",
+      "language": [
+       {
+        "_label": "French",
+        "id": "http://vocab.getty.edu/aat/300388306",
+        "type": "Language"
+       }
+      ],
+      "type": "Name"
+     },
+     {
+      "content": "1990.1",
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000002",
+      "type": "Identifier"
+     }
+    ],
+    "made_of": [
+     {
+      "_label": "oil paint",
+      "id": "http://vocab.getty.edu/aat/300015050",
+      "type": "Material"
+     }
+    ],
+    "part_of": {
+     "_label": "Parent object",
+     "id": "https://example.org/object/0",
+     "type": "HumanMadeObject"
+    },
+    "produced_by": [
+     {
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000006",
+      "part": [
+       {
+        "carried_out_by": [
+         {
+          "_label": "Artist",
+          "id": "https://example.org/person/1",
+          "type": "Person"
+         }
+        ],
+        "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000005",
+        "type": "Production"
+       }
+      ],
+      "timespan": {
+       "begin_of_the_begin": "1642-01-01T00:00:00Z",
+       "end_of_the_end": "1642-12-31T23:59:59Z",
+       "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000004",
+       "type": "TimeSpan"
+      },
+      "type": "Production"
+     }
+    ],
+    "type": "HumanMadeObject"
+   },
+   "expected": [
+    {
+     "code": "LAE-SCHEMA-type",
+     "path": "/produced_by"
+    }
+   ],
+   "name": "produced_by as a list"
+  },
+  {
+   "document": {
+    "@context": "https://linked.art/ns/v1/linked-art.json",
+    "_label": "Test Painting",
+    "dimension": [
+     {
+      "classified_as": [
+       {
+        "_label": "height",
+        "id": "http://vocab.getty.edu/aat/300055644",
+        "type": "Type"
+       }
+      ],
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000003",
+      "type": "Dimension",
+      "unit": {
+       "_label": "centimeters",
+       "id": "http://vocab.getty.edu/aat/300379098"
+      },
+      "value": "50.5"
+     }
+    ],
+    "id": "https://example.org/object/1",
+    "identified_by": [
+     {
+      "classified_as": [
+       {
+        "_label": "Primary Name",
+        "id": "http://vocab.getty.edu/aat/300404670",
+        "type": "Type"
+       }
+      ],
+      "content": "Test Painting",
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000000",
+      "language": [
+       {
+        "_label": "English",
+        "id": "http://vocab.getty.edu/aat/300388277",
+        "type": "Language"
+       }
+      ],
+      "type": "Name"
+     },
+     {
+      "classified_as": [
+       {
+        "_label": "Primary Name",
+        "id": "http://vocab.getty.edu/aat/300404670",
+        "type": "Type"
+       }
+      ],
+      "content": "Tableau d'essai",
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000001",
+      "language": [
+       {
+        "_label": "French",
+        "id": "http://vocab.getty.edu/aat/300388306",
+        "type": "Language"
+       }
+      ],
+      "type": "Name"
+     },
+     {
+      "content": "1990.1",
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000002",
+      "type": "Identifier"
+     }
+    ],
+    "made_of": [
+     {
+      "_label": "oil paint",
+      "id": "http://vocab.getty.edu/aat/300015050",
+      "type": "Material"
+     }
+    ],
+    "part_of": {
+     "_label": "Parent object",
+     "id": "https://example.org/object/0",
+     "type": "HumanMadeObject"
+    },
+    "produced_by": {
+     "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000006",
+     "part": [
+      {
+       "carried_out_by": [
+        {
+         "_label": "Artist",
+         "id": "https://example.org/person/1",
+         "type": "Person"
+        }
+       ],
+       "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000005",
+       "type": "Production"
+      }
+     ],
+     "timespan": {
+      "begin_of_the_begin": "1642-01-01T00:00:00Z",
+      "end_of_the_end": "1642-12-31T23:59:59Z",
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000004",
+      "type": "TimeSpan"
+     },
+     "type": "Production"
+    },
+    "type": "HumanMadeObject"
+   },
+   "expected": [
+    {
+     "code": "LAE-SCHEMA-required",
+     "missing": [
+      "type"
+     ],
+     "path": "/dimension/0/unit"
+    },
+    {
+     "code": "LAE-SCHEMA-type",
+     "path": "/dimension/0/value"
+    }
+   ],
+   "name": "a dimension value as text and a unit without type"
+  },
+  {
+   "document": {
+    "@context": "https://linked.art/ns/v1/linked-art.json",
+    "_label": "Test Person",
+    "born": {
+     "id": "https://example.org/person/1/node/01937a4e-0000-7000-8000-000000000002",
+     "timespan": {
+      "begin_of_the_begin": "1606-07-15T00:00:00Z",
+      "end_of_the_end": "1606-07-15T23:59:59Z",
+      "id": "https://example.org/person/1/node/01937a4e-0000-7000-8000-000000000001",
+      "type": "TimeSpan"
+     },
+     "type": "Birth"
+    },
+    "died": {
+     "id": "https://example.org/person/1/node/01937a4e-0000-7000-8000-000000000004",
+     "timespan": {
+      "begin_of_the_begin": "1669-10-04T00:00:00Z",
+      "end_of_the_end": "1669-10-04T23:59:59Z",
+      "id": "https://example.org/person/1/node/01937a4e-0000-7000-8000-000000000003",
+      "type": "TimeSpan"
+     },
+     "type": "Death"
+    },
+    "id": "https://example.org/person/1",
+    "identified_by": [
+     {
+      "content": "Test Person",
+      "id": "https://example.org/person/1/node/01937a4e-0000-7000-8000-000000000000",
+      "type": "Name"
+     }
+    ],
+    "type": "Person"
+   },
+   "expected": [],
+   "name": "valid Person"
+  },
+  {
+   "document": {
+    "@context": "https://linked.art/ns/v1/linked-art.json",
+    "born": {
+     "id": "https://example.org/person/1/node/01937a4e-0000-7000-8000-000000000002",
+     "timespan": {
+      "begin_of_the_begin": "1606-07-15T00:00:00Z",
+      "end_of_the_end": "1606-07-15T23:59:59Z",
+      "id": "https://example.org/person/1/node/01937a4e-0000-7000-8000-000000000001",
+      "type": "TimeSpan"
+     },
+     "type": "Birth"
+    },
+    "died": {
+     "id": "https://example.org/person/1/node/01937a4e-0000-7000-8000-000000000004",
+     "timespan": {
+      "begin_of_the_begin": "1669-10-04T00:00:00Z",
+      "end_of_the_end": "1669-10-04T23:59:59Z",
+      "id": "https://example.org/person/1/node/01937a4e-0000-7000-8000-000000000003",
+      "type": "TimeSpan"
+     },
+     "type": "Death"
+    },
+    "id": "https://example.org/person/1",
+    "identified_by": [
+     {
+      "content": "Test Person",
+      "id": "https://example.org/person/1/node/01937a4e-0000-7000-8000-000000000000",
+      "type": "Name"
+     }
+    ],
+    "type": "Person",
+    "unknown_property": true
+   },
+   "expected": [
+    {
+     "code": "LAE-SCHEMA-additionalProperties",
+     "extra": [
+      "unknown_property"
+     ],
+     "path": ""
+    },
+    {
+     "code": "LAE-SCHEMA-required",
+     "missing": [
+      "_label"
+     ],
+     "path": ""
+    }
+   ],
+   "name": "Person without _label and with an unknown property"
+  },
+  {
+   "document": {
+    "@context": "https://linked.art/ns/v1/linked-art.json",
+    "_label": "Test Place",
+    "id": "https://example.org/place/1",
+    "identified_by": [
+     {
+      "content": "Test Place",
+      "id": "https://example.org/place/1/node/01937a4e-0000-7000-8000-000000000000",
+      "type": "Name"
+     }
+    ],
+    "part_of": [
+     {
+      "_label": "Larger place",
+      "id": "https://example.org/place/0",
+      "type": "Place"
+     }
+    ],
+    "type": "Place"
+   },
+   "expected": [],
+   "name": "valid Place"
+  },
+  {
+   "document": {
+    "@context": "https://linked.art/ns/v1/linked-art.json",
+    "id": "https://example.org/place/1",
+    "identified_by": [
+     {
+      "content": "Test Place",
+      "id": "https://example.org/place/1/node/01937a4e-0000-7000-8000-000000000000",
+      "type": "Name"
+     }
+    ],
+    "part_of": [
+     {
+      "_label": "Larger place",
+      "id": "https://example.org/place/0",
+      "type": "Place"
+     }
+    ],
+    "type": "Place",
+    "unknown_property": true
+   },
+   "expected": [
+    {
+     "code": "LAE-SCHEMA-additionalProperties",
+     "extra": [
+      "unknown_property"
+     ],
+     "path": ""
+    },
+    {
+     "code": "LAE-SCHEMA-required",
+     "missing": [
+      "_label"
+     ],
+     "path": ""
+    }
+   ],
+   "name": "Place without _label and with an unknown property"
+  },
+  {
+   "document": {
+    "@context": "https://linked.art/ns/v1/linked-art.json",
+    "_label": "Test Concept",
+    "broader": [
+     {
+      "_label": "Broader concept",
+      "id": "https://example.org/concept/0",
+      "type": "Type"
+     }
+    ],
+    "id": "https://example.org/concept/1",
+    "identified_by": [
+     {
+      "content": "Test Concept",
+      "id": "https://example.org/concept/1/node/01937a4e-0000-7000-8000-000000000000",
+      "type": "Name"
+     }
+    ],
+    "type": "Type"
+   },
+   "expected": [],
+   "name": "valid Type"
+  },
+  {
+   "document": {
+    "@context": "https://linked.art/ns/v1/linked-art.json",
+    "broader": [
+     {
+      "_label": "Broader concept",
+      "id": "https://example.org/concept/0",
+      "type": "Type"
+     }
+    ],
+    "id": "https://example.org/concept/1",
+    "identified_by": [
+     {
+      "content": "Test Concept",
+      "id": "https://example.org/concept/1/node/01937a4e-0000-7000-8000-000000000000",
+      "type": "Name"
+     }
+    ],
+    "type": "Type",
+    "unknown_property": true
+   },
+   "expected": [
+    {
+     "code": "LAE-SCHEMA-additionalProperties",
+     "extra": [
+      "unknown_property"
+     ],
+     "path": ""
+    },
+    {
+     "code": "LAE-SCHEMA-required",
+     "missing": [
+      "_label"
+     ],
+     "path": ""
+    }
+   ],
+   "name": "Type without _label and with an unknown property"
+  }
+ ],
+ "corpus": {
+  "institutional/ycba-activity-2a201e0b-e18e-4040-a55b-9bda016e804f.json": [],
+  "institutional/ycba-activity-33a0e9a3-f472-4121-8929-ec3f7dc6c5f2.json": [],
+  "institutional/ycba-activity-f0daae04-b2a7-4d18-8fdc-d93e17a9fe51.json": [],
+  "institutional/ycba-concept-338c3cdd-5b23-4318-88e5-c2e75cc05c66.json": [],
+  "institutional/ycba-concept-4df4166e-23d3-4ffc-9730-6c85ee27e735.json": [],
+  "institutional/ycba-concept-caf73449-2bf7-4c64-b37f-c112460a65f7.json": [],
+  "institutional/ycba-group-c1291224-34eb-4a43-a0be-c9e741e03b12.json": [],
+  "institutional/ycba-group-c53c585b-259b-464a-b96e-44534de4f004.json": [],
+  "institutional/ycba-object-5497f1dd-415f-4c05-b593-2a87e00d2ee2.json": [],
+  "institutional/ycba-object-71b6123e-ce31-467d-b4a2-692b95eca677.json": [],
+  "institutional/ycba-object-f13960d7-1c36-45d0-8500-f49531bae2ac.json": [],
+  "institutional/ycba-person-85917f42-4d09-4759-8e8c-39851db1af87.json": [],
+  "institutional/ycba-person-bd41568c-1207-4cc9-83d8-b3148e639cdd.json": [],
+  "institutional/ycba-place-5408c481-a4da-4025-ab8b-64194f1a255d.json": [],
+  "institutional/ycba-place-6ba7a446-cbf3-4f3d-833c-0a37927383e7.json": [],
+  "institutional/ycba-set-678f9279-8268-408d-8dff-5eb84289724b.json": [],
+  "institutional/ycba-set-850172b2-1cf0-4976-bb36-115c39f764dc.json": [],
+  "institutional/ycba-visual-6a51f607-47e9-4ed1-a8d2-091e68db2be8.json": [],
+  "institutional/ycba-visual-f0956c76-842f-4163-be69-d62818b691c2.json": [],
+  "institutional/yuag-agt-1562.json": [],
+  "institutional/yuag-agt-36724.json": [],
+  "institutional/yuag-agt-36725.json": [],
+  "institutional/yuag-agt-67740.json": [],
+  "institutional/yuag-exb-4603.json": [],
+  "institutional/yuag-exs-4603.json": [],
+  "institutional/yuag-lin-176060.json": [],
+  "institutional/yuag-lin-176699.json": [],
+  "institutional/yuag-obj-31619.json": [
+   {
+    "code": "LAE-SCHEMA-type",
+    "path": "/used_for"
+   }
+  ],
+  "institutional/yuag-obj-360556.json": [],
+  "institutional/yuag-set-6.json": [],
+  "institutional/yuag-vis-360556.json": [],
+  "institutional/yul-node-07e71913-f2be-479c-a388-65025173b4fb.json": [
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "created_by",
+     "identified_by"
+    ],
+    "path": "/about/0"
+   },
+   {
+    "code": "LAE-SCHEMA-required",
+    "missing": [
+     "id"
+    ],
+    "path": "/about/0"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "created_by",
+     "identified_by"
+    ],
+    "path": "/about/1"
+   },
+   {
+    "code": "LAE-SCHEMA-required",
+    "missing": [
+     "id"
+    ],
+    "path": "/about/1"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "created_by",
+     "identified_by"
+    ],
+    "path": "/about/2"
+   },
+   {
+    "code": "LAE-SCHEMA-required",
+    "missing": [
+     "id"
+    ],
+    "path": "/about/2"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "created_by",
+     "identified_by"
+    ],
+    "path": "/about/3"
+   },
+   {
+    "code": "LAE-SCHEMA-required",
+    "missing": [
+     "id"
+    ],
+    "path": "/about/3"
+   }
+  ],
+  "institutional/yul-node-14a3551f-6e93-4501-9b18-1b107f0274aa.json": [
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "representation"
+    ],
+    "path": ""
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "created_by",
+     "identified_by"
+    ],
+    "path": "/about/0"
+   },
+   {
+    "code": "LAE-SCHEMA-required",
+    "missing": [
+     "id"
+    ],
+    "path": "/about/0"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "created_by",
+     "identified_by"
+    ],
+    "path": "/about/1"
+   },
+   {
+    "code": "LAE-SCHEMA-required",
+    "missing": [
+     "id"
+    ],
+    "path": "/about/1"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "created_by",
+     "identified_by"
+    ],
+    "path": "/about/2"
+   },
+   {
+    "code": "LAE-SCHEMA-required",
+    "missing": [
+     "id"
+    ],
+    "path": "/about/2"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "created_by",
+     "identified_by"
+    ],
+    "path": "/about/4"
+   },
+   {
+    "code": "LAE-SCHEMA-required",
+    "missing": [
+     "id"
+    ],
+    "path": "/about/4"
+   }
+  ],
+  "linkedart/activity-exha-1.json": [
+   {
+    "code": "LAE-SCHEMA-anyOf",
+    "path": "/carried_out_by/0"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "classified_as"
+    ],
+    "path": "/took_place_at/0"
+   }
+  ],
+  "linkedart/activity-exha-40.json": [],
+  "linkedart/activity-exhb-1.json": [
+   {
+    "code": "LAE-SCHEMA-anyOf",
+    "path": "/carried_out_by/0"
+   },
+   {
+    "code": "LAE-SCHEMA-anyOf",
+    "path": "/part_of"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "classified_as"
+    ],
+    "path": "/took_place_at/0"
+   }
+  ],
+  "linkedart/concept-0.json": [],
+  "linkedart/concept-1.json": [
+   {
+    "code": "LAE-SCHEMA-required",
+    "missing": [
+     "id"
+    ],
+    "path": "/broader/0"
+   },
+   {
+    "code": "LAE-SCHEMA-required",
+    "missing": [
+     "id"
+    ],
+    "path": "/created_by/influenced_by/0"
+   },
+   {
+    "code": "LAE-SCHEMA-required",
+    "missing": [
+     "id"
+    ],
+    "path": "/created_by/influenced_by/1"
+   },
+   {
+    "code": "LAE-SCHEMA-required",
+    "missing": [
+     "id"
+    ],
+    "path": "/member_of/0"
+   }
+  ],
+  "linkedart/concept-exhidea-1.json": [],
+  "linkedart/concept-exhidea-2.json": [],
+  "linkedart/concept-historyFrance-1.json": [],
+  "linkedart/concept-painting-1.json": [],
+  "linkedart/concept-painting-2.json": [],
+  "linkedart/concept-painting-3.json": [],
+  "linkedart/concept-painting-4.json": [],
+  "linkedart/digital-0.json": [
+   {
+    "code": "LAE-SCHEMA-required",
+    "missing": [
+     "id"
+    ],
+    "path": "/digitally_shows/0"
+   },
+   {
+    "code": "LAE-SCHEMA-type",
+    "path": "/part_of"
+   }
+  ],
+  "linkedart/digital-operation_nw-1.json": [],
+  "linkedart/digital-spring-1.json": [],
+  "linkedart/event-0.json": [
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "id"
+    ],
+    "path": "/subject_of/0"
+   }
+  ],
+  "linkedart/event-1.json": [
+   {
+    "code": "LAE-SCHEMA-required",
+    "missing": [
+     "_label"
+    ],
+    "path": ""
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "referred_to_by"
+    ],
+    "path": "/timespan"
+   }
+  ],
+  "linkedart/event-19c-1.json": [],
+  "linkedart/event-christies_24477-1.json": [
+   {
+    "code": "LAE-SCHEMA-anyOf",
+    "path": "/carried_out_by/0"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "classified_as"
+    ],
+    "path": "/took_place_at/0"
+   }
+  ],
+  "linkedart/event-christies_24477_16-1.json": [
+   {
+    "code": "LAE-SCHEMA-anyOf",
+    "path": "/part_of"
+   }
+  ],
+  "linkedart/event-early_roman-1.json": [
+   {
+    "code": "LAE-SCHEMA-anyOf",
+    "path": "/part_of"
+   }
+  ],
+  "linkedart/event-exhab-1.json": [],
+  "linkedart/event-operation_nightwatch-1.json": [],
+  "linkedart/event-stowe-1.json": [],
+  "linkedart/event-vesuvius-1.json": [],
+  "linkedart/event-vesuvius-2.json": [],
+  "linkedart/group-0.json": [
+   {
+    "code": "LAE-SCHEMA-required",
+    "missing": [
+     "id"
+    ],
+    "path": "/dissolved_by/took_place_at/0"
+   },
+   {
+    "code": "LAE-SCHEMA-required",
+    "missing": [
+     "id"
+    ],
+    "path": "/formed_by/took_place_at/0"
+   },
+   {
+    "code": "LAE-SCHEMA-required",
+    "missing": [
+     "id"
+    ],
+    "path": "/residence/0"
+   }
+  ],
+  "linkedart/group-14thc_italian-1.json": [
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "members_exemplified_by"
+    ],
+    "path": ""
+   }
+  ],
+  "linkedart/group-harwoodstudio-1.json": [],
+  "linkedart/group-rembrandthuis-1.json": [],
+  "linkedart/group-rembrandthuis-2.json": [],
+  "linkedart/object-0.json": [
+   {
+    "code": "LAE-SCHEMA-required",
+    "missing": [
+     "id"
+    ],
+    "path": "/member_of/0"
+   }
+  ],
+  "linkedart/object-1.json": [
+   {
+    "code": "LAE-SCHEMA-required",
+    "missing": [
+     "id"
+    ],
+    "path": "/current_location"
+   },
+   {
+    "code": "LAE-SCHEMA-required",
+    "missing": [
+     "id"
+    ],
+    "path": "/produced_by/took_place_at/0"
+   }
+  ],
+  "linkedart/object-10.json": [
+   {
+    "code": "LAE-SCHEMA-required",
+    "missing": [
+     "_label"
+    ],
+    "path": ""
+   }
+  ],
+  "linkedart/object-11.json": [
+   {
+    "code": "LAE-SCHEMA-required",
+    "missing": [
+     "id"
+    ],
+    "path": "/current_location"
+   },
+   {
+    "code": "LAE-SCHEMA-anyOf",
+    "path": "/current_owner/0"
+   },
+   {
+    "code": "LAE-SCHEMA-required",
+    "missing": [
+     "id"
+    ],
+    "path": "/member_of/0"
+   },
+   {
+    "code": "LAE-SCHEMA-required",
+    "missing": [
+     "content"
+    ],
+    "path": "/referred_to_by/0"
+   },
+   {
+    "code": "LAE-SCHEMA-required",
+    "missing": [
+     "id"
+    ],
+    "path": "/shows/0"
+   }
+  ],
+  "linkedart/object-12.json": [
+   {
+    "code": "LAE-SCHEMA-required",
+    "missing": [
+     "_label"
+    ],
+    "path": ""
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "subject_to"
+    ],
+    "path": "/referred_to_by/0"
+   }
+  ],
+  "linkedart/object-13.json": [
+   {
+    "code": "LAE-SCHEMA-required",
+    "missing": [
+     "_label"
+    ],
+    "path": ""
+   }
+  ],
+  "linkedart/object-2.json": [
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "part"
+    ],
+    "path": ""
+   }
+  ],
+  "linkedart/object-3.json": [
+   {
+    "code": "LAE-SCHEMA-required",
+    "missing": [
+     "_label"
+    ],
+    "path": ""
+   }
+  ],
+  "linkedart/object-4.json": [],
+  "linkedart/object-5.json": [],
+  "linkedart/object-7.json": [
+   {
+    "code": "LAE-SCHEMA-required",
+    "missing": [
+     "_label"
+    ],
+    "path": ""
+   }
+  ],
+  "linkedart/object-8.json": [
+   {
+    "code": "LAE-SCHEMA-required",
+    "missing": [
+     "_label"
+    ],
+    "path": ""
+   },
+   {
+    "code": "LAE-SCHEMA-anyOf",
+    "path": "/dimension/0/assigned_by/0/carried_out_by/0"
+   }
+  ],
+  "linkedart/object-9.json": [
+   {
+    "code": "LAE-SCHEMA-required",
+    "missing": [
+     "_label"
+    ],
+    "path": ""
+   },
+   {
+    "code": "LAE-SCHEMA-anyOf",
+    "path": "/identified_by/0"
+   }
+  ],
+  "linkedart/object-bust-1.json": [],
+  "linkedart/object-catalog-1.json": [],
+  "linkedart/object-ccp-1.json": [],
+  "linkedart/object-ccp-plate-1.json": [],
+  "linkedart/object-chess-1.json": [],
+  "linkedart/object-coppa-1.json": [],
+  "linkedart/object-flw_house-1.json": [],
+  "linkedart/object-forum-1.json": [],
+  "linkedart/object-gradualpage-1.json": [],
+  "linkedart/object-harpers-1.json": [],
+  "linkedart/object-kellerdana-1.json": [],
+  "linkedart/object-lepeintre-1.json": [],
+  "linkedart/object-lepeintre-2.json": [],
+  "linkedart/object-letter-1.json": [],
+  "linkedart/object-letter-2.json": [],
+  "linkedart/object-letter-3.json": [
+   {
+    "code": "LAE-SCHEMA-type",
+    "path": "/held_or_supported_by"
+   }
+  ],
+  "linkedart/object-nightwatch-1.json": [],
+  "linkedart/object-nightwatch-10.json": [],
+  "linkedart/object-nightwatch-11.json": [],
+  "linkedart/object-nightwatch-12.json": [],
+  "linkedart/object-nightwatch-13.json": [],
+  "linkedart/object-nightwatch-14.json": [],
+  "linkedart/object-nightwatch-15.json": [],
+  "linkedart/object-nightwatch-16.json": [],
+  "linkedart/object-nightwatch-17.json": [
+   {
+    "code": "LAE-SCHEMA-type",
+    "path": "/current_permanent_custodian"
+   }
+  ],
+  "linkedart/object-nightwatch-18.json": [
+   {
+    "code": "LAE-SCHEMA-required",
+    "missing": [
+     "_label"
+    ],
+    "path": ""
+   }
+  ],
+  "linkedart/object-nightwatch-2.json": [],
+  "linkedart/object-nightwatch-25.json": [
+   {
+    "code": "LAE-SCHEMA-anyOf",
+    "path": "/attributed_by/0/part_of"
+   }
+  ],
+  "linkedart/object-nightwatch-26.json": [
+   {
+    "code": "LAE-SCHEMA-anyOf",
+    "path": "/modified_by/0/part_of"
+   }
+  ],
+  "linkedart/object-nightwatch-3.json": [],
+  "linkedart/object-nightwatch-4.json": [],
+  "linkedart/object-nightwatch-41.json": [],
+  "linkedart/object-nightwatch-42.json": [],
+  "linkedart/object-nightwatch-43.json": [
+   {
+    "code": "LAE-SCHEMA-anyOf",
+    "path": "/produced_by/timespan/identified_by/0"
+   }
+  ],
+  "linkedart/object-nightwatch-44.json": [],
+  "linkedart/object-nightwatch-45.json": [],
+  "linkedart/object-nightwatch-47.json": [],
+  "linkedart/object-nightwatch-48.json": [],
+  "linkedart/object-nightwatch-49.json": [],
+  "linkedart/object-nightwatch-5.json": [],
+  "linkedart/object-nightwatch-50.json": [],
+  "linkedart/object-nightwatch-52.json": [],
+  "linkedart/object-nightwatch-57.json": [],
+  "linkedart/object-nightwatch-6.json": [],
+  "linkedart/object-nightwatch-7.json": [],
+  "linkedart/object-nightwatch-70.json": [
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "created_by",
+     "subject_to"
+    ],
+    "path": "/referred_to_by/0"
+   }
+  ],
+  "linkedart/object-nightwatch-8.json": [],
+  "linkedart/object-nightwatch-9.json": [
+   {
+    "code": "LAE-SCHEMA-anyOf",
+    "path": "/dimension/0/assigned_by/0/part_of"
+   }
+  ],
+  "linkedart/object-nightwatch-support.json": [
+   {
+    "code": "LAE-SCHEMA-type",
+    "path": "/part_of"
+   }
+  ],
+  "linkedart/object-nuveen-1.json": [],
+  "linkedart/object-okeeffe-gok-1.json": [],
+  "linkedart/object-okeeffe-yuag-1.json": [],
+  "linkedart/object-pompeii-buildings-1.json": [],
+  "linkedart/object-pompeii_statue-1.json": [],
+  "linkedart/object-run-1.json": [],
+  "linkedart/object-spring-1.json": [],
+  "linkedart/object-spring-10.json": [],
+  "linkedart/object-spring-11.json": [],
+  "linkedart/object-spring-12.json": [],
+  "linkedart/object-spring-13.json": [],
+  "linkedart/object-spring-14.json": [],
+  "linkedart/object-spring-15.json": [
+   {
+    "code": "LAE-SCHEMA-anyOf",
+    "path": "/changed_ownership_through/0/part_of"
+   },
+   {
+    "code": "LAE-SCHEMA-anyOf",
+    "path": "/changed_ownership_through/1/part_of"
+   }
+  ],
+  "linkedart/object-spring-2.json": [],
+  "linkedart/object-spring-20.json": [],
+  "linkedart/object-spring-21.json": [],
+  "linkedart/object-spring-29.json": [],
+  "linkedart/object-spring-3.json": [],
+  "linkedart/object-spring-30.json": [],
+  "linkedart/object-spring-31.json": [],
+  "linkedart/object-spring-4.json": [],
+  "linkedart/object-spring-5.json": [],
+  "linkedart/object-spring-6.json": [],
+  "linkedart/object-spring-7.json": [],
+  "linkedart/object-spring-8.json": [],
+  "linkedart/object-spring-9.json": [],
+  "linkedart/object-spring-back.json": [
+   {
+    "code": "LAE-SCHEMA-type",
+    "path": "/part_of"
+   }
+  ],
+  "linkedart/object-spring-support.json": [
+   {
+    "code": "LAE-SCHEMA-type",
+    "path": "/part_of"
+   }
+  ],
+  "linkedart/object-torosaurus-1.json": [],
+  "linkedart/object-washday-1.json": [],
+  "linkedart/object-yiadom-boakye-1.json": [
+   {
+    "code": "LAE-SCHEMA-anyOf",
+    "path": "/identified_by/0"
+   },
+   {
+    "code": "LAE-SCHEMA-anyOf",
+    "path": "/identified_by/1"
+   }
+  ],
+  "linkedart/object-yul_10801219-1.json": [],
+  "linkedart/person-0.json": [
+   {
+    "code": "LAE-SCHEMA-required",
+    "missing": [
+     "id"
+    ],
+    "path": "/born/took_place_at/0"
+   },
+   {
+    "code": "LAE-SCHEMA-required",
+    "missing": [
+     "id"
+    ],
+    "path": "/carried_out/0/took_place_at/0"
+   },
+   {
+    "code": "LAE-SCHEMA-required",
+    "missing": [
+     "id"
+    ],
+    "path": "/died/took_place_at/0"
+   },
+   {
+    "code": "LAE-SCHEMA-required",
+    "missing": [
+     "id"
+    ],
+    "path": "/residence/0"
+   }
+  ],
+  "linkedart/person-bol-1.json": [],
+  "linkedart/person-rembrandt-1.json": [],
+  "linkedart/person-rembrandt-10.json": [
+   {
+    "code": "LAE-SCHEMA-anyOf",
+    "path": "/identified_by/0"
+   }
+  ],
+  "linkedart/person-rembrandt-11.json": [],
+  "linkedart/person-rembrandt-12.json": [],
+  "linkedart/person-rembrandt-13.json": [],
+  "linkedart/person-rembrandt-14.json": [],
+  "linkedart/person-rembrandt-15.json": [],
+  "linkedart/person-rembrandt-2.json": [],
+  "linkedart/person-rembrandt-3.json": [],
+  "linkedart/person-rembrandt-31.json": [],
+  "linkedart/person-rembrandt-32.json": [],
+  "linkedart/person-rembrandt-4.json": [
+   {
+    "code": "LAE-SCHEMA-anyOf",
+    "path": "/identified_by/0"
+   }
+  ],
+  "linkedart/person-rembrandt-41.json": [],
+  "linkedart/person-rembrandt-42.json": [],
+  "linkedart/person-rembrandt-43.json": [],
+  "linkedart/person-rembrandt-44.json": [],
+  "linkedart/person-rembrandt-6.json": [],
+  "linkedart/person-rembrandt-7.json": [],
+  "linkedart/person-rembrandt-8.json": [],
+  "linkedart/person-rembrandt-9.json": [],
+  "linkedart/person-wiley-1.json": [],
+  "linkedart/place-0.json": [
+   {
+    "code": "LAE-SCHEMA-required",
+    "missing": [
+     "id"
+    ],
+    "path": "/member_of/0"
+   },
+   {
+    "code": "LAE-SCHEMA-required",
+    "missing": [
+     "id"
+    ],
+    "path": "/part_of/0"
+   }
+  ],
+  "linkedart/place-amsterdam-1.json": [
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "classified_as"
+    ],
+    "path": "/part_of/0"
+   }
+  ],
+  "linkedart/place-amsterdam_auction_house-1.json": [],
+  "linkedart/place-new_zealand-1.json": [],
+  "linkedart/place-paris-1.json": [],
+  "linkedart/set-1.json": [],
+  "linkedart/set-2.json": [
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "currency",
+     "referred_to_by"
+    ],
+    "path": "/dimension/0"
+   },
+   {
+    "code": "LAE-SCHEMA-required",
+    "missing": [
+     "unit"
+    ],
+    "path": "/dimension/0"
+   },
+   {
+    "code": "LAE-SCHEMA-const",
+    "path": "/dimension/0/type"
+   }
+  ],
+  "linkedart/set-24477_16_objects-1.json": [],
+  "linkedart/set-24477_16_objects-2.json": [
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "currency"
+    ],
+    "path": "/dimension/0"
+   },
+   {
+    "code": "LAE-SCHEMA-required",
+    "missing": [
+     "unit"
+    ],
+    "path": "/dimension/0"
+   },
+   {
+    "code": "LAE-SCHEMA-const",
+    "path": "/dimension/0/type"
+   }
+  ],
+  "linkedart/set-archive_asc-1.json": [],
+  "linkedart/set-archive_sfl-1.json": [],
+  "linkedart/set-archive_sfl-2.json": [],
+  "linkedart/set-exhset-1.json": [],
+  "linkedart/set-exhset-2.json": [],
+  "linkedart/set-rijks_objects-1.json": [],
+  "linkedart/set-rijks_paintings-1.json": [],
+  "linkedart/text-0.json": [
+   {
+    "code": "LAE-SCHEMA-anyOf",
+    "path": "/created_by/carried_out_by/0"
+   },
+   {
+    "code": "LAE-SCHEMA-anyOf",
+    "path": "/used_for/0/carried_out_by/0"
+   },
+   {
+    "code": "LAE-SCHEMA-required",
+    "missing": [
+     "id"
+    ],
+    "path": "/used_for/0/took_place_at/0"
+   }
+  ],
+  "linkedart/text-1.json": [],
+  "linkedart/text-catalog_24477-1.json": [],
+  "linkedart/text-harpers-1.json": [],
+  "linkedart/text-koot_nightwatch-1.json": [
+   {
+    "code": "LAE-SCHEMA-anyOf",
+    "path": "/part_of/0"
+   }
+  ],
+  "linkedart/text-koot_nightwatch-2.json": [],
+  "linkedart/text-koot_nightwatch-3.json": [],
+  "linkedart/text-koot_nightwatch-40.json": [],
+  "linkedart/text-koot_nightwatch_ch1-1.json": [],
+  "linkedart/text-koot_nightwatch_ch1-2.json": [],
+  "linkedart/text-rembrandtjaccuse-1.json": [],
+  "linkedart/visual-0.json": [
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "shown_by"
+    ],
+    "path": ""
+   }
+  ],
+  "linkedart/visual-harpers-1.json": [],
+  "linkedart/visual-nightwatch-1.json": [],
+  "linkedart/visual-nightwatch-2.json": [],
+  "linkedart/visual-nightwatch-40.json": [],
+  "linkedart/visual-spring-1.json": [],
+  "linkedart/visual-spring-2.json": [],
+  "linkedart/visual-spring-3.json": [],
+  "linkedart/visual-spring-4.json": [],
+  "linkedart/visual-spring-5.json": [],
+  "lux/activity-2fcb9f1b-0de3-4bb9-966c-11d160ab00a8.json": [
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_links"
+    ],
+    "path": ""
+   }
+  ],
+  "lux/activity-efeb56f7-9a98-449d-9234-375555814114.json": [
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_links"
+    ],
+    "path": ""
+   }
+  ],
+  "lux/concept-2d7ee50e-14c2-4477-b076-e22a3fd600a1.json": [
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_links"
+    ],
+    "path": ""
+   }
+  ],
+  "lux/concept-710b7648-91ce-438a-865d-c39588b7e2c8.json": [
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_links"
+    ],
+    "path": ""
+   }
+  ],
+  "lux/concept-8da5c4f7-2f76-4861-b58e-7f15ffd6ef18.json": [
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_links"
+    ],
+    "path": ""
+   }
+  ],
+  "lux/concept-a7a11bba-fd6b-4c35-97d7-3c3e421e95d9.json": [
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_links"
+    ],
+    "path": ""
+   }
+  ],
+  "lux/concept-b3e797cd-7e04-45d5-9c44-64a62d4e95a4.json": [
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_links"
+    ],
+    "path": ""
+   }
+  ],
+  "lux/concept-d06d30df-b3fd-4f09-8b15-b1927843b612.json": [
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_links"
+    ],
+    "path": ""
+   }
+  ],
+  "lux/concept-ddd29579-6862-417a-9ffe-5d0798be7e24.json": [
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_links"
+    ],
+    "path": ""
+   }
+  ],
+  "lux/concept-e7ac1a41-319a-4e1f-bb30-d12f19a42902.json": [
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_links"
+    ],
+    "path": ""
+   }
+  ],
+  "lux/concept-f7ef5bb4-e7fb-443d-9c6b-371a23e717ec.json": [
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_links"
+    ],
+    "path": ""
+   }
+  ],
+  "lux/concept-f989a0fc-f3dd-4d82-8580-fcc9bcb5be89.json": [
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_links"
+    ],
+    "path": ""
+   }
+  ],
+  "lux/digital-6302dd42-df1d-5b06-980c-b672bfae6cdc.json": [
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_links"
+    ],
+    "path": ""
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/0"
+   }
+  ],
+  "lux/group-41310ca5-8137-45fe-ac2c-a6a04e2235f1.json": [
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_links"
+    ],
+    "path": ""
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_seconds_since_epoch_begin_of_the_begin"
+    ],
+    "path": "/carried_out/0/timespan"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_seconds_since_epoch_begin_of_the_begin",
+     "_seconds_since_epoch_end_of_the_end"
+    ],
+    "path": "/formed_by/timespan"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/representation/0/digitally_shown_by/0/referred_to_by/1"
+   }
+  ],
+  "lux/group-91803a28-6135-4564-ae16-c6658000d088.json": [
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_links"
+    ],
+    "path": ""
+   }
+  ],
+  "lux/object-6a76f826-54e7-4b94-8fee-f043b29bb2b8.json": [
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_links",
+     "see_also"
+    ],
+    "path": ""
+   },
+   {
+    "code": "LAE-SCHEMA-anyOf",
+    "path": "/identified_by/11"
+   },
+   {
+    "code": "LAE-SCHEMA-anyOf",
+    "path": "/identified_by/12"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_seconds_since_epoch_begin_of_the_begin",
+     "_seconds_since_epoch_end_of_the_end"
+    ],
+    "path": "/produced_by/timespan"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_audioguide_url",
+     "_content_html"
+    ],
+    "path": "/referred_to_by/1"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/10"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/11"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/12"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/13"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/14"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/15"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/16"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/17"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/18"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/19"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/2"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/20"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/21"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/22"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/23"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/24"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/25"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/26"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/27"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/28"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/29"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/3"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/30"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/31"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/32"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/33"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/34"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/35"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/36"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/37"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/38"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/39"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/4"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/40"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/41"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/42"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/43"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/44"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/45"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/46"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/47"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/48"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/49"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/5"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/50"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/51"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/52"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/53"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/54"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/55"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/56"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/57"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/58"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/59"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/6"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/60"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/61"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/62"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/63"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/64"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/67"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/7"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/74"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/8"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/9"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/representation/1/digitally_shown_by/0/referred_to_by/0"
+   }
+  ],
+  "lux/object-9e77d0f8-b0ac-402c-bfe3-3b8121ae9f58.json": [
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_links"
+    ],
+    "path": ""
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_seconds_since_epoch_begin_of_the_begin",
+     "_seconds_since_epoch_end_of_the_end"
+    ],
+    "path": "/produced_by/timespan"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/11"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/3"
+   }
+  ],
+  "lux/object-b7285efb-e100-43e1-ba55-6dde6ea4b556.json": [
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_links"
+    ],
+    "path": ""
+   }
+  ],
+  "lux/object-c1b6648b-caf8-4a1f-b28d-43ce8c83a852.json": [
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_links"
+    ],
+    "path": ""
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_seconds_since_epoch_begin_of_the_begin",
+     "_seconds_since_epoch_end_of_the_end"
+    ],
+    "path": "/produced_by/timespan"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/0"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/1"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/referred_to_by/10"
+   }
+  ],
+  "lux/person-07cd63b8-4bd2-460a-b6cb-c8d5bd1d0b4f.json": [
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_links"
+    ],
+    "path": ""
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_seconds_since_epoch_begin_of_the_begin",
+     "_seconds_since_epoch_end_of_the_end"
+    ],
+    "path": "/born/timespan"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_seconds_since_epoch_begin_of_the_begin",
+     "_seconds_since_epoch_end_of_the_end"
+    ],
+    "path": "/died/timespan"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/representation/0/digitally_shown_by/0/referred_to_by/1"
+   }
+  ],
+  "lux/person-2107305b-7a4c-4af8-9d02-7a75bb1b2a4e.json": [
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_links"
+    ],
+    "path": ""
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_seconds_since_epoch_begin_of_the_begin",
+     "_seconds_since_epoch_end_of_the_end"
+    ],
+    "path": "/born/timespan"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_seconds_since_epoch_begin_of_the_begin",
+     "_seconds_since_epoch_end_of_the_end"
+    ],
+    "path": "/carried_out/0/timespan"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_seconds_since_epoch_begin_of_the_begin",
+     "_seconds_since_epoch_end_of_the_end"
+    ],
+    "path": "/died/timespan"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/representation/0/digitally_shown_by/0/referred_to_by/0"
+   }
+  ],
+  "lux/person-252d23b3-b84f-4cc5-94ca-9e98928bea48.json": [
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_links"
+    ],
+    "path": ""
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_seconds_since_epoch_begin_of_the_begin",
+     "_seconds_since_epoch_end_of_the_end"
+    ],
+    "path": "/born/timespan"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_seconds_since_epoch_begin_of_the_begin",
+     "_seconds_since_epoch_end_of_the_end"
+    ],
+    "path": "/carried_out/0/timespan"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_seconds_since_epoch_begin_of_the_begin",
+     "_seconds_since_epoch_end_of_the_end"
+    ],
+    "path": "/died/timespan"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/representation/0/digitally_shown_by/0/referred_to_by/1"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/representation/1/digitally_shown_by/0/referred_to_by/1"
+   }
+  ],
+  "lux/person-3c22919c-57e0-4cf0-84c3-0b4cd8a78572.json": [
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_links"
+    ],
+    "path": ""
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_seconds_since_epoch_begin_of_the_begin",
+     "_seconds_since_epoch_end_of_the_end"
+    ],
+    "path": "/born/timespan"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_seconds_since_epoch_begin_of_the_begin",
+     "_seconds_since_epoch_end_of_the_end"
+    ],
+    "path": "/died/timespan"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/representation/0/digitally_shown_by/0/referred_to_by/1"
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/representation/1/digitally_shown_by/0/referred_to_by/1"
+   }
+  ],
+  "lux/place-1d61ce08-b737-4326-97ba-85e5e6f9cff7.json": [
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_links"
+    ],
+    "path": ""
+   }
+  ],
+  "lux/place-a5b17437-4725-48ec-8a9f-b014e3187b64.json": [
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_links"
+    ],
+    "path": ""
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_content_html"
+    ],
+    "path": "/representation/0/digitally_shown_by/0/referred_to_by/1"
+   }
+  ],
+  "lux/place-bb47b983-248b-5a9f-93c9-eb400993b94a.json": [
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_links"
+    ],
+    "path": ""
+   }
+  ],
+  "lux/place-f10c9789-68d5-4543-a782-82f151babc5a.json": [
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_links"
+    ],
+    "path": ""
+   }
+  ],
+  "lux/place-fff6ea51-e555-4b4e-92b1-8b378d0f913b.json": [
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_links"
+    ],
+    "path": ""
+   }
+  ],
+  "lux/set-703438a0-4a84-4bc8-8c9c-28e8d3e944f8.json": [
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_links"
+    ],
+    "path": ""
+   }
+  ],
+  "lux/set-92e30c6b-6b10-46f9-b460-9c2ec2914e16.json": [
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_links"
+    ],
+    "path": ""
+   }
+  ],
+  "lux/text-a76b91ea-b120-466f-bb38-973e1aa0221d.json": [
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_links"
+    ],
+    "path": ""
+   },
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_seconds_since_epoch_begin_of_the_begin",
+     "_seconds_since_epoch_end_of_the_end"
+    ],
+    "path": "/used_for/0/timespan"
+   }
+  ],
+  "lux/visual-cd439eb0-d7a5-41dd-bf2f-f5d95e7d1bc1.json": [
+   {
+    "code": "LAE-SCHEMA-additionalProperties",
+    "extra": [
+     "_links",
+     "representation"
+    ],
+    "path": ""
+   }
+  ]
+ },
+ "description": "The server's verdict on the documents the browser's schema check is compared with (Step 1.19)."
+}

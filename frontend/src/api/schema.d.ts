@@ -572,6 +572,26 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/profiles/schema/{record_class}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Get Record Schema
+         * @description The Linked Art JSON Schema that validates records of ``record_class``.
+         */
+        get: operations["get_record_schema_api_profiles_schema__record_class__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/profiles/{record_class}": {
         parameters: {
             query?: never;
@@ -1107,6 +1127,22 @@ export interface components {
             uri: string;
             /** Draft Epoch */
             draft_epoch: number;
+        };
+        /**
+         * RecordSchema
+         * @description The JSON Schema of one record class, with every schema file it refers to.
+         */
+        RecordSchema: {
+            /** Class */
+            class: string;
+            /** Entry */
+            entry: string;
+            /** Schemas */
+            schemas: {
+                [key: string]: {
+                    [key: string]: unknown;
+                };
+            };
         };
         /**
          * RefSummary
@@ -2381,6 +2417,45 @@ export interface operations {
                 };
             };
             /** @description LAE-VOCAB-001 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    get_record_schema_api_profiles_schema__record_class__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Record class, e.g. HumanMadeObject */
+                record_class: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["RecordSchema"];
+                };
+            };
+            /** @description LAE-PROF-002 */
             404: {
                 headers: {
                     [name: string]: unknown;

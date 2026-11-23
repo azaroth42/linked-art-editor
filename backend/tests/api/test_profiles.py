@@ -1,4 +1,5 @@
-"""``GET /api/profiles/{class}`` and the startup check of ``profiles/`` (Phase 1 Step 1.18)."""
+"""``GET /api/profiles/{class}``, the startup check of ``profiles/`` (Phase 1 Step 1.18), and
+``GET /api/profiles/schema/{class}`` (Step 1.19)."""
 
 from __future__ import annotations
 
@@ -6,8 +7,12 @@ import json
 import shutil
 from collections.abc import AsyncIterator
 from pathlib import Path
+from typing import Any
 
 import pytest
+from jsonschema import Draft7Validator
+from referencing import Registry
+from referencing.jsonschema import DRAFT7
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from lae.api.profiles import (
@@ -15,8 +20,12 @@ from lae.api.profiles import (
     PROFILES_DIR,
     ProfileConfigError,
     load_profiles,
+    record_schema,
 )
+from lae.corpus import CORPUS_DIR
 from lae.profiles.validation import load_yaml
+from lae.validation.schema import schema_validator
+from lae.validation.schema_map import SCHEMA_BASE_URI, SCHEMA_DIR
 from tests.api.conftest import auth_headers
 from tests.auth.conftest import Served, serve_app
 
@@ -74,3 +83,54 @@ def test_an_invalid_profile_stops_the_start(tmp_path: Path) -> None:
 def test_every_profile_code_has_an_english_message() -> None:
     messages = json.loads(ERRORS_JSON.read_text(encoding="utf-8"))
     assert {key for key in messages if key.startswith("LAE-PROF-")} == set(PROFILE_CODES)
+
+
+async def test_a_record_schema_needs_a_signed_in_user(served: Served) -> None:
+    response = await served.client.get("/api/profiles/schema/HumanMadeObject")
+    assert response.status_code == 401
+    assert response.json()["code"] == "LAE-AUTH-002"
+
+
+@pytest.mark.parametrize(
+    ("record_class", "schema_name"),
+    [("HumanMadeObject", "object.json"), ("Person", "person.json"), ("Material", "concept.json")],
+)
+async def test_a_record_schema_is_the_vendored_entry_point_and_what_it_refers_to(
+    served: Served, viewer: dict[str, str], record_class: str, schema_name: str
+) -> None:
+    response = await served.client.get(f"/api/profiles/schema/{record_class}", headers=viewer)
+    assert response.status_code == 200, response.text
+    body = response.json()
+    entry = SCHEMA_BASE_URI + schema_name
+    assert body["class"] == record_class
+    assert body["entry"] == entry
+    # The vendored files as they are: the entry point and core.json, which it refers to.
+    assert set(body["schemas"]) == {entry, SCHEMA_BASE_URI + "core.json"}
+    for uri, schema in body["schemas"].items():
+        assert schema == json.loads((SCHEMA_DIR / uri.removeprefix(SCHEMA_BASE_URI)).read_bytes())
+
+
+def test_the_served_files_resolve_every_reference_of_the_entry_point() -> None:
+    """In a registry by ``$id`` alone, the served files check a record as the server does."""
+    schemas = record_schema("object.json")
+    registry: Registry[Any] = Registry().with_resources(
+        (uri, DRAFT7.create_resource(contents)) for uri, contents in schemas.items()
+    )
+    validator = Draft7Validator(schemas[SCHEMA_BASE_URI + "object.json"], registry=registry)
+    record = json.loads((CORPUS_DIR / "linkedart" / "object-0.json").read_bytes())
+    del record["_label"]
+    record["identified_by"][0]["content"] = 1
+    found = sorted((e.validator, list(e.absolute_path)) for e in validator.iter_errors(record))
+    server = schema_validator("object.json").iter_errors(record)
+    assert found == sorted((e.validator, list(e.absolute_path)) for e in server)
+    assert found  # the two errors are found, not skipped for an unresolved reference
+
+
+async def test_a_class_without_a_schema_is_404(served: Served, viewer: dict[str, str]) -> None:
+    response = await served.client.get("/api/profiles/schema/Name", headers=viewer)
+    assert response.status_code == 404
+    assert response.json() == {
+        "code": "LAE-PROF-002",
+        "path": "/api/profiles/schema/Name",
+        "params": {"class": "Name"},
+    }

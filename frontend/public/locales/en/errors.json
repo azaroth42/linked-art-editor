@@ -21,6 +21,7 @@
   "LAE-CRDT-008": "The draft could not be created from this content ({projection_code}).",
   "LAE-CRDT-009": "Live editing is unavailable right now. Please try again shortly.",
   "LAE-PROF-001": "There is no editing form for records of class {class}.",
+  "LAE-PROF-002": "Records of class {class} cannot be checked while you type. Use Validate to check them.",
   "LAE-PROJ-001": "The keys _order and _value are reserved and cannot be used here.",
   "LAE-PROJ-002": "This number cannot be stored (it is not finite or too large).",
   "LAE-PROJ-003": "This text contains characters that are not valid Unicode.",
