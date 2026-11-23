@@ -717,3 +717,21 @@ steps. Notes for the steps that meet it, and two choices the owner may want to c
    and export are lossless; the seed marks Accession Number `{unique: true}`.
 7. **Migration number.** `0010` with `down_revision` set to main's only head when this merged
    (`0007`); later Phase 1 migrations (`0008`, `0009`) rechain on top of it.
+
+## Step 1.10
+
+1. **A warning accepted by `(code, path)` can be a different warning at the same position**
+   (contract `docs/contracts/1.10-publish.md` §6, recorded here as asked, not solved). Publish
+   validates the draft again and requires every warning it finds to be accepted by record, code
+   and exact path. If the draft changed between the editor's `POST
+   /api/records/{id}/draft/validate` and the publish, a new warning with the same code at the
+   same path (another item now at that index, say) is accepted without having been shown.
+   Closing it needs the validate endpoint to return the draft's `(draft_epoch, last_update_id)`
+   and publish to take them as a precondition (409 `LAE-PUB-004` when they moved).
+2. **Publish can refuse what the draft validate endpoint accepted.** Publish validates the bundle
+   as it will be after the commit: references to an alias are resolved to the record's URI first
+   (ADR-0030), and a bundle member's class is the `type` of its draft (ADR-0033 item 4). The
+   validate endpoint does neither, so a reference that claims the wrong class through an alias or
+   to a never-published record is reported only by publish (422 `LAE-PUB-003` with the
+   diagnostics). Codes and paths are otherwise identical, because rewriting an `id` moves
+   nothing. Decide whether the validate endpoint should do the same (it would need the bundle).

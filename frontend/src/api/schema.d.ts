@@ -528,10 +528,66 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/records/{record_id}/publish": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Publish Record
+         * @description Publish the record's draft, with the never-published records it refers to.
+         */
+        post: operations["publish_record_api_records__record_id__publish_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/records/{record_id}/draft/discard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Discard Draft
+         * @description Discard the record's draft; delete the record if it was never published.
+         */
+        post: operations["discard_draft_api_records__record_id__draft_discard_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /**
+         * AcceptedWarning
+         * @description One warning the caller has seen and accepts (decision C2): its ``code`` and ``path``.
+         *
+         *     ``record_id`` names the record of the bundle the warning belongs to; ``None`` is the record
+         *     being published. A path is a position in the document, so the same ``code`` and ``path``
+         *     in a dependent stub is a different warning.
+         */
+        AcceptedWarning: {
+            /** Code */
+            code: string;
+            /** Path */
+            path: string;
+            /** Record Id */
+            record_id?: string | null;
+        };
         /**
          * AutocompleteResult
          * @description One entity in the answer of ``GET /api/search/autocomplete``.
@@ -677,6 +733,21 @@ export interface components {
              * @description True when no item has severity ``violation`` (warnings do not count).
              */
             readonly ok: boolean;
+        };
+        /**
+         * DiscardResult
+         * @description What ``discard`` did.
+         */
+        DiscardResult: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Deleted */
+            deleted: boolean;
+            /** Draft Epoch */
+            draft_epoch: number | null;
         };
         /**
          * DraftContributor
@@ -836,6 +907,34 @@ export interface components {
             id: string;
             /** Display Name */
             display_name: string;
+        };
+        /**
+         * PublishRequest
+         * @description Body of ``POST /api/records/{id}/publish``.
+         */
+        PublishRequest: {
+            /**
+             * Summary
+             * @default
+             */
+            summary: string;
+            /**
+             * Accepted Warnings
+             * @default []
+             */
+            accepted_warnings: components["schemas"]["AcceptedWarning"][];
+        };
+        /**
+         * PublishResult
+         * @description What ``publish`` did.
+         */
+        PublishResult: {
+            /** Version */
+            version: number;
+            /** Published */
+            published: string[];
+            /** Draft Epoch */
+            draft_epoch: number;
         };
         /**
          * ReadyStatus
@@ -1881,6 +1980,91 @@ export interface operations {
                 };
             };
             /** @description LAE-PROF-001 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    publish_record_api_records__record_id__publish_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["PublishRequest"];
+            };
+        };
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["PublishResult"];
+                };
+            };
+            /** @description LAE-REC-001 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description LAE-PUB-001, LAE-PUB-002, LAE-PUB-004, LAE-PUB-005, LAE-PUB-006 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description LAE-PUB-003 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    discard_draft_api_records__record_id__draft_discard_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DiscardResult"];
+                };
+            };
+            /** @description LAE-REC-001 */
             404: {
                 headers: {
                     [name: string]: unknown;

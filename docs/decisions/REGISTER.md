@@ -47,6 +47,7 @@ Decisions made during the November 2026 design review are also written up as ADR
 | B10 | Semantic diff is a list of typed changes (`add_node`, `remove_node`, `update_literal`, `add_ref`, `remove_ref`, `reorder`) matched by internal IRI / target URI, never prose. | locked | spec §4.3; Phase 1 Step 1.14 |
 | B11 | User-scoped undo via `Y.UndoManager` tracked origins; agent turns are undone via `RoomManager.revert(transaction_ids)`. | locked | spec §6.5, §6.8 |
 | B12 | All draft-scoped endpoints use `/api/records/{id}/draft/...`; `apply_change` (`lae.crdt.ops`) is the single generic write path for typed changes from agents, inverse links, smart paste, and rebase. | fixed | Phase 1 Step 1.10; Phase 3 Step 3.6 |
+| B13 | Publish details: the outbox event of a first publish has `from_version` NULL; the revision back-filled for a bulk-loaded version has `published_by` NULL (migration `0009`); an accepted warning is `{code, path, record_id?}` and matched exactly per record; bundle members are validated with the class of their own draft; conflicts are 409 `LAE-PUB-004` (draft changed since the validated snapshot), `-005` (deleted or merged), `-006` (base version moved), never retried automatically; `records.type` follows the published data. | fixed | ADR-0033; `docs/contracts/1.10-publish.md` |
 
 ## C. Validation and vocabularies
 
