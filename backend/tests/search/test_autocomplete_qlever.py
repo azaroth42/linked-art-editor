@@ -351,8 +351,10 @@ async def test_the_overlay_returns_an_entity_published_after_the_build(
                 "source": "local",
             }
         ]
-    # Ranked among the indexed Rembrandts for q=rem.
-    response = await client.get(PATH, params={"q": "rem", "types": "Person"}, headers=headers)
+    # Ranked among the indexed Rembrandts for q=rem. The bulk load keeps the corpus records that
+    # fail JSON Schema (ADR-0030), so more than a default page of people match "rem".
+    params = {"q": "rem", "types": "Person", "limit": "100"}
+    response = await client.get(PATH, params=params, headers=headers)
     assert uri in [r["id"] for r in response.json()]
 
 

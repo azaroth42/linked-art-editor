@@ -12,6 +12,12 @@ node which came with an ``id`` of its own from somewhere else (ADR-0021). It nev
 JSON-LD, so ``is_internal_node_iri`` stays UUIDv7-only; ``owner_of`` and ``record_id_from_uri``
 accept both, because both turn up in SPARQL results.
 
+A record may also have *aliases*: URIs it was known by before it was given a URI of this form
+(a bulk load re-mints every record that arrives with a URI from elsewhere, ADR-0030). They are
+rows of ``record_aliases``, not something a URI's form reveals, so the functions here return
+``None`` / raise for them; ``lae.aliases`` has the lookups that need the database
+(``resolve_alias``, ``resolve_record_id``).
+
 ``base_uri`` defaults to ``Settings.base_uri`` from ``get_settings()``; code that holds its own
 ``Settings`` (the API, through ``get_app_settings``) passes ``base_uri=settings.base_uri``.
 """

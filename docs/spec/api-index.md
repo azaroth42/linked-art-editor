@@ -100,7 +100,7 @@ Generated from the phase guides by `scripts/gen_api_index.py` (kept in the scrat
 | `POST /api/records/{id}/unprotect` | Phase 3 Step 3.8 |
 | `POST /api/records/{referrer_id}/draft/apply` | Phase 4 Step 4.14 |
 | `POST /api/records/{uuid}/reconcile` | Phase 3 Step 3.11 |
-| `POST /api/records` | Phase 1 Step 1.6, Phase 1 Step 1.7, Phase 1 Step 1.17, Phase 1 Step 1.18 |
+| `POST /api/records` | Phase 1 Step 1.6, Phase 1 Step 1.7, Phase 1 Step 1.15, Phase 1 Step 1.17, Phase 1 Step 1.18 |
 | `POST /api/search/resultset` | Phase 4 Step 4.1 |
 | `POST /api/smart-sets/{id}/run` | Phase 4 Step 4.6 |
 | `POST /api/smart-sets` | Phase 4 Step 4.6 |
@@ -149,12 +149,13 @@ Generated from the phase guides by `scripts/gen_api_index.py` (kept in the scrat
 | `/id/:uuid` | Phase 1 Step 1.22 |
 | `/id/` | Phase 1 Step 1.21 |
 | `/id/{uuid}?version=N` | Phase 1 Step 1.20 |
-| `/id/{uuid}` | Phase 1 Step 1.6, Phase 1 Step 1.19, Phase 1 Step 1.21, Phase 1 Step 1.22, Phase 2 Step 2.5, Phase 2 Step 2.6, Phase 2 Step 2.16, Phase 2 Step 2.17, Phase 2 Step 2.18 |
+| `/id/{uuid}` | Phase 1 Step 1.6, Phase 1 Step 1.12, Phase 1 Step 1.19, Phase 1 Step 1.21, Phase 1 Step 1.22, Phase 2 Step 2.5, Phase 2 Step 2.6, Phase 2 Step 2.16, Phase 2 Step 2.17, Phase 2 Step 2.18 |
 
 ## WebSocket routes
 
 | Item | Introduced / extended in |
 | :-- | :-- |
+| `/ws/` | Phase 1 Step 1.17 |
 | `/ws/rooms/<id>` | Phase 1 Step 1.8 |
 | `/ws/rooms/{id}` | Phase 1 Step 1.17 |
 | `/ws/rooms/{record_id}` | Phase 1 Step 1.8 |
@@ -235,6 +236,7 @@ Generated from the phase guides by `scripts/gen_api_index.py` (kept in the scrat
 | `lae bootstrap build-index` | Phase 1 Step 1.12 |
 | `lae bootstrap export-nt` | Phase 1 Step 1.12 |
 | `lae bootstrap load` | Phase 1 Step 1.12 |
+| `lae bootstrap rewrite-refs` | Phase 1 Step 1.12 |
 | `lae embedder` | Phase 3 Step 3.1 |
 | `lae embeddings migrate` | Phase 4 Step 4.18 |
 | `lae embeddings swap` | Phase 4 Step 4.18 |

@@ -1,72 +1,93 @@
 """One input document → the rows ``lae bootstrap load`` writes (runs in the worker processes).
 
-For each document, in order:
+``parse`` reads an item and finds its source URI; ``build`` does the rest. Between the two the
+loader drops the items whose source URI is already loaded, so a repeated load does none of the
+expensive work. For each document, in order:
 
-1. Parse it (orjson); it must be a JSON object with a string root ``id`` (the record URI).
+1. Parse it (orjson); it must be a JSON object with a string root ``id``, its *source URI*.
 2. Repair ids (``lae.bootstrap.sanitize.clean_ids``); a record with an id that cannot be repaired
-   is reported (``LAE-BOOT-002`` for the root, ``LAE-BOOT-003`` below it).
-3. Validate its public form against the JSON Schema for its ``type``
-   (``lae.validation.schema_map``): the document without internal node IRIs
-   (``strip_internal_iris``), as ``/id/{uuid}`` would serve it, and without the ids that
-   embedded nodes brought with them and nested repeats of the pinned ``@context``
-   (``lae.rdf.strip_embedded_ids``, ``lae.rdf.strip_nested_contexts``, ADR-0028), as
-   ``lae.validation.validate_schema`` checks it. The schemas forbid ``id`` on
-   many embedded nodes (129 of the 184 valid corpus records fail with node IRIs added), and an
-   input may already carry node IRIs (an export of this system, the Spike S6 generator).
-   JSON Schema only, no SHACL.
-4. Assign internal node IRIs (``lae.projection.assign_node_iris``, Spike S3 rule R4).
-5. Build the ``records`` row: ``id`` is the UUID of a local record URI (``<base_uri><uuid>``) or a
-   new UUIDv7 for a record that keeps a URI from elsewhere (ADR-0024), ``etag`` is
-   ``lae.api.records.record_etag`` (BLAKE2b-128 of the canonical JSON, the same function publish
-   uses), and the ``entity_labels`` row comes from ``lae.labels``.
+   is rejected (``LAE-BOOT-002`` for the root, ``LAE-BOOT-003`` below it).
+3. Its root ``type`` must be a Linked Art record class, one with a JSON Schema
+   (``lae.validation.schema_map``); else it is rejected (``LAE-BOOT-004``): the editor has no
+   profile for it.
+4. **Re-mint** (ADR-0030). A source URI of the form ``<base_uri><uuid>`` is kept and its UUID is
+   the record id. Any other gets a new UUIDv7 id and the URI ``<base_uri><uuidv7>``;
+   ``lae.bootstrap.remint.remint`` rewrites the document and adds the source URI to
+   ``equivalent``, and the source URI becomes a ``record_aliases`` row. A root ``id`` that is a
+   node IRI of a local record (``<base_uri><uuid>/node/<uuid>``) is rejected (``LAE-BOOT-002``):
+   ``lae.ids`` already resolves it to the record that owns the node, so it cannot be an alias
+   of another one.
+5. Assign internal node IRIs (``lae.projection.assign_node_iris``, Spike S3 rule R4).
+6. **Expand to RDF** with ``lae.rdf.expand_to_ntriples``, the production expansion. A record it
+   refuses is rejected (``LAE-BOOT-007``) and never reaches PostgreSQL, so PostgreSQL and QLever
+   cannot disagree about which records exist. The triples are thrown away; ``export-nt`` makes
+   them again from the final document.
+7. **Validate** against the JSON Schema for its type (``lae.validation.validate_schema``, which
+   ignores internal node IRIs, the ids embedded nodes brought with them and nested repeats of
+   the pinned ``@context``; ADR-0028). A record that fails is loaded all the same, and its
+   violations become ``qa_findings`` rows (``lae.bootstrap.findings``).
+8. Build the ``records`` row (``etag`` is ``lae.api.records.record_etag``, the function publish
+   uses) and the ``entity_labels`` row (``lae.labels``).
 
-References keep any ``_label`` the source gave them: write-time stub normalization
-(``lae.labels.normalize``) needs every target's ``entity_labels`` row, which a single streaming
-pass does not have, and transclusion on read replaces those labels anyway (ADR-0006).
+References to other records are not touched here: a worker sees one batch, not the whole load.
+``lae.bootstrap.rewrite`` rewrites them, and strips ``_label`` from references whose target is
+known, in a second pass. Neither changes whether a record can be expanded (ADR-0030).
 """
 
 from __future__ import annotations
 
-import functools
 import time
 from collections.abc import Iterable
 from typing import Any, Final, NamedTuple
 from uuid import UUID
 
 import orjson
-from jsonschema import Draft7Validator
-from jsonschema.exceptions import ValidationError
-from referencing import Registry
-from referencing.exceptions import Unresolvable
 
 from lae.api.records import record_etag
 from lae.bootstrap.common import (
+    EXPANSION_FAILED,
     INVALID_ID,
     NO_RECORD_URI,
     NOT_A_RECORD,
-    SCHEMA_INVALID,
+    PREPARE_FAILED,
     UNKNOWN_TYPE,
     Failure,
 )
+from lae.bootstrap.findings import schema_findings
+from lae.bootstrap.remint import local_record_id, remint
 from lae.bootstrap.sanitize import clean_ids
 from lae.bootstrap.source import SourceItem
-from lae.ids import new_uuid7, record_id_from_uri
+from lae.ids import new_uuid7, record_id_from_uri, record_uri
 from lae.labels.extract import labels_from_record
 from lae.labels.upsert import primary_classification
-from lae.projection import assign_node_iris, canonical_json, strip_internal_iris
-from lae.rdf import strip_embedded_ids, strip_nested_contexts
-from lae.validation.schema_map import load_registry, schema_name_for, validator_for
+from lae.projection import assign_node_iris, canonical_json
+from lae.rdf import ExpansionError, expand_to_ntriples
+from lae.validation.schema import validate_schema
+from lae.validation.schema_map import schema_name_for
 
 STAGE: Final = "load"
-MAX_ERRORS: Final = 10
-"""JSON Schema errors listed per record in the report."""
+
+
+class ParsedItem(NamedTuple):
+    """An input item that is a JSON object with a usable root ``id``."""
+
+    source: str
+    """Where it came from: ``<file>`` or ``<file>:<line>``."""
+    source_uri: str
+    """Its root ``id`` after repair: the URI the source knows it by."""
+    document: dict[str, Any]
+    repaired_ids: int
 
 
 class PreparedRecord(NamedTuple):
-    """Everything ``COPY`` needs for one record and its ``entity_labels`` row."""
+    """Everything the loader writes for one record."""
 
     id: UUID
     uri: str
+    """``<base_uri><id>``."""
+    source_uri: str
+    alias: str | None
+    """``source_uri`` if the record was re-minted (its ``record_aliases`` row), else ``None``."""
     type: str
     etag: str
     data: str
@@ -75,112 +96,129 @@ class PreparedRecord(NamedTuple):
     """JSON text of ``{language: label}``."""
     default_label: str
     primary_classification: str | None
+    findings: list[tuple[str, str]]
+    """``(code, params JSON)`` per ``qa_findings`` row (``lae.bootstrap.findings``)."""
     source: str
 
 
 class PreparedBatch(NamedTuple):
-    """What a worker returns for one batch of input items."""
+    """What ``build_batch`` returns for one batch of parsed items."""
 
     records: list[PreparedRecord]
     failures: list[Failure]
-    repaired_ids: int
     cpu_s: float
 
 
-@functools.cache
-def _registry() -> Registry[Any]:
-    return load_registry()
-
-
-@functools.cache
-def _validator(schema_name: str) -> Draft7Validator:
-    return validator_for(schema_name, _registry())
-
-
-def _summarize(error: ValidationError) -> str:
-    pointer = "/" + "/".join(str(part) for part in error.absolute_path)
-    if error.validator == "anyOf":
-        detail = "matches none of the allowed shapes"
-    elif error.validator == "type":
-        detail = f"is not of type {error.validator_value!r}"
-    else:
-        detail = error.message
-    return f"{pointer} {error.validator}: {detail[:300]}"
-
-
-def schema_errors(record: dict[str, Any]) -> list[str]:
-    """Return up to ``MAX_ERRORS`` sorted JSON Schema error summaries (empty if valid).
-
-    Raises ``ValueError`` if the record's ``type`` has no schema (not a record class).
-    """
-    validator = _validator(schema_name_for(record))
-    try:
-        # One pass: as fast as is_valid for a valid record, and half the work for an invalid one.
-        errors = sorted(_summarize(error) for error in validator.iter_errors(record))
-    except Unresolvable as error:
-        errors = [f"(schema) unresolvable $ref: {error.ref}"]
-    if len(errors) > MAX_ERRORS:
-        errors = [*errors[:MAX_ERRORS], f"... and {len(errors) - MAX_ERRORS} more"]
-    return errors
-
-
-def record_id_for(uri: str, base_uri: str) -> UUID:
-    """The ``records.id`` of a record: its UUID if ``uri`` is local, else a new UUIDv7."""
-    return record_id_from_uri(uri, base_uri=base_uri) or new_uuid7()
-
-
-def prepare(item: SourceItem, base_uri: str) -> tuple[PreparedRecord | None, Failure | None, int]:
-    """Turn one input item into a row, or a failure; also return the number of repaired ids."""
+def parse(item: SourceItem) -> ParsedItem | Failure:
+    """Read one input item: a record to build, or the reason it is not one."""
     try:
         document = orjson.loads(item.text)
     except orjson.JSONDecodeError as error:
-        return None, Failure(STAGE, item.source, NOT_A_RECORD, None, [str(error)]), 0
+        return Failure(STAGE, item.source, NOT_A_RECORD, None, [str(error)])
     if not isinstance(document, dict):
-        return None, Failure(STAGE, item.source, NOT_A_RECORD, None, ["not a JSON object"]), 0
+        return Failure(STAGE, item.source, NOT_A_RECORD, None, ["not a JSON object"])
     root_id = document.get("id")
     if not isinstance(root_id, str):
-        return None, Failure(STAGE, item.source, NO_RECORD_URI, None, ["no root id"]), 0
+        return Failure(STAGE, item.source, NO_RECORD_URI, None, ["no root id"])
     cleaned = clean_ids(document)
     if cleaned.invalid:
         code = NO_RECORD_URI if root_id in cleaned.invalid else INVALID_ID
-        return None, Failure(STAGE, item.source, code, root_id, cleaned.invalid), 0
-    document = cleaned.document
-    uri: str = document["id"]
+        return Failure(STAGE, item.source, code, root_id, cleaned.invalid)
+    source_uri: str = cleaned.document["id"]
+    return ParsedItem(item.source, source_uri, cleaned.document, len(cleaned.repaired))
+
+
+def _build(parsed: ParsedItem, base_uri: str, context_version: int) -> PreparedRecord | Failure:
+    document, source_uri = parsed.document, parsed.source_uri
     try:
-        public = strip_embedded_ids(strip_nested_contexts(document), uri)
-        errors = schema_errors(strip_internal_iris(public, uri))
+        schema_name_for(document)
     except ValueError as error:
-        return None, Failure(STAGE, item.source, UNKNOWN_TYPE, uri, [str(error)]), 0
-    if errors:
-        return None, Failure(STAGE, item.source, SCHEMA_INVALID, uri, errors), 0
+        return Failure(STAGE, parsed.source, UNKNOWN_TYPE, source_uri, [str(error)])
+    record_id = local_record_id(source_uri, base_uri)
+    alias: str | None = None
+    if record_id is None and record_id_from_uri(source_uri, base_uri=base_uri) is not None:
+        # A node IRI of a local record: as an alias it would name two records at once.
+        detail = "the root id is a node IRI of a record of this installation"
+        return Failure(STAGE, parsed.source, NO_RECORD_URI, source_uri, [detail])
+    if record_id is None:
+        record_id = new_uuid7()
+        alias = source_uri
+        uri = record_uri(record_id, base_uri=base_uri)
+        document = remint(document, source_uri, uri)
+    else:
+        uri = source_uri
     stored = assign_node_iris(document, uri)
-    data = canonical_json(stored)
+    try:
+        expand_to_ntriples(stored, context_version, record_uri=uri)
+    except ExpansionError as error:
+        detail = f"{type(error).__name__}: {error}"
+        return Failure(STAGE, parsed.source, EXPANSION_FAILED, source_uri, [detail])
+    findings = schema_findings(validate_schema(stored, uri, context_version=context_version))
     labels, default_label = labels_from_record(stored)
-    prepared = PreparedRecord(
-        id=record_id_for(uri, base_uri),
+    return PreparedRecord(
+        id=record_id,
         uri=uri,
+        source_uri=source_uri,
+        alias=alias,
         type=stored["type"],
         etag=record_etag(stored),
-        data=data.decode("utf-8"),
+        data=canonical_json(stored).decode("utf-8"),
         labels=orjson.dumps(labels).decode("utf-8"),
         default_label=default_label,
         primary_classification=primary_classification(stored),
-        source=item.source,
+        findings=findings,
+        source=parsed.source,
     )
-    return prepared, None, len(cleaned.repaired)
 
 
-def prepare_batch(items: Iterable[SourceItem], base_uri: str) -> PreparedBatch:
-    """Worker entry point: prepare a batch of input items."""
+def build(parsed: ParsedItem, base_uri: str, context_version: int) -> PreparedRecord | Failure:
+    """Turn a parsed item into its rows, or the reason it is rejected (module docstring).
+
+    Never raises for a bad document: anything unexpected is reported as ``LAE-BOOT-010``, so one
+    record cannot stop a load of millions.
+    """
+    try:
+        return _build(parsed, base_uri, context_version)
+    except Exception as error:  # noqa: BLE001 - reported per record, see the docstring
+        detail = f"{type(error).__name__}: {error}"
+        return Failure(STAGE, parsed.source, PREPARE_FAILED, parsed.source_uri, [detail[:500]])
+
+
+def prepare(
+    item: SourceItem, base_uri: str, context_version: int
+) -> tuple[PreparedRecord | None, Failure | None]:
+    """``parse`` then ``build`` for one input item: ``(record, None)`` or ``(None, failure)``."""
+    parsed = parse(item)
+    if isinstance(parsed, Failure):
+        return None, parsed
+    built = build(parsed, base_uri, context_version)
+    if isinstance(built, Failure):
+        return None, built
+    return built, None
+
+
+def parse_batch(items: Iterable[SourceItem]) -> tuple[list[ParsedItem], list[Failure]]:
+    """Parse a batch of input items: the records to build and the items that are not records."""
+    parsed: list[ParsedItem] = []
+    failures: list[Failure] = []
+    for item in items:
+        result = parse(item)
+        if isinstance(result, Failure):
+            failures.append(result)
+        else:
+            parsed.append(result)
+    return parsed, failures
+
+
+def build_batch(parsed: Iterable[ParsedItem], base_uri: str, context_version: int) -> PreparedBatch:
+    """Build the rows of a batch of parsed items; rejected ones are returned as failures."""
     cpu0 = time.process_time()
     records: list[PreparedRecord] = []
     failures: list[Failure] = []
-    repaired = 0
-    for item in items:
-        record, failure, repaired_ids = prepare(item, base_uri)
-        if record is not None:
-            records.append(record)
-        if failure is not None:
-            failures.append(failure)
-        repaired += repaired_ids
-    return PreparedBatch(records, failures, repaired, time.process_time() - cpu0)
+    for item in parsed:
+        result = build(item, base_uri, context_version)
+        if isinstance(result, Failure):
+            failures.append(result)
+        else:
+            records.append(result)
+    return PreparedBatch(records, failures, time.process_time() - cpu0)

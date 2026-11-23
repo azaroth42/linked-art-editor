@@ -23,6 +23,14 @@ are therefore anonymous (blank nodes in Turtle). Derived node IRIs (ADR-0021) ex
 RDF sent to QLever, never in JSON-LD, so they cannot appear either; an embedded node that came
 with an ``id`` of its own keeps that original ``id``, as stored.
 
+**Aliases (ADR-0030).** A record re-minted by a bulk load keeps its old URI in
+``record_aliases``. The editor is only ever asked for URIs on its own host (the host of
+``Settings.base_uri``), so those are the aliases it can serve: a request for one answers 301 with
+the record's canonical URI, keeping ``?format``. ``GET /id/{anything}`` that is not a record does
+this lookup itself; a request no route matches reaches ``alias_fallback`` through the
+application's 404 handler (``lae.app``), so an alias anywhere on the host is redirected. An alias
+on another host cannot be redirected from here; it resolves in data, through ``lae.aliases``.
+
 Status: ``deleted`` → 410; ``merged`` → 301 to the URI of ``merged_into`` (keeping ``?format``,
 dropping ``?version``). The status is checked before the version.
 
@@ -56,6 +64,7 @@ import orjson
 from fastapi import APIRouter, Depends, Query, Request, Response, status
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from lae.aliases import resolve_local_alias
 from lae.api.deps import locale_chain
 from lae.api.errors import ApiError
 from lae.api.records import (
@@ -75,7 +84,7 @@ from lae.db.models import Record
 from lae.db.session import get_session
 from lae.ids import record_id_from_uri, record_uri
 from lae.labels.transclude import hydrate_labels
-from lae.logging import bind_log_context
+from lae.logging import bind_log_context, get_logger
 from lae.projection import strip_internal_iris
 from lae.rdf import to_turtle
 from lae.reader.assets import SCRIPT_SRC
@@ -113,6 +122,8 @@ _ETAGC: Final = re.compile(r"[\x21\x23-\x7e]+")
 """RFC 9110 ``etagc``: what may stand between the quotes of an entity tag."""
 
 router = APIRouter(prefix="/id", tags=["public"])
+
+logger = get_logger(__name__)
 
 
 def jsonld_content_type(context_version: int) -> str:
@@ -252,12 +263,61 @@ def reader_page(
     return render_page(page, catalogue)
 
 
-def parse_record_id(value: str, base_uri: str) -> UUID:
-    """Return the record id of a ``{uuid}`` path segment in canonical form, else raise 404."""
+def parse_record_id(value: str, base_uri: str) -> UUID | None:
+    """Return the record id of a ``{uuid}`` path segment in canonical form, else ``None``."""
     record_id = record_id_from_uri(base_uri + value, base_uri=base_uri)
     if record_id is None or "/" in value:
-        raise not_found()
+        return None
     return record_id
+
+
+def _sent_path(request: Request) -> str:
+    """The request path as it was sent (percent-encoding kept), as alias URIs are stored."""
+    raw = request.scope.get("raw_path")
+    if isinstance(raw, bytes):
+        return raw.decode("latin-1").partition("?")[0]
+    return request.url.path
+
+
+async def alias_redirect(
+    request: Request, session: AsyncSession, settings: Settings
+) -> Response | None:
+    """Return a 301 to the canonical record URI if this request is for an alias, else ``None``.
+
+    The alias is looked up as a URI on the host of ``settings.base_uri`` with the request's path
+    (``lae.aliases.local_alias_candidates``). ``?format=`` is passed on unless the query string
+    was part of the alias itself.
+    """
+    query = request.url.query
+    found = await resolve_local_alias(session, _sent_path(request), query, settings.base_uri)
+    if found is None:
+        return None
+    alias, record_id = found
+    location = record_uri(record_id, base_uri=settings.base_uri)
+    format_ = request.query_params.get("format")
+    if format_ in {member.value for member in Representation} and "?" not in alias:
+        location += f"?format={format_}"
+    bind_log_context(record_id=record_id)
+    return Response(status_code=status.HTTP_301_MOVED_PERMANENTLY, headers={"Location": location})
+
+
+async def alias_fallback(request: Request) -> Response | None:
+    """``alias_redirect`` for a request that matched no route (called by the 404 handler).
+
+    Only ``GET`` and ``HEAD`` are redirected. Opens its own session; a failure to look the alias
+    up is logged and treated as "not an alias", so the caller still answers 404.
+    """
+    if request.method not in ("GET", "HEAD"):
+        return None
+    sessionmaker = getattr(request.app.state, "sessionmaker", None)
+    if sessionmaker is None:
+        return None
+    try:
+        async with sessionmaker() as session:
+            return await alias_redirect(request, session, request.app.state.settings)
+    except Exception as error:  # noqa: BLE001 - the 404 must still be answered
+        logger.warning("alias_lookup_failed", path=request.url.path, error=repr(error))
+        return None
 
 
 @router.get(
@@ -267,7 +327,9 @@ def parse_record_id(value: str, base_uri: str) -> UUID:
         status.HTTP_200_OK: {
             "content": {JSONLD_MEDIA_TYPE: {}, TURTLE_MEDIA_TYPE: {}, HTML_MEDIA_TYPE: {}}
         },
-        status.HTTP_301_MOVED_PERMANENTLY: {"description": "Merged (LAE-REC-003)"},
+        status.HTTP_301_MOVED_PERMANENTLY: {
+            "description": "Merged (LAE-REC-003), or an alias of a re-minted record"
+        },
         status.HTTP_304_NOT_MODIFIED: {"description": "If-None-Match matched"},
         status.HTTP_404_NOT_FOUND: {"description": "LAE-REC-001, LAE-REC-004"},
         status.HTTP_410_GONE: {"description": "Deleted (LAE-REC-002)"},
@@ -286,9 +348,15 @@ async def dereference(
 ) -> Response:
     """Serve a published record as JSON-LD, Turtle, or HTML (see the module docstring)."""
     record_id = parse_record_id(record_uuid, settings.base_uri)
+    record = None if record_id is None else await session.get(Record, record_id)
+    if record is None:
+        # Not a record of this installation: perhaps the URI one had before it was re-minted.
+        redirect = await alias_redirect(request, session, settings)
+        if redirect is not None:
+            return redirect
+        raise not_found()
     bind_log_context(record_id=record_id)
-    record = await session.get(Record, record_id)
-    if record is None or record.version < 1:
+    if record.version < 1:
         raise not_found()
     merged_location = ""
     if record.merged_into is not None:

@@ -1,26 +1,46 @@
 """``lae bootstrap load``: stream Linked Art JSON-LD into ``records`` and ``entity_labels``.
 
-The main process reads the input (``lae.bootstrap.source``) and hands it out in batches of
-``--batch`` records (10,000) to a pool of worker processes. Each worker prepares its batch
-(``lae.bootstrap.records``: id repair, JSON Schema, internal node IRIs, etag, labels) and writes
-it with two binary ``COPY`` statements, ``records`` then ``entity_labels``, in one transaction on
-its own connection. At most ``--streams`` workers copy at the same time (Spike S6: four streams
-are 2.2x one on stock Postgres settings, eight add nothing). Rows are written as published
-version 1: ``version = 1``, ``status = 'active'``, ``context_version = settings.context_version``,
-and ``draft_epoch = 0`` once that column exists (migration 0006, Step 1.8; its default is 0).
-Bulk-loaded records have no ``record_revisions`` row until they are first edited (spec §3.3).
+A load has two passes, both in one pool of worker processes (ADR-0030).
 
-**Failures.** An input item that is not a record, has an id that cannot be repaired, or fails
-JSON Schema is written to the report (JSON Lines, ``LAE-BOOT-*`` codes) and skipped. So is a
-record whose URI is already in ``records`` or occurs earlier in the input: ``COPY`` fails on the
-unique index, and the worker then finds the duplicates, reports them, and writes the rest of the
-batch, upserting the labels. With several streams, which of two equal URIs in different batches
-is kept is not defined.
+**Pass 1: load.** The main process reads the input (``lae.bootstrap.source``) and hands it out
+in batches of ``--batch`` records (10,000). Each worker parses its batch, drops the items whose
+source URI is already loaded, and prepares the rest (``lae.bootstrap.records``): id repair,
+re-minting to ``<base_uri><uuidv7>``, internal node IRIs, the RDF expansion check, JSON Schema,
+etag, labels. It then writes the batch in one transaction on its own connection with binary
+``COPY``: ``records``, ``entity_labels``, ``record_aliases`` (the source URI of every re-minted
+record) and ``qa_findings`` (the schema failures of records loaded anyway). At most ``--streams``
+workers write at the same time (Spike S6: four streams are 2.2x one on stock Postgres settings,
+eight add nothing). Rows are written as published version 1: ``version = 1``,
+``status = 'active'``, ``context_version = settings.context_version``, and ``draft_epoch = 0``
+once that column exists (Step 1.8; its default is 0). Bulk-loaded records have
+no ``record_revisions`` row until they are first edited (spec §3.3).
+
+**Pass 2: rewrite and normalize** (``lae.bootstrap.rewrite``). Every reference to a re-minted
+record is rewritten to its new URI, and ``_label`` is stripped from references whose target has
+an ``entity_labels`` row. It runs over the rows created since the load began, or since an
+earlier load that did not finish.
+
+**What is not loaded.** An input item is written to the report (JSON Lines, ``LAE-BOOT-*``
+codes) and skipped when it is not a record (001), has an id that cannot be repaired (002, 003),
+is of no Linked Art record class (004), cannot be expanded to RDF (007), or fails in a way
+nothing else covers (010). So is a record that is already loaded (006): its source URI is a
+``records.uri`` or a ``record_aliases.alias_uri``, or that of a record loaded earlier from the
+input (an earlier item that was rejected does not count). Loading the
+same input again therefore writes nothing. Two equal source URIs in batches that two workers
+write at the same moment are caught by the unique indexes (``COPY`` fails, and the worker looks
+again and writes the rest); which of the two is kept is not defined.
+
+A record that fails JSON Schema *is* loaded; the summary counts such records and their findings.
+
+**One load at a time.** The main connection holds an advisory lock for the whole run; a second
+``load`` (or ``rewrite-refs``) on the same database stops at once. Memory is bounded by the
+batches in flight: the alias map is never held in memory, pass 2 looks aliases up per batch.
 
 At the end, ``sync_state`` records ``bootstrap_context_version`` and
 ``bootstrap_expander_version`` (ADR-0007), the metatypes that records state inline on the concepts
 they reference are added to those concepts' ``entity_labels`` rows
-(``lae.vocab.metatypes.harvest_all_metatypes``, ADR-0032), and both tables are analyzed.
+(``lae.vocab.metatypes.harvest_all_metatypes``, ADR-0032; after pass 2, so under the final
+URIs), and the tables are vacuumed and analyzed.
 """
 
 from __future__ import annotations
@@ -32,25 +52,43 @@ import sys
 import time
 from collections.abc import Iterable, Iterator
 from concurrent.futures import ProcessPoolExecutor
+from datetime import datetime
 from itertools import islice
-from multiprocessing.synchronize import Semaphore
 from pathlib import Path
 from typing import Any, Final, NamedTuple
 
 import asyncpg
 
+from lae.aliases import BOOTSTRAP_SOURCE
 from lae.bootstrap.common import (
     BOOTSTRAP_CONTEXT_VERSION,
     BOOTSTRAP_EXPANDER_VERSION,
+    BOOTSTRAP_REWRITE_SINCE,
     DUPLICATE_URI,
     Failure,
     Report,
     asyncpg_dsn,
+    get_sync_state,
     set_sync_state,
 )
-from lae.bootstrap.records import STAGE, PreparedRecord, prepare_batch
+from lae.bootstrap.records import (
+    STAGE,
+    ParsedItem,
+    PreparedRecord,
+    build_batch,
+    parse_batch,
+)
+from lae.bootstrap.rewrite import (
+    acquire_load_lock,
+    finish,
+    has_column,
+    index_is_stale,
+    rewrite_pass,
+)
 from lae.bootstrap.source import SourceItem, iter_source
-from lae.db.models import EntityLabelStatus, RecordStatus
+from lae.bootstrap.worker import Worker, current, init_worker
+from lae.db.models import EntityLabelStatus, QaFindingSeverity, RecordStatus
+from lae.ids import new_uuid7
 from lae.labels.upsert import LOCAL_SOURCE
 from lae.rdf import EXPANDER_VERSION
 from lae.settings import Settings
@@ -82,6 +120,9 @@ LABEL_COLUMNS: Final = (
     "source",
     "status",
 )
+ALIAS_COLUMNS: Final = ("alias_uri", "record_id", "source")
+FINDING_COLUMNS: Final = ("id", "code", "severity", "record_id", "params", "sweep_run_id")
+
 _LABEL_UPSERT: Final = """
 INSERT INTO entity_labels (uri, type, labels, default_label, primary_classification, source, status)
 VALUES ($1, $2, $3::jsonb, $4, $5, $6, $7::entity_labels_status)
@@ -94,6 +135,11 @@ ON CONFLICT (uri) DO UPDATE SET
     status = EXCLUDED.status,
     updated_at = now()
 """
+_LOADED: Final = """
+SELECT alias_uri FROM record_aliases WHERE alias_uri = ANY($1::text[])
+UNION ALL
+SELECT uri FROM records WHERE uri = ANY($1::text[])
+"""
 
 
 class LoadedBatch(NamedTuple):
@@ -101,41 +147,16 @@ class LoadedBatch(NamedTuple):
 
     items: int
     written: int
+    reminted: int
+    flagged: int
+    findings: dict[str, int]
     failures: list[Failure]
     repaired_ids: int
     prepare_cpu_s: float
     copy_s: float
 
 
-class _Worker:
-    """Per-process state of a load worker: its event loop, connection and settings."""
-
-    loop: asyncio.AbstractEventLoop
-    conn: asyncpg.Connection
-    base_uri: str
-    context_version: int
-    draft_epoch: bool
-    copy_slots: Semaphore
-
-
-_WORKER: _Worker | None = None
-
-
-def _init_worker(
-    dsn: str, base_uri: str, context_version: int, draft_epoch: bool, copy_slots: Semaphore
-) -> None:
-    global _WORKER
-    worker = _Worker()
-    worker.loop = asyncio.new_event_loop()
-    worker.conn = worker.loop.run_until_complete(asyncpg.connect(dsn))
-    worker.base_uri = base_uri
-    worker.context_version = context_version
-    worker.draft_epoch = draft_epoch
-    worker.copy_slots = copy_slots
-    _WORKER = worker
-
-
-def _record_rows(worker: _Worker, records: Iterable[PreparedRecord]) -> list[tuple[Any, ...]]:
+def _record_rows(worker: Worker, records: Iterable[PreparedRecord]) -> list[tuple[Any, ...]]:
     extra = (0,) if worker.draft_epoch else ()
     status = RecordStatus.ACTIVE.value
     return [
@@ -160,55 +181,103 @@ def _label_rows(records: Iterable[PreparedRecord]) -> list[tuple[Any, ...]]:
     ]
 
 
-def _record_columns(worker: _Worker) -> tuple[str, ...]:
+def _alias_rows(records: Iterable[PreparedRecord]) -> list[tuple[Any, ...]]:
+    return [(r.alias, r.id, BOOTSTRAP_SOURCE) for r in records if r.alias is not None]
+
+
+def _finding_rows(worker: Worker, records: Iterable[PreparedRecord]) -> list[tuple[Any, ...]]:
+    severity = QaFindingSeverity.ERROR.value
+    return [
+        (new_uuid7(), code, severity, r.id, params, worker.run_id)
+        for r in records
+        for code, params in r.findings
+    ]
+
+
+def _record_columns(worker: Worker) -> tuple[str, ...]:
     return (*RECORD_COLUMNS, DRAFT_EPOCH_COLUMN) if worker.draft_epoch else RECORD_COLUMNS
 
 
-async def _copy(worker: _Worker, records: list[PreparedRecord]) -> None:
+async def _copy(worker: Worker, records: list[PreparedRecord], *, upsert_labels: bool) -> None:
+    """Write one batch in one transaction; ``UniqueViolationError`` leaves nothing behind."""
     conn = worker.conn
     async with conn.transaction():
         await conn.copy_records_to_table(
             "records", records=_record_rows(worker, records), columns=_record_columns(worker)
         )
-        await conn.copy_records_to_table(
-            "entity_labels", records=_label_rows(records), columns=LABEL_COLUMNS
-        )
+        if upsert_labels:
+            await conn.executemany(_LABEL_UPSERT, _label_rows(records))
+        else:
+            await conn.copy_records_to_table(
+                "entity_labels", records=_label_rows(records), columns=LABEL_COLUMNS
+            )
+        aliases = _alias_rows(records)
+        if aliases:
+            await conn.copy_records_to_table(
+                "record_aliases", records=aliases, columns=ALIAS_COLUMNS
+            )
+        findings = _finding_rows(worker, records)
+        if findings:
+            await conn.copy_records_to_table(
+                "qa_findings", records=findings, columns=FINDING_COLUMNS
+            )
+
+
+async def _loaded(conn: asyncpg.Connection, source_uris: list[str]) -> set[str]:
+    """Return those of ``source_uris`` that are already a record URI or an alias."""
+    if not source_uris:
+        return set()
+    return {row[0] for row in await conn.fetch(_LOADED, source_uris)}
+
+
+def _split_new(
+    items: Iterable[ParsedItem], loaded: set[str]
+) -> tuple[list[ParsedItem], list[ParsedItem]]:
+    """Split parsed items into those whose source URI is not loaded yet, and the duplicates."""
+    new: list[ParsedItem] = []
+    duplicates: list[ParsedItem] = []
+    for item in items:
+        (duplicates if item.source_uri in loaded else new).append(item)
+    return new, duplicates
+
+
+def _first_of_each(
+    records: Iterable[PreparedRecord],
+) -> tuple[list[PreparedRecord], list[PreparedRecord]]:
+    """Split a batch's records into the first with each source URI, and the repeats.
+
+    This runs after the records were built, so an item that was rejected does not make a later,
+    good item with the same URI a duplicate of something that was never loaded.
+    """
+    keep: list[PreparedRecord] = []
+    repeats: list[PreparedRecord] = []
+    seen: set[str] = set()
+    for record in records:
+        if record.source_uri in seen:
+            repeats.append(record)
+        else:
+            seen.add(record.source_uri)
+            keep.append(record)
+    return keep, repeats
 
 
 async def _copy_without_duplicates(
-    worker: _Worker, records: list[PreparedRecord]
+    worker: Worker, records: list[PreparedRecord]
 ) -> list[PreparedRecord]:
-    """Write the records whose URI is new; upsert their labels; return the duplicates."""
-    conn = worker.conn
-    existing = {
-        row[0]
-        for row in await conn.fetch(
-            "SELECT uri FROM records WHERE uri = ANY($1::text[])", [r.uri for r in records]
-        )
-    }
-    keep: list[PreparedRecord] = []
-    duplicates: list[PreparedRecord] = []
-    seen: set[str] = set()
-    for record in records:
-        if record.uri in existing or record.uri in seen:
-            duplicates.append(record)
-        else:
-            seen.add(record.uri)
-            keep.append(record)
-    async with conn.transaction():
-        await conn.copy_records_to_table(
-            "records", records=_record_rows(worker, keep), columns=_record_columns(worker)
-        )
-        await conn.executemany(_LABEL_UPSERT, _label_rows(keep))
-    return duplicates
+    """Write the records that are not loaded yet; upsert their labels; return the duplicates."""
+    loaded = await _loaded(worker.conn, [r.source_uri for r in records])
+    keep = [r for r in records if r.source_uri not in loaded]
+    if keep:
+        await _copy(worker, keep, upsert_labels=True)
+    return [r for r in records if r.source_uri in loaded]
 
 
-async def _write(worker: _Worker, records: list[PreparedRecord]) -> list[PreparedRecord]:
+async def _write(worker: Worker, records: list[PreparedRecord]) -> list[PreparedRecord]:
     """Write a batch; return the records skipped as duplicates."""
     if not records:
         return []
     try:
-        await _copy(worker, records)
+        await _copy(worker, records, upsert_labels=False)
         return []
     except asyncpg.UniqueViolationError:
         pass
@@ -221,26 +290,44 @@ async def _write(worker: _Worker, records: list[PreparedRecord]) -> list[Prepare
     return await _copy_without_duplicates(worker, records)
 
 
+def _duplicate(source: str, source_uri: str) -> Failure:
+    return Failure(
+        STAGE, source, DUPLICATE_URI, source_uri, ["a record with this URI is already loaded"]
+    )
+
+
 def load_batch(items: list[SourceItem]) -> LoadedBatch:
     """Worker entry point: prepare one batch and ``COPY`` it."""
-    worker = _WORKER
-    assert worker is not None, "load_batch runs in a pool started with _init_worker"
-    prepared = prepare_batch(items, worker.base_uri)
+    worker = current()
+    cpu0 = time.process_time()
+    parsed, failures = parse_batch(items)
+    parse_cpu_s = time.process_time() - cpu0
+    loaded: set[str] = worker.run(_loaded(worker.conn, [p.source_uri for p in parsed]))
+    new, known = _split_new(parsed, loaded)
+    failures.extend(_duplicate(p.source, p.source_uri) for p in known)
+    prepared = build_batch(new, worker.base_uri, worker.context_version)
+    failures.extend(prepared.failures)
+    records, repeats = _first_of_each(prepared.records)
     started = time.perf_counter()
-    with worker.copy_slots:
-        duplicates = worker.loop.run_until_complete(_write(worker, prepared.records))
+    with worker.write_slots:
+        duplicates: list[PreparedRecord] = worker.run(_write(worker, records))
     copy_s = time.perf_counter() - started
-    failures = list(prepared.failures)
-    failures.extend(
-        Failure(STAGE, r.source, DUPLICATE_URI, r.uri, ["a record with this URI is already loaded"])
-        for r in duplicates
-    )
+    failures.extend(_duplicate(r.source, r.source_uri) for r in (*repeats, *duplicates))
+    skipped = {id(r) for r in duplicates}
+    written = [r for r in records if id(r) not in skipped]
+    findings: dict[str, int] = {}
+    for record in written:
+        for code, _ in record.findings:
+            findings[code] = findings.get(code, 0) + 1
     return LoadedBatch(
         items=len(items),
-        written=len(prepared.records) - len(duplicates),
+        written=len(written),
+        reminted=sum(1 for r in written if r.alias is not None),
+        flagged=sum(1 for r in written if r.findings),
+        findings=findings,
         failures=failures,
-        repaired_ids=prepared.repaired_ids,
-        prepare_cpu_s=prepared.cpu_s,
+        repaired_ids=sum(p.repaired_ids for p in new),
+        prepare_cpu_s=parse_cpu_s + prepared.cpu_s,
         copy_s=copy_s,
     )
 
@@ -250,20 +337,13 @@ def _batches(items: Iterator[SourceItem], size: int) -> Iterator[list[SourceItem
         yield chunk
 
 
-async def _has_column(conn: asyncpg.Connection, table: str, column: str) -> bool:
-    found: bool = await conn.fetchval(
-        "SELECT EXISTS (SELECT 1 FROM information_schema.columns "
-        "WHERE table_schema = current_schema() AND table_name = $1 AND column_name = $2)",
-        table,
-        column,
-    )
-    return found
-
-
 class _Totals:
     def __init__(self) -> None:
         self.items = 0
         self.written = 0
+        self.reminted = 0
+        self.flagged = 0
+        self.findings: dict[str, int] = {}
         self.repaired_ids = 0
         self.prepare_cpu_s = 0.0
         self.copy_s = 0.0
@@ -271,9 +351,27 @@ class _Totals:
     def add(self, batch: LoadedBatch) -> None:
         self.items += batch.items
         self.written += batch.written
+        self.reminted += batch.reminted
+        self.flagged += batch.flagged
+        for code, count in batch.findings.items():
+            self.findings[code] = self.findings.get(code, 0) + count
         self.repaired_ids += batch.repaired_ids
         self.prepare_cpu_s += batch.prepare_cpu_s
         self.copy_s += batch.copy_s
+
+
+async def _rewrite_since(conn: asyncpg.Connection) -> datetime:
+    """Return the time pass 2 starts from, and record it until the load has finished.
+
+    An earlier load that did not finish left its own, earlier time: keep it, so that this load's
+    second pass completes that one's rows as well.
+    """
+    pending = await get_sync_state(conn, BOOTSTRAP_REWRITE_SINCE)
+    if isinstance(pending, str):
+        return datetime.fromisoformat(pending)
+    since: datetime = await conn.fetchval("SELECT now()")
+    await set_sync_state(conn, {BOOTSTRAP_REWRITE_SINCE: since.isoformat()})
+    return since
 
 
 async def load(
@@ -286,12 +384,18 @@ async def load(
     workers: int | None = None,
     progress_every: int = 100_000,
 ) -> dict[str, Any]:
-    """Load every record of ``input_path`` (a directory or a JSON Lines file); return a summary."""
+    """Load every record of ``input_path`` (a directory or a JSON Lines file); return a summary.
+
+    Raises ``BootstrapError`` if another load is running on the database.
+    """
     workers = workers or os.cpu_count() or 1
     dsn = asyncpg_dsn(settings.database_url)
     conn = await asyncpg.connect(dsn)
     try:
-        draft_epoch = await _has_column(conn, "records", DRAFT_EPOCH_COLUMN)
+        await acquire_load_lock(conn)
+        draft_epoch = await has_column(conn, "records", DRAFT_EPOCH_COLUMN)
+        since = await _rewrite_since(conn)
+        run_id = new_uuid7()
         loop = asyncio.get_running_loop()
         context = multiprocessing.get_context("spawn")
         totals = _Totals()
@@ -302,12 +406,13 @@ async def load(
             ProcessPoolExecutor(
                 workers,
                 mp_context=context,
-                initializer=_init_worker,
+                initializer=init_worker,
                 initargs=(
                     dsn,
                     settings.base_uri,
                     settings.context_version,
                     draft_epoch,
+                    run_id,
                     context.Semaphore(streams),
                 ),
             ) as pool,
@@ -334,35 +439,58 @@ async def load(
                 done, _ = await asyncio.wait(pending)
                 collect(done)
             failures = dict(sorted(report.counts.items()))
-        load_s = time.perf_counter() - started
+            load_s = time.perf_counter() - started
+
+            # Pass 2 looks every reference up in these tables: give the planner their sizes.
+            for table in ("records", "record_aliases", "entity_labels"):
+                await conn.execute(f"ANALYZE {table}")
+            rewrite = await rewrite_pass(
+                conn,
+                pool,
+                since=since,
+                batch=batch,
+                inflight=workers + 1,
+                progress_every=progress_every,
+            )
         versions = {
             BOOTSTRAP_CONTEXT_VERSION: settings.context_version,
             BOOTSTRAP_EXPANDER_VERSION: EXPANDER_VERSION,
         }
         await set_sync_state(conn, versions)
         metatypes_harvested = await harvest_all_metatypes(conn)
-        await conn.execute("ANALYZE records")
-        await conn.execute("ANALYZE entity_labels")
+        finish_started = time.perf_counter()
+        await finish(conn, changed=rewrite["changed"] > 0)
+        finish_s = time.perf_counter() - finish_started
         records_total = await conn.fetchval("SELECT count(*) FROM records")
+        stale = await index_is_stale(conn, changed=totals.written > 0 or rewrite["changed"] > 0)
     finally:
         await conn.close()
+    seconds = time.perf_counter() - started
     return {
         "stage": STAGE,
         "input": str(input_path),
+        "run_id": str(run_id),
         "workers": workers,
         "streams": streams,
         "batch": batch,
         "items": totals.items,
         "records_written": totals.written,
+        "records_reminted": totals.reminted,
+        "records_flagged": totals.flagged,
+        "findings": dict(sorted(totals.findings.items())),
         "records_skipped": sum(failures.values()),
         "failures": failures,
         "report": str(report_path),
         "repaired_ids": totals.repaired_ids,
-        "seconds": round(load_s, 2),
+        "seconds": round(seconds, 2),
+        "load_seconds": round(load_s, 2),
         "records_per_s": round(totals.written / max(load_s, 1e-9)),
         "prepare_cpu_s": round(totals.prepare_cpu_s, 1),
         "copy_s": round(totals.copy_s, 1),
+        "rewrite": rewrite,
+        "finish_seconds": round(finish_s, 2),
         "records_total": records_total,
         "metatypes_harvested": metatypes_harvested,
+        "index_rebuild_needed": stale,
         "sync_state": versions,
     }

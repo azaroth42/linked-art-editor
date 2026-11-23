@@ -1451,7 +1451,7 @@ export interface operations {
                     "text/html": unknown;
                 };
             };
-            /** @description Merged (LAE-REC-003) */
+            /** @description Merged (LAE-REC-003), or an alias of a re-minted record */
             301: {
                 headers: {
                     [name: string]: unknown;

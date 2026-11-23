@@ -1,6 +1,6 @@
 # ADR-0024: Bulk-loaded records keep the URIs they arrive with
 
-**Status:** Accepted (owner to confirm; `docs/questions.md`, Step 1.12) · **Date:** 2026-11-22 · **Decided by:** Claude Opus 5.5 as the implementing agent of Phase 1 Step 1.12, under conventions §8 (spec silent) · **Recorded by:** Claude
+**Status:** Superseded by [ADR-0030](0030-bulk-load-remints-and-flags.md) (owner decision, 2026-11-22: bulk-loaded records are re-minted) · **Date:** 2026-11-22 · **Decided by:** Claude Opus 5.5 as the implementing agent of Phase 1 Step 1.12, under conventions §8 (spec silent) · **Recorded by:** Claude
 
 ## Context
 `lae bootstrap load` writes `records` rows from existing Linked Art JSON-LD. Decision A6 says record ids are UUIDv7 and public URIs are flat `/id/{uuidv7}`, which is how the editor mints new records (Step 1.6). The spec does not say what happens to a record that already has a URI from elsewhere. The golden corpus, which Step 1.12's Verify loads, is entirely such records (`https://linked.art/example/object/0`, `https://ycba-lux.s3.amazonaws.com/v3/object/…`), and an institution migrating into the editor brings its own published URIs. `records.id` is a UUID primary key and cannot hold those URIs.

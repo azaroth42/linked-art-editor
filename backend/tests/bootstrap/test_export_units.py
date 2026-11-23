@@ -31,7 +31,7 @@ def stored_rows() -> list[tuple[str, str, int]]:
     """``(uri, data, context_version)`` of every corpus record the load would store."""
     rows = []
     for item in iter_source(CORPUS_DIR):
-        record, _, _ = prepare(item, BASE_URI)
+        record, _ = prepare(item, BASE_URI, 1)
         if record is not None:
             rows.append((record.uri, record.data, 1))
     return rows
@@ -41,7 +41,7 @@ def test_the_batch_is_exactly_the_records_expansions() -> None:
     rows = stored_rows()
     batch = expand_batch(rows, compress=False)
     assert batch.failures == []
-    assert batch.records == len(rows) == 184
+    assert batch.records == len(rows) == 276
     lines = batch.data.decode().splitlines()
     assert len(lines) == batch.triples
     expected: set[str] = set()

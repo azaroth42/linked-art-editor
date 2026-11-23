@@ -1,4 +1,4 @@
-"""``lae bootstrap <load|export-nt|build-index|aat-labels>``: argument parsing and dispatch.
+"""``lae bootstrap <load|rewrite-refs|export-nt|build-index|aat-labels>``: parsing and dispatch.
 
 The stage modules are imported only when their sub-command runs, so ``lae --help`` and the other
 commands do not pay for pyld or the JSON Schema registry.
@@ -19,6 +19,7 @@ EXIT_FAILED = 1
 
 SUBCOMMANDS: dict[str, str] = {
     "load": "Stream Linked Art JSON-LD into records and entity_labels with COPY.",
+    "rewrite-refs": "Rewrite references to re-minted records in every bulk-loaded record.",
     "export-nt": "Expand every active record (and sidecar labels) into one N-Triples file.",
     "build-index": "Build a QLever index from an export and start the server.",
     "aat-labels": "Seed entity_labels with Getty AAT terms from a CSV.",
@@ -35,11 +36,18 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
         "--report",
         type=Path,
         default=Path("bootstrap-load-report.jsonl"),
-        help="JSON Lines file listing the records that were skipped, and why",
+        help="JSON Lines file listing the records that were not loaded, and why",
     )
     load.add_argument("--batch", type=int, default=10_000, help="records per COPY batch")
     load.add_argument("--streams", type=int, default=4, help="concurrent COPY connections")
     load.add_argument("--workers", type=int, help="worker processes (default: CPU count)")
+
+    rewrite = sub.add_parser(
+        "rewrite-refs", help=SUBCOMMANDS["rewrite-refs"], description=SUBCOMMANDS["rewrite-refs"]
+    )
+    rewrite.add_argument("--batch", type=int, default=10_000, help="records per worker task")
+    rewrite.add_argument("--streams", type=int, default=4, help="concurrent writing connections")
+    rewrite.add_argument("--workers", type=int, help="worker processes (default: CPU count)")
 
     export = sub.add_parser(
         "export-nt", help=SUBCOMMANDS["export-nt"], description=SUBCOMMANDS["export-nt"]
@@ -84,6 +92,14 @@ def _run_stage(args: argparse.Namespace, settings: Settings) -> dict[str, Any]:
                 workers=args.workers,
             )
         )
+    if stage == "rewrite-refs":
+        from lae.bootstrap.rewrite import rewrite_refs
+
+        return asyncio.run(
+            rewrite_refs(
+                settings=settings, batch=args.batch, streams=args.streams, workers=args.workers
+            )
+        )
     if stage == "export-nt":
         from lae.bootstrap.export import export_nt
 
@@ -116,12 +132,12 @@ def _run_stage(args: argparse.Namespace, settings: Settings) -> dict[str, Any]:
 
 def run(args: argparse.Namespace) -> int:
     """Run the selected stage, print its JSON summary; return the exit code."""
-    from lae.bootstrap.common import print_summary
+    from lae.bootstrap.common import BootstrapError, print_summary
     from lae.bootstrap.index import IndexBuildError
 
     try:
         summary = _run_stage(args, get_settings())
-    except (IndexBuildError, FileNotFoundError) as error:
+    except (BootstrapError, IndexBuildError, FileNotFoundError) as error:
         print(f"lae bootstrap {args.stage}: {error}", file=sys.stderr)
         return EXIT_FAILED
     print_summary(summary)

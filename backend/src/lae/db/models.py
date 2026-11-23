@@ -98,6 +98,23 @@ class OutboxEventStatus(StrEnum):
     FAILED = "failed"
 
 
+class QaFindingSeverity(StrEnum):
+    """``qa_findings.severity`` (Phase 3 Step 3.10)."""
+
+    INFO = "info"
+    WARNING = "warning"
+    ERROR = "error"
+
+
+class QaFindingStatus(StrEnum):
+    """``qa_findings.status`` (Phase 3 Step 3.10)."""
+
+    OPEN = "open"
+    CLAIMED = "claimed"
+    RESOLVED = "resolved"
+    DISMISSED = "dismissed"
+
+
 class UserKind(StrEnum):
     """``users.kind``: agents are service accounts (Phase 3 Step 3.4)."""
 
@@ -160,6 +177,25 @@ class RecordRevision(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=NOW)
 
 
+class RecordAlias(Base):
+    """A URI a record was known by before it got its ``<base_uri><uuid>`` URI (ADR-0030).
+
+    A bulk load re-mints every record that arrives with a URI from elsewhere and keeps that URI
+    here. ``lae.aliases`` resolves an alias to its record; later loads rewrite references to an
+    alias; ``lae.api.public`` redirects the aliases that lie on the editor's own host.
+    """
+
+    __tablename__ = "record_aliases"
+
+    alias_uri: Mapped[str] = mapped_column(Text, primary_key=True)
+    record_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("records.id", ondelete="CASCADE"), index=True
+    )
+    # What created the alias: ``bootstrap`` for ``lae bootstrap load``.
+    source: Mapped[str] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=NOW)
+
+
 class EntityLabel(Base):
     """Label lookup row for a local record or a sidecar entity (spec §3.1, §3.2)."""
 
@@ -190,6 +226,55 @@ class EntityLabel(Base):
     )
     # Migration 0010: how often QLever's default graph points at the entity (lae.vocab.usage).
     usage_count: Mapped[int] = mapped_column(Integer, server_default=text("0"))
+
+
+class QaFinding(Base):
+    """One quality finding about a record (Phase 3 Step 3.10 columns; created by ADR-0030).
+
+    ``lae bootstrap load`` writes the JSON Schema failures of the records it loads anyway
+    (``lae.bootstrap.findings``); the QA sweeps of Step 3.10 add theirs. A finding is keyed by
+    ``(code, record_id, node_id)``, a missing ``node_id`` included.
+    """
+
+    __tablename__ = "qa_findings"
+    __table_args__ = (
+        Index(
+            "uq_qa_findings_code_record_id_node_id",
+            "code",
+            "record_id",
+            "node_id",
+            unique=True,
+            postgresql_nulls_not_distinct=True,
+        ),
+        Index("ix_qa_findings_status_code", "status", "code"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(Uuid, primary_key=True, default=uuid7)
+    code: Mapped[str] = mapped_column(Text)
+    severity: Mapped[QaFindingSeverity] = mapped_column(
+        _pg_enum(QaFindingSeverity, "qa_findings_severity")
+    )
+    record_id: Mapped[uuid.UUID] = mapped_column(
+        ForeignKey("records.id", ondelete="CASCADE"), index=True
+    )
+    node_id: Mapped[str | None] = mapped_column(Text)
+    params: Mapped[dict[str, Any]] = mapped_column(JSONB, server_default=EMPTY_JSON_OBJECT)
+    status: Mapped[QaFindingStatus] = mapped_column(
+        _pg_enum(QaFindingStatus, "qa_findings_status"),
+        server_default=QaFindingStatus.OPEN.value,
+    )
+    claimed_by: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    resolved_by: Mapped[uuid.UUID | None] = mapped_column(
+        ForeignKey("users.id", ondelete="SET NULL")
+    )
+    # The sweep, or the bulk load, that found it.
+    sweep_run_id: Mapped[uuid.UUID] = mapped_column(Uuid)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=NOW)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), server_default=NOW, onupdate=NOW
+    )
 
 
 class CrdtDraft(Base):

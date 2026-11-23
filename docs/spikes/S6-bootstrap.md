@@ -416,3 +416,94 @@ with the `rdfs:label` of its classification in the AAT sidecar graph returned it
 
 The text index stays the largest single-threaded phase of the build. Memory stays well inside
 the machine: 3.3 GB for the load's main process, 2.5 GiB for the index build.
+
+## ADR-0030 rerun (re-mint, load and flag, reject unexpandable)
+
+The same 1M synthetic records (SHA-256 `8f6d1ae8…`) went through the reworked commands on
+2026-11-22, same machine, after ADR-0030 changed what `load` does: every record is re-minted,
+expanded to RDF once as a check, loaded even if it fails JSON Schema, and a second pass rewrites
+references and strips known labels. `LAE_BASE_URI=https://editor.example.org/id/`, so that all
+1M records (generated under `https://collection.example.org/id/`, with node IRIs under those
+URIs) are re-minted. Slot database `lae_i25` (migrations to head), QLever index `lae_i25` on
+port 7025, defaults (18 workers, 4 write streams, batches of 10,000 and 500). AAT labels were
+loaded first so that concept references could be normalized. Load average 6.4 before the run;
+other agents' test runs were active during it.
+
+| Stage | Wall | Throughput | Notes |
+| :-- | --: | :-- | :-- |
+| `aat-labels` | 0.6 s | | 58,799 terms. |
+| `load` | **371.4 s** | 3,054 records/s in pass 1 | 1,000,000 read, **999,970 written**, all re-minted; **30 rejected** and reported: 12 ids that cannot be repaired (`LAE-BOOT-003`) and 18 that RDF expansion refuses (`LAE-BOOT-007`, the year-only and `c. 1850` `xsd:dateTime` values). **370,821 records flagged**, 543,111 `qa_findings` rows (`required` 185,316, `anyOf` 141,484, `additionalProperties` 128,347, `type` 74,055, `const` 9,787, `ref` 4,122). 23 ids repaired. Peak RSS of the main process 3.4 GB. |
+| — pass 1 (prepare, `COPY`) | 327.4 s | | Worker CPU 4,799 s, **4.8 ms per record**: JSON Schema plus one full RDF expansion per record, over all records (the earlier run's 1.43 ms was schema only, and its export's 1.88 ms covered only the smaller records that passed). `COPY` 138 s summed over workers. |
+| — pass 2 (rewrite, normalize) | 34.6 s | 28,874 records/s | 999,970 rows read, 974,946 updated; **3,724,672 references rewritten**, 16,121,009 `_label`s stripped. Worker CPU 149 s; 350 s summed in `UPDATE` (4 streams). |
+| — vacuum and analyze | 8.1 s | | `records` 4,771 MB after the pass (its dead tuples are reusable space), `entity_labels` 390 MB, `record_aliases` 301 MB, `qa_findings` 470 MB. |
+| `export-nt` | **222.3 s** | 4,509 records/s, 224,888 triples/s | **999,970 records, none failed** (the load had already rejected the 18), **49,879,352 triples** (49.9 per record; S6 predicted 49.4 for unfiltered records), 117,598 sidecar quads; 10,966,202,229 bytes. Worker CPU 2,825 s (2.82 ms per record), workers 71 % busy. |
+| `build-index` | **138.6 s** + 1.5 s to ready | 361k triples/s | 49,996,950 triples parsed and distinct, index 2.42 GB, peak RSS 4.02 GiB. |
+| **Total** | **734 s (12.2 min)** | | for 1M input records, 999,970 loaded (earlier run: 235 s for 629,163) |
+
+Checks on the served index and the database:
+
+- `SELECT (COUNT(*) AS ?c) WHERE { ?s ?p ?o }` → 49,996,950. 999,970 `la:equivalent` triples
+  point at source URIs, one per record, and `record_aliases` has 999,970 rows.
+- Triples whose object is a source URI by any other predicate: 92, over 18 distinct objects, and
+  all 18 are the records the load rejected for RDF expansion (they were never loaded, so there
+  is nothing to rewrite to). No reference to a loaded record still carries its source URI.
+- **Rerun:** loading the same file again took 13.6 s, wrote nothing (999,970 `LAE-BOOT-006`,
+  the 30 rejects reported again), and left the row counts of `records`, `record_aliases` and
+  `qa_findings` unchanged.
+- The corpus (244 files, institutional sample included) loads completely: 244 written, 60
+  flagged (exactly `tests/corpus/KNOWN_FAILURES.md`), none rejected; its 5 references between
+  corpus records all resolve in QLever as `<new URI> p <new URI>`; a second load writes nothing.
+  The 32 LUX records merged afterwards: the corpus is now 276 files, all loaded, 92 flagged
+  (the 60 and the 32 LUX records, for LUX's `_links`), none rejected (reviewer run, 2026-11-23).
+
+### What it costs, and the projection to 10M
+
+Loading everything instead of 63 % makes each later stage proportionally larger (1.59x the
+records, 2.34x the triples). The load itself is 4.0x slower in wall time: pass 1 now expands
+every record (about 60 % of its CPU in a profile of 2,000 records; JSON Schema is most of the
+rest) and prepares the larger records that used to be dropped; pass 2 adds 9 %.
+
+| Stage | Basis | 10M records |
+| :-- | :-- | --: |
+| `load` | 371 s per 1M, linear (independent batches; pass 2 is per batch with indexed lookups) | 62 min |
+| `export-nt` | 4,509 records/s | 37 min |
+| `build-index` | 500M triples; `time ∝ triples^b`, `b = 1.08–1.14` (§4) from 138.6 s | 28–32 min |
+| **Total** | | **≈ 2.1–2.2 h**, inside the 8-hour window |
+
+The load expands every record once and the export expands it again. Writing the load's triples
+out would not save the second expansion, because pass 2 changes the reference IRIs afterwards;
+if the load ever needs to be faster, the candidate is to skip `rdf_triples`' double pyld
+expansion (`expand`, then `to_rdf`, which expands again), which is Step 1.3 code.
+
+
+### Reviewer check at `EXPANDER_VERSION` 2 (2026-11-23)
+
+The table above was measured at expander version 1, before ADR-0028 and before the metatype
+harvest (ADR-0032) joined the end of `load`. The full 1M run was **not** repeated for the review
+(to save machine time); instead the first 100,000 records of the same generator (same seed) were
+loaded on the final code (expander version 2, the review's changes, AAT labels first), on the
+same machine with a load average of 3.4:
+
+| | 100k, final code | 1M table above |
+| :-- | --: | --: |
+| Pass 1 worker CPU per record | 3.8 ms | 4.8 ms |
+| Pass 2 | 4.4 s, 22,639 records/s (worker CPU 0.14 ms per record) | 28,874 records/s (0.15 ms) |
+| Metatype harvest (one SQL statement over `records`) | about 3.2 s | not in that run |
+| Vacuum and analyze | 1.8 s | 8.1 s |
+| Whole `load` | 53.5 s (99,998 written, 2 rejected, 37,068 flagged) | 371.4 s |
+| Second `load` of the same file | 5.5 s, nothing written | 13.6 s |
+
+Per-record costs are the same or lower, so ADR-0028 and the review's changes (two more index
+probes per updated row in pass 2; duplicate detection after building) do not move the 1M
+figures. A 100k run has only ten batches for 18 workers, so its wall-clock rate (2,274 records/s
+in pass 1) understates a long run and is not comparable. The one new cost is the harvest: scaled
+linearly it adds about 30 s per 1M records to `load` (roughly 8 %), and about 5 minutes to the
+10M projection, which stays near 2.2 h. Repeat the 1M run if a figure in the table is needed at
+expander version 2 exactly.
+
+Crash tests on the same 100k file (`kill -9` of the whole process group): during pass 1, the
+database held exactly the committed batches (30,000 records, aliases and labels; no partial
+batch), and `bootstrap_rewrite_since` stayed; during pass 2, the next `load` wrote nothing new,
+ran pass 2 from the kept time and left no reference to an alias (checked with a join of every
+`id` below the root against `record_aliases`); `rewrite-refs` afterwards changed nothing. No
+worker process or database session survived the kill.

@@ -9,6 +9,7 @@ from alembic.runtime.migration import MigrationContext
 from alembic.script import ScriptDirectory
 from sqlalchemy import Connection, text
 from sqlalchemy.engine import make_url
+from sqlalchemy.exc import IntegrityError
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 from uuid_utils.compat import uuid7
 
@@ -29,6 +30,8 @@ CORE_TABLES = {
     "roles",
     "user_roles",
     "api_tokens",
+    "record_aliases",
+    "qa_findings",
 }
 CORE_ENUMS = {
     "records_status",
@@ -36,6 +39,8 @@ CORE_ENUMS = {
     "outbox_events_kind",
     "outbox_events_status",
     "users_kind",
+    "qa_findings_severity",
+    "qa_findings_status",
 }
 
 
@@ -117,3 +122,45 @@ def test_downgrade_base_then_lae_migrate(db_url: str, monkeypatch: pytest.Monkey
     tables, enums = asyncio.run(_schema_objects(db_url))
     assert tables >= CORE_TABLES | {"alembic_version"}
     assert enums >= CORE_ENUMS
+
+
+async def test_qa_findings_are_keyed_by_code_record_and_node(db_session: AsyncSession) -> None:
+    """Phase 3 Step 3.10 upserts on ``(code, record_id, node_id)``; a missing node id is a value."""
+    record_id, run_id = uuid7(), uuid7()
+    await db_session.execute(
+        text(
+            "INSERT INTO records (id, uri, type, etag, data, context_version) "
+            "VALUES (:id, :uri, 'Type', 'x', '{}', 1)"
+        ),
+        {"id": record_id, "uri": f"urn:test:{record_id}"},
+    )
+    insert = text(
+        "INSERT INTO qa_findings (id, code, severity, record_id, node_id, sweep_run_id) "
+        "VALUES (:id, :code, 'error', :record_id, :node_id, :run_id)"
+    )
+    values = {"code": "ref.unresolved_target", "record_id": record_id, "run_id": run_id}
+    await db_session.execute(insert, {**values, "id": uuid7(), "node_id": None})
+    await db_session.execute(insert, {**values, "id": uuid7(), "node_id": "n1"})
+    row = (
+        await db_session.execute(
+            text("SELECT status::text, params::text, claimed_by FROM qa_findings LIMIT 1")
+        )
+    ).one()
+    assert tuple(row) == ("open", "{}", None)
+    for node_id in (None, "n1"):
+        async with db_session.begin_nested() as savepoint:
+            with pytest.raises(IntegrityError):
+                await db_session.execute(insert, {**values, "id": uuid7(), "node_id": node_id})
+            await savepoint.rollback()
+    # Findings and aliases go with their record.
+    await db_session.execute(
+        text(
+            "INSERT INTO record_aliases (alias_uri, record_id, source) VALUES ('urn:a', :id, 't')"
+        ),
+        {"id": record_id},
+    )
+    await db_session.execute(text("DELETE FROM records WHERE id = :id"), {"id": record_id})
+    counts = await db_session.execute(
+        text("SELECT (SELECT count(*) FROM qa_findings), (SELECT count(*) FROM record_aliases)")
+    )
+    assert tuple(counts.one()) == (0, 0)
