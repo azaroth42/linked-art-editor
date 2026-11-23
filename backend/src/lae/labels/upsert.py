@@ -4,7 +4,7 @@ Called inside the publish transaction (Step 1.10). Only the columns this step ow
 ``metatype_uris``, ``vocab_ids`` and ``usage_count`` keep their values on update (``lae.vocab``
 maintains them). Afterwards the metatypes the record states inline on the concepts it references
 (and, for a concept record, its own) are added to those concepts' rows
-(``lae.vocab.metatypes.harvest_record_metatypes``, Phase 2 Step 2.1, ADR-0029).
+(``lae.vocab.metatypes.harvest_record_metatypes``, Phase 2 Step 2.1, ADR-0032).
 """
 
 from __future__ import annotations

@@ -4,7 +4,7 @@
 
 - **enumerated**: its members are its terms (deprecated ones included: deprecation hides a term
   from pickers, it does not make existing values invalid).
-- **rule** (ADR-0029): the union of
+- **rule** (ADR-0032): the union of
   1. QLever, over the default graph and every ``urn:graph:sidecar:*`` graph (QLever's default
      graph is their union): concepts with ``crm:P2_has_type`` any of ``metatype_uris``, or that
      reach any of ``broader_roots`` through ``(skos:broader|crm:P127_has_broader_term)+``,

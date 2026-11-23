@@ -20,7 +20,7 @@ is kept is not defined.
 At the end, ``sync_state`` records ``bootstrap_context_version`` and
 ``bootstrap_expander_version`` (ADR-0007), the metatypes that records state inline on the concepts
 they reference are added to those concepts' ``entity_labels`` rows
-(``lae.vocab.metatypes.harvest_all_metatypes``, ADR-0029), and both tables are analyzed.
+(``lae.vocab.metatypes.harvest_all_metatypes``, ADR-0032), and both tables are analyzed.
 """
 
 from __future__ import annotations

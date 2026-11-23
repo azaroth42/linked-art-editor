@@ -1,4 +1,4 @@
-# ADR-0029: Inline metatypes are harvested into `entity_labels`; rule membership joins them with QLever
+# ADR-0032: Inline metatypes are harvested into `entity_labels`; rule membership joins them with QLever
 
 **Status:** Accepted · **Date:** 2026-11-22 · **Decided by:** Claude Opus 5.5 as implementer of Phase 2 Step 2.1, on the orchestrator's instruction (Rob Sanderson may override) · **Recorded by:** Claude
 

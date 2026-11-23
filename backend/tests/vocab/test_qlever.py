@@ -187,7 +187,7 @@ async def concept_rows(indexed: Indexed, db_engine: AsyncEngine, labels: Labels)
     async with AsyncSession(db_engine) as session:
         for data in (indexed.person, {"id": indexed.local_nationality, "type": "Type"}):
             labels.uris.append(data["id"])
-        # Publishing the person harvests the Dutch metatype it states inline (ADR-0029).
+        # Publishing the person harvests the Dutch metatype it states inline (ADR-0032).
         person = indexed.person
         await upsert_entity_labels_for_record(
             session, Record(id=uuid7(), uri=person["id"], type="Person", data=person)

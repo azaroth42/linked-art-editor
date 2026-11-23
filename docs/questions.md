@@ -616,16 +616,16 @@ Implemented as decided above (items 3 and 4). Points for a human:
 Started early, before Phase 1 is complete, because nothing in it depends on the remaining Phase 1
 steps. Notes for the steps that meet it, and two choices the owner may want to change:
 
-1. **Scheduling `refresh_usage_counts` is left to Step 1.15.** The job is
-   `lae.vocab.usage.refresh_usage_counts(session, qlever, context_version=...)` (name in
-   `lae.vocab.usage.JOB_NAME`); `lae vocab refresh-usage` runs it by hand. The `scheduler`
-   process should run it nightly and commit. No decision needed.
-2. **Inline metatypes are harvested into `entity_labels.metatype_uris` (ADR-0029).** Adds only,
+1. **`refresh_usage_counts` runs nightly at 03:00 UTC** as a `scheduler` job
+   (`lae.vocab.usage.run_job`, registered in `lae.scheduler.main.registered_jobs`); it does
+   nothing without `LAE_QLEVER_URL`. `lae vocab refresh-usage` runs it by hand. No decision
+   needed.
+2. **Inline metatypes are harvested into `entity_labels.metatype_uris` (ADR-0032).** Adds only,
    to existing rows only. Step 1.10's publish gets it through `upsert_entity_labels_for_record`;
    Step 2.14's sidecar loader must keep harvested metatypes when it rewrites a row (or run
    `lae vocab harvest-metatypes` after the load) before it refreshes rule memberships. The
    owner may prefer a provenance table, so that a metatype a record stops repeating goes away;
-   ADR-0029 explains why that was not done now.
+   ADR-0032 explains why that was not done now.
 3. **Seed content (reversible, please review).** The twelve Value Sets use the Linked Art
    recommended and required terms (linked.art `docs/model/vocab/`). Enforcement is `extensible`
    everywhere except `vocab:statement_types`, which is `advisory` because Linked Art says statement
@@ -649,5 +649,5 @@ steps. Notes for the steps that meet it, and two choices the owner may want to c
    `lae.vocab.service.registry_version` (max `updated_at` plus the Value Set count).
 6. **For Step 2.10:** `vocabulary_terms.flags` already exists (migration `0010`), so that import
    and export are lossless; the seed marks Accession Number `{unique: true}`.
-7. **Migration number.** `0010` with `down_revision` `0005` (main's only head when this merged).
-   The in-flight `0004`, `0006`+ migrations rechain on top of it.
+7. **Migration number.** `0010` with `down_revision` set to main's only head when this merged
+   (`0007`); later Phase 1 migrations (`0008`, `0009`) rechain on top of it.

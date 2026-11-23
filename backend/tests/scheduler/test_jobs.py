@@ -101,7 +101,8 @@ def test_lock_keys_are_stable_distinct_64_bit_integers() -> None:
 
 def test_the_reaper_is_registered_hourly() -> None:
     jobs = {job.name: job for job in registered_jobs(Settings())}
-    assert set(jobs) == {"reap_drafts"}
+    assert set(jobs) == {"reap_drafts", "refresh_usage_counts"}
+    assert jobs["refresh_usage_counts"].schedule == DailyAt(time(3, 0))
     assert jobs["reap_drafts"].run is reaper.run
     assert jobs["reap_drafts"].schedule == Every(timedelta(hours=1))
 

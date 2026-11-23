@@ -18,15 +18,17 @@ are written with one ``UPDATE … FROM`` that also sets every entity not counted
 whose count changes are written, and ``updated_at`` is left alone. Term pickers
 (``GET /api/vocab/{id}/terms``) and autocomplete order by the column.
 
-It is a nightly job of the ``scheduler`` process (Step 1.15 schedules it; until then
-``lae vocab refresh-usage`` runs it).
+It is a nightly job of the ``scheduler`` process (``run_job``, registered in
+``lae.scheduler.main.registered_jobs`` at ``JOB_TIME`` UTC); ``lae vocab refresh-usage`` runs it
+by hand. Without ``LAE_QLEVER_URL`` the job does nothing.
 """
 
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from dataclasses import dataclass, field
-from typing import Any, Final, cast
+from datetime import time
+from typing import TYPE_CHECKING, Any, Final, cast
 
 from sqlalchemy import CursorResult, select, text
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -35,8 +37,14 @@ from lae.db.models import EntityLabel
 from lae.sparql.terms import iri
 from lae.sync.qlever_client import QLeverClient
 
+if TYPE_CHECKING:
+    from lae.scheduler.jobs import JobContext
+
 JOB_NAME: Final = "refresh_usage_counts"
-"""The scheduler job's name (Step 1.15)."""
+"""The scheduler job's name (``sync_state`` key ``job:refresh_usage_counts``)."""
+
+JOB_TIME: Final = time(3, 0)
+"""When the nightly job runs (UTC)."""
 
 DEFAULT_GRAPH: Final = "http://qlever.cs.uni-freiburg.de/builtin-functions/default-graph"
 """QLever's name for the graph of triples loaded or inserted without one."""
@@ -127,3 +135,23 @@ async def refresh_usage_counts(
     summary.updated = cast(CursorResult[Any], result).rowcount
     await session.execute(text("DROP TABLE usage_count_stage"))
     return summary
+
+
+async def run_job(ctx: JobContext) -> Mapping[str, Any] | None:
+    """Scheduler job: ``refresh_usage_counts`` in one transaction; ``None`` without QLever."""
+    settings = ctx.settings
+    if not settings.qlever_url:
+        return None
+    token = settings.qlever_access_token
+    async with QLeverClient(
+        settings.qlever_url,
+        settings.qlever_update_url,
+        token.get_secret_value() if token is not None else None,
+        http_client=ctx.http,
+    ) as qlever:
+        async with ctx.sessions() as session:
+            summary = await refresh_usage_counts(
+                session, qlever, context_version=settings.context_version
+            )
+            await session.commit()
+    return summary.as_json()

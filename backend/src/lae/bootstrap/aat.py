@@ -9,7 +9,7 @@ becomes ``uri = http://vocab.getty.edu/aat/<aat_code>``, ``type = 'Type'``,
 ``metatype_uris`` and ``vocab_ids`` alone (Phase 2 maintains them). A row without a numeric code
 or a name, or one that repeats a code, is reported and skipped. At the end the metatypes that
 loaded records state inline on AAT concepts are added to the new rows
-(``lae.vocab.metatypes.harvest_all_metatypes``, ADR-0029): the load ran before those rows existed.
+(``lae.vocab.metatypes.harvest_all_metatypes``, ADR-0032): the load ran before those rows existed.
 
 ``lae bootstrap export-nt`` writes these rows to QLever graph ``urn:graph:sidecar:aat``.
 """

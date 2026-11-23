@@ -1,4 +1,4 @@
-"""Harvesting inline metatypes into ``entity_labels.metatype_uris`` (Phase 2 Step 2.1, ADR-0029).
+"""Harvesting inline metatypes into ``entity_labels.metatype_uris`` (Phase 2 Step 2.1, ADR-0032).
 
 A Linked Art record often repeats a concept's metatype where it references the concept:
 
@@ -21,7 +21,7 @@ these are its own metatypes. ``classified_as`` on a ``Person``, ``Group``, ``Pla
 a classification, not a metatype, and is not harvested.
 
 **How.** The harvest only adds: a metatype is never removed because a record stopped repeating it
-(the concept owns its metatypes; ADR-0029 discusses this). Only existing rows are changed: a concept
+(the concept owns its metatypes; ADR-0032 discusses this). Only existing rows are changed: a concept
 without an ``entity_labels`` row is unresolved (ADR-0006) and gets its metatypes when a later
 harvest finds its row. Neither ``updated_at`` nor anything else in the row changes, so the
 autocomplete overlay is unaffected.

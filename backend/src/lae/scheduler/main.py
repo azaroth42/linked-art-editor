@@ -40,8 +40,9 @@ from lae.crdt.server import EXIT_CONFIG_ERROR, TOKEN_REQUIRED_ENVS
 from lae.db.session import create_engine, create_sessionmaker
 from lae.logging import get_logger
 from lae.scheduler import reaper
-from lae.scheduler.jobs import Every, Job, JobContext, read_job_state, run_job, utcnow
+from lae.scheduler.jobs import DailyAt, Every, Job, JobContext, read_job_state, run_job, utcnow
 from lae.settings import Settings
+from lae.vocab import usage
 
 SHUTDOWN_GRACE_SECONDS: Final = 30.0
 """How long running jobs may take to finish after ``SIGTERM`` before they are cancelled."""
@@ -63,13 +64,13 @@ def registered_jobs(settings: Settings) -> list[Job]:
     """Return every job this process runs.
 
     - ``reap_drafts``, hourly: the draft reaper (``lae.scheduler.reaper``, decision B7).
-
-    Phase 2 Step 2.1 registers ``refresh_usage_counts`` here, nightly:
-    ``Job("refresh_usage_counts", <adapter>, DailyAt(time(3, 0)))``, where the adapter is an
-    ``async`` function of a ``JobContext`` that calls the step's function with
-    ``ctx.sessions`` / ``ctx.http`` / ``ctx.settings`` and returns its counts.
+    - ``refresh_usage_counts``, nightly: ``entity_labels.usage_count`` from QLever
+      (``lae.vocab.usage``, Phase 2 Step 2.1).
     """
-    return [Job(reaper.JOB_NAME, reaper.run, Every(reaper.INTERVAL))]
+    return [
+        Job(reaper.JOB_NAME, reaper.run, Every(reaper.INTERVAL)),
+        Job(usage.JOB_NAME, usage.run_job, DailyAt(usage.JOB_TIME)),
+    ]
 
 
 class Scheduler:

@@ -19,7 +19,7 @@ On ``entity_labels`` it adds ``usage_count`` (refreshed nightly from QLever,
 ``down_revision`` is the single head of ``main`` when this step merged (agent-workflow §4).
 
 Revision ID: 0010
-Revises: 0005
+Revises: 0007
 Create Date: 2026-11-22
 """
 
@@ -30,7 +30,7 @@ from alembic import op
 from sqlalchemy.dialects import postgresql
 
 revision: str = "0010"
-down_revision: str | Sequence[str] | None = "0005"
+down_revision: str | Sequence[str] | None = "0007"
 branch_labels: str | Sequence[str] | None = None
 depends_on: str | Sequence[str] | None = None
 

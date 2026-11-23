@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import httpx
 import pytest
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
@@ -70,3 +71,14 @@ async def test_a_failing_qlever_changes_nothing(db_engine: AsyncEngine, labels: 
             await refresh_usage_counts(session, qlever.client())
     row = await labels.get(used)
     assert row is not None and row.usage_count == 5
+
+
+async def test_the_scheduler_job_does_nothing_without_qlever(db_engine: AsyncEngine) -> None:
+    from lae.db.session import create_sessionmaker
+    from lae.scheduler.jobs import JobContext
+    from lae.settings import Settings
+    from lae.vocab.usage import run_job
+
+    async with httpx.AsyncClient() as http:
+        ctx = JobContext(Settings(qlever_url=None), db_engine, create_sessionmaker(db_engine), http)
+        assert await run_job(ctx) is None

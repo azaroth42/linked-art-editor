@@ -1,4 +1,4 @@
-"""``refresh_membership``: enumerated and rule Value Sets, ``vocab_ids`` (Step 2.1, ADR-0029).
+"""``refresh_membership``: enumerated and rule Value Sets, ``vocab_ids`` (Step 2.1, ADR-0032).
 
 QLever is scripted here (``FakeQLever``); ``test_qlever.py`` runs the same against a real index.
 """

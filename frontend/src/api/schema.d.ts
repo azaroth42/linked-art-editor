@@ -468,6 +468,46 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/vocab/bundle": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Vocab Bundle
+         * @description Every Value Set (terms with resolved labels) and every binding, ETag-cached.
+         */
+        get: operations["vocab_bundle_api_vocab_bundle_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/vocab/{vocabulary_id}/terms": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Vocab Terms
+         * @description Terms of a Value Set whose label starts with ``q``, most used first.
+         */
+        get: operations["vocab_terms_api_vocab__vocabulary_id__terms_get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -487,6 +527,102 @@ export interface components {
             context: string | null;
             /** Source */
             source: string;
+        };
+        /**
+         * BundleBinding
+         * @description A binding of a Value Set to ``(entity_class, property_path)``.
+         */
+        BundleBinding: {
+            /** Entity Class */
+            entity_class: string;
+            /** Property Path */
+            property_path: string;
+            /** Vocabulary Id */
+            vocabulary_id: string;
+            /** Enforcement */
+            enforcement: ("strict" | "extensible" | "advisory") | null;
+            /**
+             * Effective Enforcement
+             * @enum {string}
+             */
+            effective_enforcement: "strict" | "extensible" | "advisory";
+        };
+        /**
+         * BundleRule
+         * @description The membership rule of a rule Value Set.
+         */
+        BundleRule: {
+            /** Metatype Uris */
+            metatype_uris: string[];
+            /** Broader Roots */
+            broader_roots: string[];
+            /** Exclusions */
+            exclusions: string[];
+            /** Classes */
+            classes: string[];
+        };
+        /**
+         * BundleTerm
+         * @description One term of a Value Set in the bundle.
+         */
+        BundleTerm: {
+            /** Uri */
+            uri: string;
+            /** Label */
+            label: {
+                [key: string]: string;
+            };
+            /** Default Label */
+            default_label: string;
+            /** Scope Note */
+            scope_note?: {
+                [key: string]: string;
+            } | null;
+            /**
+             * Is Default
+             * @default false
+             */
+            is_default: boolean;
+            /**
+             * Deprecated
+             * @default false
+             */
+            deprecated: boolean;
+            /** Flags */
+            flags?: {
+                [key: string]: unknown;
+            } | null;
+        };
+        /**
+         * BundleVocabulary
+         * @description A Value Set in the bundle: all terms of an enumerated set, the pinned ones of a rule set.
+         */
+        BundleVocabulary: {
+            /** Id */
+            id: string;
+            /** Version */
+            version: number;
+            /** Label */
+            label: {
+                [key: string]: string;
+            };
+            /** Scope Note */
+            scope_note?: {
+                [key: string]: string;
+            } | null;
+            /**
+             * Mode
+             * @enum {string}
+             */
+            mode: "enumerated" | "rule";
+            /**
+             * Enforcement
+             * @enum {string}
+             */
+            enforcement: "strict" | "extensible" | "advisory";
+            rule?: components["schemas"]["BundleRule"] | null;
+            /** Terms */
+            terms: components["schemas"]["BundleTerm"][];
         };
         /**
          * Diagnostic
@@ -687,6 +823,26 @@ export interface components {
             summary: string;
         };
         /**
+         * TermOption
+         * @description One answer of ``GET /api/vocab/{id}/terms``.
+         */
+        TermOption: {
+            /** Uri */
+            uri: string;
+            /** Label */
+            label: string;
+            /** Scope Note */
+            scope_note: string | null;
+            /** Deprecated */
+            deprecated: boolean;
+            /** Pinned */
+            pinned: boolean;
+            /** Usage Count */
+            usage_count: number;
+            /** Source */
+            source: string | null;
+        };
+        /**
          * TokenCreate
          * @description Body of ``POST /api/tokens``.
          */
@@ -778,6 +934,18 @@ export interface components {
             input?: unknown;
             /** Context */
             ctx?: Record<string, never>;
+        };
+        /**
+         * VocabBundle
+         * @description Body of ``GET /api/vocab/bundle``.
+         */
+        VocabBundle: {
+            /** Version */
+            version: string;
+            /** Vocabularies */
+            vocabularies: components["schemas"]["BundleVocabulary"][];
+            /** Bindings */
+            bindings: components["schemas"]["BundleBinding"][];
         };
     };
     responses: never;
@@ -1506,6 +1674,76 @@ export interface operations {
                 };
             };
             /** @description LAE-REC-001, LAE-CRDT-003 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    vocab_bundle_api_vocab_bundle_get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["VocabBundle"];
+                };
+            };
+            /** @description If-None-Match matched */
+            304: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+        };
+    };
+    vocab_terms_api_vocab__vocabulary_id__terms_get: {
+        parameters: {
+            query?: {
+                /** @description Label prefix; empty: shortlist */
+                q?: string;
+                limit?: number;
+            };
+            header?: never;
+            path: {
+                /** @description Value Set id, e.g. vocab:gender */
+                vocabulary_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TermOption"][];
+                };
+            };
+            /** @description LAE-VOCAB-001 */
             404: {
                 headers: {
                     [name: string]: unknown;

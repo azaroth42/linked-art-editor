@@ -1,4 +1,4 @@
-"""Harvesting inline metatypes into ``entity_labels.metatype_uris`` (Step 2.1, ADR-0029)."""
+"""Harvesting inline metatypes into ``entity_labels.metatype_uris`` (Step 2.1, ADR-0032)."""
 
 from __future__ import annotations
 
