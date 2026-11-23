@@ -40,6 +40,7 @@ from lae.validation.schema_map import (  # noqa: E402
 )
 
 CORPUS = REPO / "tests" / "corpus"
+SUBSETS = ("linkedart", "institutional", "lux")
 OUT = REPO / "docs" / "upstream" / "linked-art-schema-mismatches.md"
 
 CATEGORIES = {
@@ -228,9 +229,7 @@ def main() -> int:
 
     rows: list[dict[str, Any]] = []
     ignored_ids: list[tuple[str, str, str]] = []
-    for path in sorted((CORPUS / "linkedart").glob("*.json")) + sorted(
-        (CORPUS / "institutional").glob("*.json")
-    ):
+    for path in [p for subset in SUBSETS for p in sorted((CORPUS / subset).glob("*.json"))]:
         raw = path.read_bytes()
         as_stored = json.loads(raw)
         # As ``lae.validation.validate_schema`` checks it: an ``id`` on an embedded node is
@@ -290,13 +289,14 @@ def main() -> int:
                 "type": record.get("type"),
                 "schema": schema,
                 "errors": errors,
-                "kind": "linkedart" if path.parent.name == "linkedart" else "institutional",
+                "kind": path.parent.name,
                 "categories": Counter(e["category"] for e in errors),
             }
         )
 
     upstream = [r for r in rows if r["kind"] == "linkedart"]
     inst = [r for r in rows if r["kind"] == "institutional"]
+    lux = [r for r in rows if r["kind"] == "lux"]
     cat_files: Counter[str] = Counter()
     cat_errors: Counter[str] = Counter()
     for r in upstream:
@@ -318,7 +318,8 @@ def main() -> int:
     w("```\nuv run --project backend python scripts/report_schema_mismatches.py\n```")
     w("")
     w(
-        f"**{len(upstream)} linked.art examples** and **{len(inst)} institutional records** fail. Each linked.art entry "
+        f"**{len(upstream)} linked.art examples**, **{len(inst)} institutional records** and **{len(lux)} LUX records** "
+        "fail. Each linked.art entry "
         "names the example file, the model page and line of the `crom` block that generates it, and every error. "
         '"Schema location" is the definition that rejected the value (the last `$ref` followed). For `anyOf` '
         "failures the closest alternative is shown, because that is usually the real problem."
@@ -363,15 +364,30 @@ def main() -> int:
                 if e["alt"]:
                     w(f"    - {e['alt']}")
         w("")
-    if inst:
-        w("## Institutional records (data-provider quirks, not linked.art upstream)")
-        w("")
-        w(
+    data_sections = (
+        (
+            inst,
+            "Institutional records (data-provider quirks, not linked.art upstream)",
             "These come from public YCBA, YUAG, and Yale Library feeds (`tests/corpus/SOURCE.md`). They are listed for "
-            "completeness; fix them with the data providers or accept them as known failures."
-        )
+            "completeness; fix them with the data providers or accept them as known failures.",
+        ),
+        (
+            lux,
+            "LUX records (LUX data, not linked.art upstream)",
+            "These are merged records from `lux.collections.yale.edu` (`tests/corpus/SOURCE.md`). Every one carries "
+            "LUX's own underscore-prefixed API keys (`_links`, and often `_content_html` or `_seconds_since_epoch_*`), "
+            "which no entry-point schema allows. They are listed for completeness; fix them with LUX or accept them "
+            "as known failures.",
+        ),
+    )
+    for section, title, intro in data_sections:
+        if not section:
+            continue
+        w(f"## {title}")
         w("")
-        for r in inst:
+        w(intro)
+        w("")
+        for r in section:
             w(
                 f"- [ ] `{r['corpus']}` — `{r['type']}` → `{r['schema']}` — {len(r['errors'])} error(s)"
             )
@@ -399,7 +415,7 @@ def main() -> int:
     OUT.parent.mkdir(parents=True, exist_ok=True)
     OUT.write_text("\n".join(out))
     print(
-        f"wrote {OUT.relative_to(REPO)}: {len(upstream)} linked.art, {len(inst)} institutional, "
+        f"wrote {OUT.relative_to(REPO)}: {len(upstream)} linked.art, {len(inst)} institutional, {len(lux)} LUX, "
         f"{sum(len(r['errors']) for r in rows)} errors"
     )
     return 0

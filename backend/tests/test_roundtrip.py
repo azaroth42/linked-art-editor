@@ -33,7 +33,7 @@ def _embedded_nodes(value: Any, *, is_root: bool = True) -> list[dict[str, Any]]
 
 
 def test_corpus_is_complete() -> None:
-    assert len(FILES) == 244
+    assert len(FILES) == 276
 
 
 @pytest.mark.parametrize("path", FILES, ids=lambda p: f"{p.parent.name}/{p.name}")

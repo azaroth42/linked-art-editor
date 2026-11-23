@@ -143,7 +143,9 @@ def test_applying_corpus_diffs_yields_exactly_the_new_triples() -> None:
         if update:
             store.update(update)
             checked += 1
-        assert triples_in(store) == triples_of(new)
+        # The store keeps an xsd:double by value ("2.5E0" reads back as "2.5"), so compare
+        # it with a store that holds the new triples (the BCE tetradrachm in lux/ has doubles).
+        assert triples_in(store) == triples_in(store_with(new))
     assert checked > 100
 
 

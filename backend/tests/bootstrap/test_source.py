@@ -41,9 +41,9 @@ def test_missing_input_is_an_error(tmp_path: Path) -> None:
         input_files(tmp_path / "missing")
 
 
-def test_the_golden_corpus_is_244_records() -> None:
+def test_the_golden_corpus_is_276_records() -> None:
     from lae.corpus import CORPUS_DIR
 
     items = list(iter_source(CORPUS_DIR))
-    assert len(items) == 244
-    assert {item.source.split("/")[0] for item in items} == {"institutional", "linkedart"}
+    assert len(items) == 276
+    assert {item.source.split("/")[0] for item in items} == {"institutional", "linkedart", "lux"}

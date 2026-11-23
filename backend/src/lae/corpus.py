@@ -1,7 +1,8 @@
 """The golden corpus: Linked Art records under ``tests/corpus/`` (Phase 0, Step 0.4).
 
-``linkedart/`` holds every linked.art documentation example and ``institutional/`` holds real
-institutional records; ``tests/corpus/SOURCE.md`` records where each came from. The corpus is the
+``linkedart/`` holds every linked.art documentation example, ``institutional/`` holds real
+records from the Yale units that publish Linked Art for LUX, and ``lux/`` holds merged records
+from LUX itself; ``tests/corpus/SOURCE.md`` records where each came from. The corpus is the
 oracle for round-trip and projection tests, so files are read exactly as stored.
 """
 
@@ -13,7 +14,7 @@ from pathlib import Path
 from typing import Any, Final
 
 CORPUS_DIR: Final = Path(__file__).resolve().parents[3] / "tests" / "corpus"
-SUBSETS: Final = ("linkedart", "institutional")
+SUBSETS: Final = ("linkedart", "institutional", "lux")
 
 
 def corpus_files(root: Path = CORPUS_DIR) -> list[Path]:

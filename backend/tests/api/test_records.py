@@ -151,15 +151,16 @@ async def test_create_record_is_undone_when_the_draft_cannot_be_opened(
     served: Served, network: Network, db_engine: AsyncEngine
 ) -> None:
     headers = await auth_headers(db_engine, "Collaborator", "edit_draft")
+    # Other tests leave records in the database (the corpus has a Currency), so count the change.
+    currencies = select(func.count()).select_from(Record).where(Record.type == "Currency")
+    async with AsyncSession(db_engine) as session:
+        before = await session.scalar(currencies)
     network.crdt_down = True
     response = await served.client.post("/api/records", json={"type": "Currency"}, headers=headers)
     assert response.status_code == 503
     assert response.json()["code"] == "LAE-CRDT-009"
     async with AsyncSession(db_engine) as session:
-        left = await session.scalar(
-            select(func.count()).select_from(Record).where(Record.type == "Currency")
-        )
-        assert left == 0
+        assert await session.scalar(currencies) == before
 
 
 async def test_create_record_with_template(served: Served, db_engine: AsyncEngine) -> None:

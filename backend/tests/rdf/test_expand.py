@@ -888,6 +888,27 @@ def _pyld_reference_triples(doc: dict[str, Any]) -> set[ox.Triple]:
     }
 
 
+def _with_spaces_in_ids_encoded(value: Any) -> Any:
+    """The document with each space in an ``id`` written ``%20``, as expansion repairs it.
+
+    pyld's writer drops a triple whose IRI has a space; ``expand_to_ntriples`` percent-encodes
+    the ``id`` instead (ADR-0028). The corpus has no other character that needs repair (the LUX
+    image URLs, ``tests/corpus/lux/``).
+    """
+    if isinstance(value, list):
+        return [_with_spaces_in_ids_encoded(item) for item in value]
+    if isinstance(value, dict):
+        return {
+            key: (
+                item.replace(" ", "%20")
+                if key == "id" and isinstance(item, str)
+                else _with_spaces_in_ids_encoded(item)
+            )
+            for key, item in value.items()
+        }
+    return value
+
+
 def _embedded_foreign_ids(doc: dict[str, Any], record_uri: str) -> set[str]:
     """ADR-0021's rule, written again without the expander's helpers."""
     found: set[str] = set()
@@ -982,7 +1003,8 @@ def test_corpus_record_expands_to_owned_canonical_triples(name: str, doc: dict[s
     }
     assert len(ours) == len(lines)
     embedded = _embedded_foreign_ids(doc, record_uri)
-    assert ours == _reachable_owned_triples(_pyld_reference_triples(doc), record_uri, embedded)
+    reference = _pyld_reference_triples(_with_spaces_in_ids_encoded(doc))
+    assert ours == _reachable_owned_triples(reference, record_uri, embedded)
     for iri in embedded:
         assert nt(derived_node_iri(record_uri, iri), LA_EQUIVALENT, iri) in lines
 
