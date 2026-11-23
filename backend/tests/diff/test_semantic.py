@@ -240,6 +240,36 @@ def test_context_and_opaque_values_are_literals_whatever_their_form() -> None:
     assert changes[1].new == {"@value": "b"}
 
 
+def test_a_context_that_looks_like_a_node_is_still_set_and_cleared_as_a_literal() -> None:
+    """``@context`` is opaque whatever its form (R3), also when it appears or disappears."""
+    aliases = {"id": "@id", "type": "@type"}  # passes for a reference by its keys
+    terms = {"type": "@type", "x": "https://x.test/"}  # passes for a node
+    bare = record(produced_by={"id": nid(1), "type": "Production"})
+    del bare["@context"]
+    full = record(produced_by={"id": nid(1), "type": "Production", "@context": terms})
+    full["@context"] = aliases
+    step = Step(
+        property="produced_by",
+        key=None,
+        id=nid(1),
+        type="Production",
+        classified_as=None,
+        label=None,
+    )
+    assert diff(bare, full) == [
+        UpdateLiteral(path="@context", parent=[], property="@context", op="set", new=aliases),
+        UpdateLiteral(
+            path="produced_by.@context", parent=[step], property="@context", op="set", new=terms
+        ),
+    ]
+    assert diff(full, bare) == [
+        UpdateLiteral(path="@context", parent=[], property="@context", op="clear", old=aliases),
+        UpdateLiteral(
+            path="produced_by.@context", parent=[step], property="@context", op="clear", old=terms
+        ),
+    ]
+
+
 def test_opaque_array_items_are_set_and_cleared_by_key() -> None:
     old = record(x_tags=["a", "b", "c"])
     new = record(x_tags=["a", "d", "c"])

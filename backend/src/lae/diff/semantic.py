@@ -452,14 +452,23 @@ class _Differ:
 
     # -- emitting ----------------------------------------------------------------------------
 
-    def _removed(self, parent: tuple[Step, ...], prop: str, key: str | None, item: Any) -> None:
+    def _removed(
+        self,
+        parent: tuple[Step, ...],
+        prop: str,
+        key: str | None,
+        item: Any,
+        *,
+        literal: bool = False,
+    ) -> None:
+        """Report ``item`` removed; ``literal`` for a value that is opaque by its key (R3)."""
         common: dict[str, Any] = {
             "path": format_path(parent, prop),
             "parent": list(parent),
             "property": prop,
             "key": key,
         }
-        if not is_structured(item):
+        if literal or not is_structured(item):
             self.changes.append(UpdateLiteral(**common, op="clear", old=item))
         elif is_reference(item):
             self.changes.append(
@@ -489,7 +498,10 @@ class _Differ:
         key: str | None,
         item: Any,
         before: str | None = None,
+        *,
+        literal: bool = False,
     ) -> None:
+        """Report ``item`` added; ``literal`` for a value that is opaque by its key (R3)."""
         common: dict[str, Any] = {
             "path": format_path(parent, prop),
             "parent": list(parent),
@@ -497,7 +509,7 @@ class _Differ:
             "key": key,
             "before": before,
         }
-        if not is_structured(item):
+        if literal or not is_structured(item):
             self.changes.append(UpdateLiteral(**common, op="set", new=item))
         elif is_reference(item):
             self.changes.append(
@@ -525,14 +537,15 @@ class _Differ:
             for key, item in zip(item_keys(value), value, strict=True):
                 self._removed(parent, prop, key, item)
         else:
-            self._removed(parent, prop, None, value)
+            # A literal stays one even if it looks like a node or a reference (``@context``).
+            self._removed(parent, prop, None, value, literal=shape == _LITERAL)
 
     def _add_all(self, parent: tuple[Step, ...], prop: str, shape: str, value: Any) -> None:
         if shape == _ARRAY:
             for key, item in zip(item_keys(value), value, strict=True):
                 self._added(parent, prop, key, item)
         else:
-            self._added(parent, prop, None, value)
+            self._added(parent, prop, None, value, literal=shape == _LITERAL)
 
     # -- comparing ---------------------------------------------------------------------------
 
