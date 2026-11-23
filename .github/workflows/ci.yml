@@ -1,4 +1,4 @@
-# Every PR must be green on all five jobs before it merges (docs/agent-workflow.md §6).
+# Every PR must be green on all four jobs before it merges (docs/agent-workflow.md §6).
 # No Docker: PostgreSQL is installed natively on the runner. QLever is never run in CI: its
 # integration tests run locally only (docs/conventions.md, owner decision 2026-11-23).
 name: CI

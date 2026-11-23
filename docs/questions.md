@@ -765,3 +765,24 @@ steps. Notes for the steps that meet it, and two choices the owner may want to c
    needs `brew trust qlever-dev/qlever`) ran green once in 7 min 4 s (46 passed). Hosted macOS
    runners then queued for 15+ min, so the owner removed the job: QLever integration tests run
    locally only (docs/conventions.md, backend/tests/sync/README.md).
+5. **Open, for Step 2.18 (found in review of PR #148): an event that commits late can be missing
+   from a rebuilt index.** `lae bootstrap export` takes its watermark as `max(outbox_events.id)`
+   in its snapshot. A publish that had inserted its event (a lower id) but not yet committed is
+   in neither the export nor the range above the watermark. If the worker marks it `done` on the
+   old index before the rebuilt one goes live, `catch_up` and `replay(after_id=watermark)` never
+   send it, and the record's next `DIFF` is then applied to the wrong version. The window is one
+   publish transaction that overlaps the start of the snapshot. Replay is idempotent from any
+   earlier point (contract item 17), so Step 2.18 can replay from a margin below the watermark
+   (for example every `done` event created after `snapshot_at` minus a few minutes, in id order
+   through the newest), or the export can record a safe lower bound.
+6. **Open, for Step 2.18: replaying `DIFF` events into an index built by another expander or
+   context version.** `drift_check` is computed at publish time against the index of that
+   moment. Events replayed into a later index (catch-up, the green index) keep their mode, and a
+   `DIFF` deletes the stored lines of `from_version`, which the new index may hold in another
+   form. When the build's versions differ from those the replayed events were written under,
+   the replay should translate every event as `REPLACE` (always correct, contract item 6); that
+   needs a flag on `replay`, which this step does not have.
+7. **Open: a `done` event that can no longer be replayed stops the worker.** If `catch_up` meets
+   an event QLever now rejects or whose revision is unreadable, the worker exits 1 and does so
+   again at each restart (pending events wait). Nothing in this step can produce that state; a
+   later step should decide between skipping with an alarm and a rebuild.
