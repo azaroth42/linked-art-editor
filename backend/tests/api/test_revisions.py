@@ -596,6 +596,7 @@ async def test_revert_gives_up_with_409_when_the_draft_keeps_coming_back(
     path = f"/api/records/{record_id}/revisions/2/revert"
     response = await served.client.post(path, headers=await editor(db_engine))
     assert response.status_code == 409
+    assert racing.discards == revisions.REVERT_ATTEMPTS
     assert response.json() == {
         "code": "LAE-CRDT-004",
         "path": path,
