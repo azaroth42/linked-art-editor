@@ -10,7 +10,7 @@ Public Reader sets ``lang`` on them) can collect the language of each transclude
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Collection, Mapping, Sequence
 from typing import Any
 
 from sqlalchemy import Text, any_, bindparam, select
@@ -65,6 +65,31 @@ def label_language(labels: Mapping[str, str], label: str) -> str | None:
     return None
 
 
+async def resolve_labels(
+    uris: Collection[str],
+    locale_chain: Sequence[str],
+    session: AsyncSession,
+    *,
+    languages: dict[str, str] | None = None,
+) -> dict[str, str]:
+    """Return the label for ``locale_chain`` of each of ``uris`` that has an ``entity_labels`` row.
+
+    One query (none when ``uris`` is empty). For callers that need the labels beside the
+    document rather than in it, such as the semantic diff (``lae.diff.semantic``). If
+    ``languages`` is given, it receives the language tag of each label whose language is known
+    (``label_language``), keyed by URI.
+    """
+    resolved: dict[str, str] = {}
+    if uris:
+        rows = await session.execute(_LABEL_ROWS, {"uris": sorted(uris)})
+        for uri, labels, default_label in rows:
+            resolved[uri] = resolve_label(labels, default_label, locale_chain)
+            tag = label_language(labels, resolved[uri])
+            if languages is not None and tag is not None:
+                languages[uri] = tag
+    return resolved
+
+
 async def hydrate_labels(
     jsonld: Mapping[str, Any],
     locale_chain: Sequence[str],
@@ -77,15 +102,9 @@ async def hydrate_labels(
     If ``languages`` is given, it receives the language tag of each transcluded label whose
     language is known (``label_language``), keyed by the reference's ``id``.
     """
-    uris = reference_ids(jsonld)
-    resolved: dict[str, str] = {}
-    if uris:
-        rows = await session.execute(_LABEL_ROWS, {"uris": sorted(uris)})
-        for uri, labels, default_label in rows:
-            resolved[uri] = resolve_label(labels, default_label, locale_chain)
-            tag = label_language(labels, resolved[uri])
-            if languages is not None and tag is not None:
-                languages[uri] = tag
+    resolved = await resolve_labels(
+        reference_ids(jsonld), locale_chain, session, languages=languages
+    )
 
     def transclude(reference: dict[str, Any]) -> dict[str, Any]:
         label = resolved.get(reference["id"])

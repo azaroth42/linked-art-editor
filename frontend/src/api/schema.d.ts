@@ -328,6 +328,70 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/records/{record_id}/revisions/{from_version}/diff/{to_version}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Diff Revisions
+         * @description Return the changes that turn version ``from_version`` into version ``to_version``.
+         */
+        get: operations["diff_revisions_api_records__record_id__revisions__from_version__diff__to_version__get"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/records/{record_id}/draft/diff": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Diff Draft
+         * @description Return the changes that turn the published version into the live draft.
+         */
+        post: operations["diff_draft_api_records__record_id__draft_diff_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/records/{record_id}/revisions/{version}/revert": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Revert To Revision
+         * @description Replace the record's draft with revision ``version``; return the new ``draft_epoch``.
+         *
+         *     Whatever draft the record had is discarded, with every unpublished edit in it. 409
+         *     ``LAE-CRDT-005`` for a deleted or merged record; 409 ``LAE-CRDT-004`` if other clients kept
+         *     opening a draft between the discard and the open (try again).
+         */
+        post: operations["revert_to_revision_api_records__record_id__revisions__version__revert_post"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/id/{record_uuid}": {
         parameters: {
             query?: never;
@@ -587,6 +651,70 @@ export interface components {
             path: string;
             /** Record Id */
             record_id?: string | null;
+        };
+        /**
+         * AddNode
+         * @description A node was added to ``property``.
+         */
+        AddNode: {
+            /** Path */
+            path: string;
+            /** Parent */
+            parent: components["schemas"]["Step"][];
+            /** Property */
+            property: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "add_node";
+            /** Key */
+            key: string | null;
+            /** Before */
+            before: string | null;
+            /** Node Type */
+            node_type: string | null;
+            /** Node Id */
+            node_id: string | null;
+            /** Summary Fields */
+            summary_fields: {
+                [key: string]: string | boolean | number | components["schemas"]["RefSummary"] | (string | boolean | number | components["schemas"]["RefSummary"])[];
+            };
+            /** Value */
+            value: {
+                [key: string]: unknown;
+            };
+        };
+        /**
+         * AddRef
+         * @description A reference was added to ``property``.
+         */
+        AddRef: {
+            /** Path */
+            path: string;
+            /** Parent */
+            parent: components["schemas"]["Step"][];
+            /** Property */
+            property: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "add_ref";
+            /** Key */
+            key: string | null;
+            /** Before */
+            before: string | null;
+            /** Uri */
+            uri: string;
+            /** Type */
+            type: string | null;
+            /** Label */
+            label: string | null;
+            /** Value */
+            value: {
+                [key: string]: unknown;
+            };
         };
         /**
          * AutocompleteResult
@@ -981,11 +1109,121 @@ export interface components {
             draft_epoch: number;
         };
         /**
+         * RefSummary
+         * @description A reference inside ``summary_fields``.
+         */
+        RefSummary: {
+            /** Uri */
+            uri: string;
+            /** Type */
+            type: string | null;
+            /** Label */
+            label: string | null;
+        };
+        /**
+         * RemoveNode
+         * @description A node was removed from ``property``.
+         */
+        RemoveNode: {
+            /** Path */
+            path: string;
+            /** Parent */
+            parent: components["schemas"]["Step"][];
+            /** Property */
+            property: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "remove_node";
+            /** Key */
+            key: string | null;
+            /** Node Type */
+            node_type: string | null;
+            /** Node Id */
+            node_id: string | null;
+            /** Summary Fields */
+            summary_fields: {
+                [key: string]: string | boolean | number | components["schemas"]["RefSummary"] | (string | boolean | number | components["schemas"]["RefSummary"])[];
+            };
+            /** Value */
+            value: {
+                [key: string]: unknown;
+            };
+        };
+        /**
+         * RemoveRef
+         * @description A reference was removed from ``property``.
+         */
+        RemoveRef: {
+            /** Path */
+            path: string;
+            /** Parent */
+            parent: components["schemas"]["Step"][];
+            /** Property */
+            property: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "remove_ref";
+            /** Key */
+            key: string | null;
+            /** Uri */
+            uri: string;
+            /** Type */
+            type: string | null;
+            /** Label */
+            label: string | null;
+            /** Value */
+            value: {
+                [key: string]: unknown;
+            };
+        };
+        /**
+         * Reorder
+         * @description The items of ``property`` that are in both versions changed their relative order.
+         */
+        Reorder: {
+            /** Path */
+            path: string;
+            /** Parent */
+            parent: components["schemas"]["Step"][];
+            /** Property */
+            property: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "reorder";
+            /** Order */
+            order: string[];
+            /** Previous */
+            previous: string[];
+        };
+        /**
          * Representation
          * @description A representation of a record; the value is what ``?format=`` takes.
          * @enum {string}
          */
         Representation: "html" | "jsonld" | "ttl";
+        /**
+         * Reverted
+         * @description Answer of ``POST /api/records/{id}/revisions/{n}/revert``.
+         */
+        Reverted: {
+            /**
+             * Id
+             * Format: uuid
+             */
+            id: string;
+            /** Version */
+            version: number;
+            /** Draft Epoch */
+            draft_epoch: number;
+            /** Base Version */
+            base_version: number;
+        };
         /**
          * RevisionSummary
          * @description One entry of ``GET /api/records/{id}/revisions`` (Step 1.14's shape).
@@ -1006,6 +1244,43 @@ export interface components {
             summary: string;
         };
         /**
+         * SemanticDiff
+         * @description The typed changes between two states of a record.
+         */
+        SemanticDiff: {
+            /**
+             * Record Id
+             * Format: uuid
+             */
+            record_id: string;
+            /** From Version */
+            from_version: number;
+            /** To Version */
+            to_version: number | null;
+            /** Draft Epoch */
+            draft_epoch: number | null;
+            /** Changes */
+            changes: (components["schemas"]["AddNode"] | components["schemas"]["RemoveNode"] | components["schemas"]["UpdateLiteral"] | components["schemas"]["AddRef"] | components["schemas"]["RemoveRef"] | components["schemas"]["Reorder"])[];
+        };
+        /**
+         * Step
+         * @description One step from an object to an object inside it, on the way to a change.
+         */
+        Step: {
+            /** Property */
+            property: string;
+            /** Key */
+            key: string | null;
+            /** Id */
+            id: string | null;
+            /** Type */
+            type: string | null;
+            /** Classified As */
+            classified_as: string | null;
+            /** Label */
+            label: string | null;
+        };
+        /**
          * TermOption
          * @description One answer of ``GET /api/vocab/{id}/terms``.
          */
@@ -1024,6 +1299,18 @@ export interface components {
             usage_count: number;
             /** Source */
             source: string | null;
+        };
+        /**
+         * TextEdit
+         * @description The single splice that turns ``old`` into ``new`` (R23), in Unicode code points (R19).
+         */
+        TextEdit: {
+            /** Index */
+            index: number;
+            /** Delete */
+            delete: number;
+            /** Insert */
+            insert: string;
         };
         /**
          * TokenCreate
@@ -1100,6 +1387,37 @@ export interface components {
             sections: components["schemas"]["ProfileSection"][];
             /** Grid Columns */
             grid_columns?: components["schemas"]["GridColumn"][] | null;
+        };
+        /**
+         * UpdateLiteral
+         * @description A literal was set, changed or cleared.
+         */
+        UpdateLiteral: {
+            /** Path */
+            path: string;
+            /** Parent */
+            parent: components["schemas"]["Step"][];
+            /** Property */
+            property: string;
+            /**
+             * @description discriminator enum property added by openapi-typescript
+             * @enum {string}
+             */
+            kind: "update_literal";
+            /**
+             * Op
+             * @enum {string}
+             */
+            op: "set" | "change" | "clear";
+            /** Key */
+            key: string | null;
+            /** Before */
+            before: string | null;
+            /** Old */
+            old: unknown;
+            /** New */
+            new: unknown;
+            text_edit: components["schemas"]["TextEdit"] | null;
         };
         /**
          * UserKind
@@ -1618,6 +1936,128 @@ export interface operations {
                 content: {
                     "application/json": components["schemas"]["HTTPValidationError"];
                 };
+            };
+        };
+    };
+    diff_revisions_api_records__record_id__revisions__from_version__diff__to_version__get: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_id: string;
+                from_version: number;
+                to_version: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SemanticDiff"];
+                };
+            };
+            /** @description LAE-REC-001, LAE-REC-004 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    diff_draft_api_records__record_id__draft_diff_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["SemanticDiff"];
+                };
+            };
+            /** @description LAE-REC-001, LAE-CRDT-003 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Validation Error */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["HTTPValidationError"];
+                };
+            };
+        };
+    };
+    revert_to_revision_api_records__record_id__revisions__version__revert_post: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_id: string;
+                version: number;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Successful Response */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Reverted"];
+                };
+            };
+            /** @description LAE-REC-001, LAE-REC-004 */
+            404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description LAE-CRDT-004, LAE-CRDT-005 */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description LAE-CRDT-008 */
+            422: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
             };
         };
     };
