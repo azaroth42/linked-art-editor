@@ -10,12 +10,17 @@ the method named after it.
 
 1. **One hydration per draft epoch** (``InMemoryRoomManager._load``). A draft is hydrated from
    ``records.data`` once, when its ``crdt_drafts`` row is inserted. Every later open of the
-   same draft replays that row's ``state`` and the ``crdt_updates`` of the same epoch.
+   same draft replays that row's ``state`` and the ``crdt_updates`` of the same epoch. The
+   ``records`` row is locked ``FOR SHARE`` while that is decided, so a publish cannot commit
+   between reading ``records.draft_epoch`` / ``data`` and reading (or inserting) the draft.
 2. **Persist before apply, apply before broadcast** (``Room._write``). An update is validated,
    then committed to ``crdt_updates``, then applied to the ``Doc``; the broadcast is triggered
    by the ``Doc`` changing. Nothing a peer has seen can be missing from the database. The whole
    step holds the room lock and is shielded from cancellation, so compaction never runs between
-   the commit and the apply.
+   the commit and the apply. **Memory never falls behind the database either:** if the commit
+   fails (its outcome is then unknown: the acknowledgement of a commit can be lost) or the
+   apply fails, the room is dropped (``RoomFailedError``) and the next open rebuilds it from
+   the rows. Otherwise a later compaction would delete a row the ``Doc`` does not contain.
 3. **A superseded room writes nothing** (``lae.crdt.store.append_update`` / ``compact``). Both
    statements only match a ``crdt_drafts`` row with the room's epoch. When the row is gone or
    has another epoch (the draft was published or discarded while this room was in memory), the
@@ -30,6 +35,9 @@ the method named after it.
    1012 ``room-closed`` when the room only leaves memory (the client reconnects and the room
    rehydrates), 4403 ``ejected`` for ``eject``. Idle eviction only takes rooms with no socket.
 6. **Deleting a draft ends its epoch** (``close(discard=True)`` → ``store.delete_draft``).
+7. **One process** (decision A4; ``lae.crdt.instance``). Two managers on one database would each
+   compact away rows the other one's ``Doc`` does not contain. ``crdt-ws`` holds a PostgreSQL
+   advisory lock for as long as it runs and a second process does not start.
 
 Presence (awareness). The server stamps ``user_id``, ``display_name``, ``kind`` (``"human"`` or
 ``"agent"``) and ``read_only`` on every state a socket publishes, so a client cannot pose as
@@ -120,6 +128,8 @@ CLOSE_INTERNAL_ERROR: Final = 1011
 
 REASON_PERSIST_FAILED: Final = "persist-failed"
 
+REASON_INTERNAL_ERROR: Final = "internal-error"
+
 logger = get_logger(__name__)
 _yroom_log = logging.getLogger("lae.crdt.yroom")
 
@@ -156,6 +166,23 @@ class RoomClosedError(RoomError):
     """The room has left memory; open it again."""
 
 
+class RoomFailedError(RoomError):
+    """A write could not be completed and the room no longer vouches for its ``Doc``.
+
+    Either the insert into ``crdt_updates`` failed (it may have been committed all the same) or
+    a committed update could not be applied. Nothing was broadcast. The room is closed and is
+    rebuilt from the database on the next open; clients reconnect and resend.
+    """
+
+
+class EpochMismatchError(RoomError):
+    """The caller holds another draft epoch than the record's current one (decision B6)."""
+
+    def __init__(self, record_id: UUID, current: int) -> None:
+        super().__init__(f"{record_id}: the current draft epoch is {current}")
+        self.current = current
+
+
 class Snapshot(BaseModel):
     """The state of a draft at one moment, as ``RoomManager.snapshot`` returns it."""
 
@@ -168,10 +195,12 @@ class Snapshot(BaseModel):
     base_version: int
     """``records.version`` when the draft was hydrated."""
     last_update_id: int
-    """Largest ``crdt_updates.id`` the snapshot contains (0 if none since the room was loaded).
+    """Id of the last update the snapshot contains (``crdt_drafts.last_update_id``; 0 if none).
 
-    A publish that must not lose edits made after its snapshot can check, in its transaction,
-    that no ``crdt_updates`` row of the record has a larger id.
+    It is the draft's version: every write changes it, compaction and eviction do not. A publish
+    that must not lose edits made after its snapshot calls, in its transaction,
+    ``lae.crdt.store.draft_unchanged(session, record_id, draft_epoch, last_update_id)``.
+    ``max(crdt_updates.id)`` is **not** a substitute: compaction deletes those rows.
     """
 
 
@@ -274,6 +303,8 @@ class Room(YRoom):
         self.lock = asyncio.Lock()
         """Serialises persist-then-apply and compaction."""
         self.closed = False
+        self.superseded = False
+        """True once a write or a compaction found the draft row gone (published, discarded)."""
         self.last_activity = time.monotonic()
         self._owners: dict[int, Connection] = {}
         self._empty = asyncio.Event()
@@ -344,8 +375,9 @@ class Room(YRoom):
 
         Returns ``last_update_id``. Raises ``InvalidUpdateError`` (nothing happened),
         ``DraftSupersededError`` or ``RoomClosedError`` (nothing happened, the room is gone), or
-        the database error (nothing was applied or broadcast). If the caller is cancelled the
-        write still runs to completion.
+        ``RoomFailedError`` (nothing was applied or broadcast; the update may or may not be in
+        the database, and the room is closed so that it is rebuilt from there). If the caller is
+        cancelled the write still runs to completion.
         """
         try:
             check_update(update)
@@ -359,17 +391,35 @@ class Room(YRoom):
         async with self.lock:
             if self.closed:
                 raise RoomClosedError(str(self.record_id))
-            async with self._sessions() as session:
-                async with session.begin():
-                    update_id = await store.append_update(
-                        session, self.record_id, self.draft_epoch, update, user_id
-                    )
+            try:
+                async with self._sessions() as session:
+                    async with session.begin():
+                        update_id = await store.append_update(
+                            session, self.record_id, self.draft_epoch, update, user_id
+                        )
+            except Exception as exc:
+                # Not known to be persisted, so not applied and not broadcast. Not known to be
+                # absent either: the row is there if only the commit's answer was lost. The Doc
+                # can no longer be trusted to contain every row, so the room goes.
+                self.closed = True
+                logger.error("update_not_persisted", record_id=str(self.record_id), error=repr(exc))
+                raise RoomFailedError(str(self.record_id)) from exc
             # Committed. From here on the update survives a crash (replayed on the next open).
             if update_id is None:
-                self.closed = True
+                self.closed = self.superseded = True
                 raise DraftSupersededError(str(self.record_id))
             await self._persisted(update_id)
-            self.ydoc.apply_update(update)  # observers queue the broadcast to every socket
+            try:
+                self.ydoc.apply_update(update)  # observers queue the broadcast to every socket
+            except Exception as exc:  # cannot happen: check_update accepted the bytes
+                self.closed = True
+                logger.error(
+                    "update_not_applied",
+                    record_id=str(self.record_id),
+                    update_id=update_id,
+                    error=repr(exc),
+                )
+                raise RoomFailedError(str(self.record_id)) from exc
             if not is_integrated(self.ydoc, update):
                 self.unintegrated.append(update)
             self.last_update_id = update_id
@@ -420,7 +470,7 @@ class Room(YRoom):
                     session, self.record_id, self.draft_epoch, state, self.last_update_id
                 )
         if not current:
-            self.closed = True
+            self.closed = self.superseded = True
             raise DraftSupersededError(str(self.record_id))
         if self.unintegrated:
             self.unintegrated = [state]
@@ -489,13 +539,21 @@ class Room(YRoom):
         except (ProtocolError, InvalidUpdateError, IndexError) as exc:
             logger.warning("protocol_error", record_id=str(self.record_id), error=str(exc))
             connection.close(CLOSE_PROTOCOL_ERROR, REASON_PROTOCOL_ERROR)
-        except (DraftSupersededError, RoomClosedError):
+        except DraftSupersededError:
             connection.close(CLOSE_STALE_EPOCH, REASON_STALE_EPOCH)
             raise
-        except Exception as exc:
-            # Not persisted, so not applied and not broadcast. The client resends on reconnect.
-            logger.error("update_not_persisted", record_id=str(self.record_id), error=repr(exc))
+        except RoomClosedError:
+            # The room left memory while this update waited; the client reconnects and resends
+            # (and meets the epoch guard if the draft is gone).
+            connection.close(CLOSE_ROOM_CLOSED, REASON_ROOM_CLOSED)
+            raise
+        except RoomFailedError:
+            # Not applied and not broadcast. The client resends on reconnect.
             connection.close(CLOSE_INTERNAL_ERROR, REASON_PERSIST_FAILED)
+            raise
+        except Exception as exc:
+            logger.error("message_failed", record_id=str(self.record_id), error=repr(exc))
+            connection.close(CLOSE_INTERNAL_ERROR, REASON_INTERNAL_ERROR)
 
     async def _handle_sync(self, connection: Connection, message: bytes) -> None:
         step = message[1]
@@ -692,6 +750,7 @@ class InMemoryRoomManager:
         self._locks: dict[UUID, tuple[asyncio.Lock, int]] = {}
         self._tasks: set[asyncio.Task[None]] = set()
         self._sweeper: asyncio.Task[None] | None = None
+        self._abandoned = False
 
     # -- lifecycle ---------------------------------------------------------------------------
 
@@ -711,6 +770,18 @@ class InMemoryRoomManager:
             await self._retire(room, CLOSE_ROOM_CLOSED, REASON_ROOM_CLOSED, compact=True)
         if self._tasks:
             await asyncio.gather(*self._tasks, return_exceptions=True)
+
+    async def abandon(self) -> None:
+        """Drop every room **without writing anything** and refuse to open rooms from now on.
+
+        For a process that may no longer be the only ``crdt-ws`` on its database
+        (``lae.crdt.instance``): its ``Doc`` objects must not be compacted over what another
+        process has written. Sockets are closed with 1012; nothing is lost, because every
+        update a room accepted is in ``crdt_updates`` already.
+        """
+        self._abandoned = True
+        for room in list(self._rooms.values()):
+            await self._retire(room, CLOSE_ROOM_CLOSED, REASON_ROOM_CLOSED)
 
     async def __aenter__(self) -> InMemoryRoomManager:
         await self.start()
@@ -743,6 +814,7 @@ class InMemoryRoomManager:
         content: dict[str, Any] | None = None,
         created_by: UUID | None = None,
         create: bool = True,
+        expected_epoch: int | None = None,
     ) -> Room:
         """Return the record's room, loading its draft or creating one from ``records.data``.
 
@@ -751,22 +823,35 @@ class InMemoryRoomManager:
         ``DraftExistsError``. ``created_by`` is stored on a new draft. With ``create=False`` a
         record without a draft raises ``DraftNotFoundError`` instead of getting one.
 
+        ``expected_epoch`` is the draft epoch the caller holds (a socket's ``?epoch=``). If it
+        is not the record's current one, ``EpochMismatchError`` is raised and **no draft is
+        created**: a stale browser tab must not leave a new draft behind on a record that was
+        just published.
+
         Also raises ``RecordNotFoundError``, ``RecordNotEditableError`` (deleted or merged) and
         ``lae.projection.ProjectionError`` (content that cannot be hydrated).
         """
         async with self._record_lock(record_id):
+            if self._abandoned:
+                raise RoomFailedError("this crdt-ws process is shutting down")
             room = self._rooms.get(record_id)
             if room is not None and not room.closed:
                 async with self._sessions() as session:
                     current = await store.draft_is_current(session, record_id, room.draft_epoch)
                 if current:
+                    if expected_epoch is not None and expected_epoch != room.draft_epoch:
+                        raise EpochMismatchError(record_id, room.draft_epoch)
                     if content is not None:
                         raise DraftExistsError(str(record_id))
                     return room
                 logger.warning("room_superseded", record_id=str(record_id), via="open")
-            if room is not None:
                 await self._retire(room, CLOSE_STALE_EPOCH, REASON_STALE_EPOCH)
-            room = await self._load(record_id, content, created_by, create)
+            elif room is not None and room.superseded:
+                await self._retire(room, CLOSE_STALE_EPOCH, REASON_STALE_EPOCH)
+            elif room is not None:
+                # Closed by a failed write and not yet retired; its sockets reconnect.
+                await self._retire(room, CLOSE_ROOM_CLOSED, REASON_ROOM_CLOSED)
+            room = await self._load(record_id, content, created_by, create, expected_epoch)
             self._rooms[record_id] = room
             await room.run()
             return room
@@ -777,11 +862,13 @@ class InMemoryRoomManager:
         content: dict[str, Any] | None,
         created_by: UUID | None,
         create: bool,
+        expected_epoch: int | None = None,
     ) -> Room:
         """Build the room from the draft rows, or hydrate a new draft (invariant 1)."""
         async with self._sessions() as session:
             async with session.begin():
-                record = await store.load_record(session, record_id)
+                # Locked against a concurrent publish until the draft is read or inserted.
+                record = await store.load_record(session, record_id, for_share=True)
                 if record is None:
                     raise RecordNotFoundError(str(record_id))
                 epoch = record.draft_epoch
@@ -797,6 +884,8 @@ class InMemoryRoomManager:
                     new_epoch = await store.delete_draft(session, record_id)
                     assert new_epoch is not None
                     epoch, draft = new_epoch, None
+                if expected_epoch is not None and expected_epoch != epoch:
+                    raise EpochMismatchError(record_id, epoch)
                 if draft is None:
                     if not create:
                         raise DraftNotFoundError(str(record_id))
@@ -847,7 +936,7 @@ class InMemoryRoomManager:
             draft_epoch=draft.draft_epoch,
             base_version=draft.base_version,
             contributors=set(draft.contributors),
-            last_update_id=updates[-1][0] if updates else 0,
+            last_update_id=draft.last_update_id,
             uncompacted=len(updates),
             unintegrated=[u for u in replayed if not is_integrated(doc, u)],
             compact_every=self.compact_every,
@@ -891,15 +980,26 @@ class InMemoryRoomManager:
         """Persist, apply and broadcast a Yjs update on behalf of ``user_id``.
 
         Opens the room (creating the draft) if needed. Raises ``InvalidUpdateError`` for bytes
-        that are not an update, and ``DraftSupersededError`` if the draft was published or
-        discarded underneath the room.
+        that are not an update, ``DraftSupersededError`` if the draft was published or
+        discarded underneath the room, and ``RoomFailedError`` if the update could not be
+        persisted.
         """
-        room = await self.open(record_id)
-        try:
-            await room.write(update, user_id)
-        except (DraftSupersededError, RoomClosedError):
-            self._retire_soon(room)
-            raise
+        for attempt in (1, 2):
+            room = await self.open(record_id)
+            try:
+                await room.write(update, user_id)
+            except DraftSupersededError:
+                self._retire_soon(room, CLOSE_STALE_EPOCH, REASON_STALE_EPOCH)
+                raise
+            except RoomFailedError:
+                self._retire_soon(room, CLOSE_ROOM_CLOSED, REASON_ROOM_CLOSED)
+                raise
+            except RoomClosedError:
+                # The room left memory (eviction, a failed write) between open and write.
+                if attempt == 2:
+                    raise
+            else:
+                return
 
     async def list_rooms(self) -> list[RoomInfo]:
         """Describe every room in memory."""
@@ -938,8 +1038,10 @@ class InMemoryRoomManager:
         """Serve one authenticated socket in ``room`` until it closes (see ``Room.attend``)."""
         try:
             await room.attend(connection)
-        except (DraftSupersededError, RoomClosedError):
-            self._retire_soon(room)
+        except DraftSupersededError:
+            self._retire_soon(room, CLOSE_STALE_EPOCH, REASON_STALE_EPOCH)
+        except (RoomFailedError, RoomClosedError):
+            self._retire_soon(room, CLOSE_ROOM_CLOSED, REASON_ROOM_CLOSED)
 
     # -- eviction and retirement (invariant 5) -----------------------------------------------
 
@@ -970,11 +1072,11 @@ class InMemoryRoomManager:
                 if evicted:
                     logger.info("rooms_evicted", count=len(evicted))
 
-    def _retire_soon(self, room: Room) -> None:
-        """Retire a superseded room from inside one of its own sockets' tasks."""
+    def _retire_soon(self, room: Room, code: int, reason: str) -> None:
+        """Retire a superseded or failed room from inside one of its own sockets' tasks."""
         if self._rooms.get(room.record_id) is room:
             del self._rooms[room.record_id]
-        task = asyncio.create_task(self._retire(room, CLOSE_STALE_EPOCH, REASON_STALE_EPOCH))
+        task = asyncio.create_task(self._retire(room, code, reason))
         self._tasks.add(task)
         task.add_done_callback(self._tasks.discard)
 

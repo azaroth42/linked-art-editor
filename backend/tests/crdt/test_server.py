@@ -149,8 +149,7 @@ async def test_offline_edits_against_a_published_draft_are_not_replayed(
         await client.connect()  # still says epoch 0
         assert await client.wait_closed() == (4409, "stale-epoch")
         await client.close()
-        assert await draft_row(db_engine, record_id) is not None  # the new draft, hydrated fresh
-        assert names((await server.manager.snapshot(record_id)).jsonld) == ["First name"]
+        assert await draft_row(db_engine, record_id) is None  # a stale client creates no draft
         assert "Offline edit" in names(client.project())  # the client keeps its document
 
         async with YClient(server.ws_url(record_id, token=token, epoch=1)) as fresh:
@@ -493,9 +492,7 @@ async def test_internal_rpc_through_the_client(db_url: str, db_engine: AsyncEngi
         with pytest.raises(CrdtWsError) as missing:
             await crdt.open(uuid7())
         assert (missing.value.status_code, missing.value.code) == (404, errors.RECORD_NOT_FOUND)
-        with pytest.raises(CrdtWsError) as missing:
-            await crdt.snapshot(uuid7())
-        assert missing.value.code == errors.RECORD_NOT_FOUND
+        assert await crdt.snapshot(uuid7()) is None  # no such record: no draft either
         with pytest.raises(CrdtWsError) as invalid:
             await crdt.apply_update(other_id, b"not an update", None)
         assert (invalid.value.status_code, invalid.value.code) == (422, errors.INVALID_UPDATE)

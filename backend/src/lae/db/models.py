@@ -191,6 +191,8 @@ class CrdtDraft(Base):
     contributors: Mapped[list[uuid.UUID]] = mapped_column(ARRAY(Uuid), server_default=EMPTY_ARRAY)
     last_activity_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=NOW)
     created_by: Mapped[uuid.UUID | None] = mapped_column(Uuid)
+    last_update_id: Mapped[int] = mapped_column(BigInteger, server_default=text("0"))
+    """Id of the last ``crdt_updates`` row appended to this draft; compaction keeps it."""
 
 
 class CrdtUpdate(Base):

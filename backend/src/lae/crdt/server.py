@@ -7,8 +7,18 @@ lifespan owns the database engine and the one ``InMemoryRoomManager`` of the dep
 WebSocket ``/ws/rooms/{record_id}`` (y-sync and awareness, as spoken by ``y-websocket``)
 -----------------------------------------------------------------------------------
 
-The handshake is always accepted and a refusal is a close frame, because a close code can only
-be sent on an open socket (S2 finding 8). In order:
+**Origin.** A browser sends its session cookie with a WebSocket handshake to this server from
+any page, whatever site the page came from, and a WebSocket is not subject to the same-origin
+policy. Without a check, a page on another origin could open a room as the signed-in user and
+read and write the draft (cross-site WebSocket hijacking). So a handshake that carries an
+``Origin`` header is refused with HTTP 403, before anything else, unless the origin is allowed
+(``allowed_origins``): the origin of ``LAE_BASE_URI``, every entry of ``LAE_ALLOWED_ORIGINS``,
+and in ``LAE_ENV=development`` any loopback origin (the Vite dev server). A handshake without
+``Origin`` is not from a browser (a script, an agent, ``y-websocket`` in Node) and is let
+through to authentication; such a client has no ambient cookie to abuse.
+
+After that the handshake is always accepted and a refusal is a close frame, because a close code
+can only be sent on an open socket (S2 finding 8). In order:
 
 1. ``record_id`` must be a UUID, else close ``4400 bad-request``.
 2. Authentication: ``?token=<PAT>`` or ``Authorization: Bearer`` (``lae.auth.tokens``), else
@@ -23,8 +33,9 @@ be sent on an open socket (S2 finding 8). In order:
    ``4404 not-found``; its document updates are dropped; its user id is listed in the server's
    awareness state (``lae.crdt.rooms``). Unknown record: ``4404 not-found``. Deleted or merged
    record: ``4410 not-editable``.
-5. Epoch guard (decision B6): if the stated epoch is not the room's, close
-   ``4409 stale-epoch``. The client keeps its document and reloads (Step 1.17).
+5. Epoch guard (decision B6): if the stated epoch is not the record's current draft epoch,
+   close ``4409 stale-epoch``; no draft is created for such a client. The client keeps its
+   document and reloads (Step 1.17).
 
 While connected, the server may close with ``4409 stale-epoch`` (the draft was published or
 discarded), ``1012 room-closed`` (the room left memory or the server is restarting: reconnect),
@@ -53,9 +64,11 @@ import contextlib
 import hmac
 import logging
 import re
+import signal
 import sys
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from typing import Annotated, Any, Final, cast
+from urllib.parse import urlsplit
 from uuid import UUID
 
 import uvicorn
@@ -69,18 +82,23 @@ from lae.auth import dev, oidc, tokens
 from lae.auth.permissions import CurrentUser
 from lae.auth.setup import AuthConfigError, check_auth_settings, session_secret
 from lae.crdt import errors
+from lae.crdt.instance import InstanceLock
 from lae.crdt.rooms import (
+    CLOSE_ROOM_CLOSED,
     CLOSE_STALE_EPOCH,
+    REASON_ROOM_CLOSED,
     REASON_STALE_EPOCH,
     Connection,
     DraftExistsError,
     DraftNotFoundError,
     DraftSupersededError,
+    EpochMismatchError,
     InMemoryRoomManager,
     InvalidUpdateError,
     RecordNotEditableError,
     RecordNotFoundError,
     RoomClosedError,
+    RoomFailedError,
     RoomInfo,
     Snapshot,
 )
@@ -105,6 +123,9 @@ TOKEN_REQUIRED_ENVS: Final = frozenset({"staging", "production"})
 """Environments in which ``LAE_INTERNAL_TOKEN`` must be set for ``crdt-ws`` to start."""
 
 EXIT_CONFIG_ERROR: Final = 2
+
+LOOPBACK_HOSTS: Final = frozenset({"localhost", "127.0.0.1", "::1"})
+DEFAULT_PORTS: Final = {"http": 80, "https": 443}
 
 logger = get_logger(__name__)
 
@@ -227,6 +248,47 @@ async def authenticate_websocket(websocket: WebSocket, settings: Settings) -> Cu
         return await oidc.session_principal(request, session)
 
 
+def normalize_origin(value: str) -> str | None:
+    """``scheme://host[:port]`` in lower case without a default port; ``None`` if not an origin.
+
+    Accepts a URL too (its path is ignored), so that ``LAE_BASE_URI`` can be passed.
+    """
+    try:
+        parts = urlsplit(value.strip())
+        port = parts.port
+    except ValueError:
+        return None
+    scheme, host = parts.scheme.lower(), (parts.hostname or "").lower()
+    if scheme not in DEFAULT_PORTS or not host:
+        return None
+    if ":" in host:
+        host = f"[{host}]"
+    return (
+        f"{scheme}://{host}"
+        if port in (None, DEFAULT_PORTS[scheme])
+        else f"{scheme}://{host}:{port}"
+    )
+
+
+def allowed_origins(settings: Settings) -> frozenset[str]:
+    """The origins a browser may open a room from: that of ``base_uri`` and ``allowed_origins``."""
+    candidates = [settings.base_uri, *settings.allowed_origins]
+    return frozenset(origin for origin in map(normalize_origin, candidates) if origin is not None)
+
+
+def origin_allowed(origin: str | None, settings: Settings) -> bool:
+    """Whether a handshake with this ``Origin`` header may proceed (see the module docstring)."""
+    if origin is None:
+        return True  # not a browser
+    normalized = normalize_origin(origin)
+    if normalized is None:
+        return False  # "null" (sandboxed frame, file:) or anything that is not http(s)
+    if normalized in allowed_origins(settings):
+        return True
+    host = urlsplit(normalized).hostname
+    return settings.env == "development" and host in LOOPBACK_HOSTS
+
+
 def stated_epoch(websocket: WebSocket) -> int | None:
     """The draft epoch the client says it holds, or ``None`` if absent or not a number."""
     raw = websocket.headers.get(EPOCH_HEADER) or websocket.query_params.get(EPOCH_PARAM)
@@ -239,6 +301,11 @@ async def serve_room(websocket: WebSocket, record_id: str) -> None:
     """The ``/ws/rooms/{record_id}`` endpoint (see the module docstring for the steps)."""
     manager: InMemoryRoomManager = websocket.app.state.rooms
     settings: Settings = websocket.app.state.settings
+    origin = websocket.headers.get("origin")
+    if not origin_allowed(origin, settings):
+        logger.warning("ws_origin_refused", record_id=record_id, origin=(origin or "")[:200])
+        await websocket.close()  # before accept: the handshake is answered with HTTP 403
+        return
     await websocket.accept()
 
     async def refuse(code: int, reason: str) -> None:
@@ -258,12 +325,18 @@ async def serve_room(websocket: WebSocket, record_id: str) -> None:
         return await refuse(CLOSE_BAD_REQUEST, "bad-request")
     read_only = not user.has(EDIT_PERMISSION)
     try:
-        room = await manager.open(room_id, create=not read_only, created_by=user.id)
+        room = await manager.open(
+            room_id, create=not read_only, created_by=user.id, expected_epoch=epoch
+        )
+    except EpochMismatchError:
+        return await refuse(CLOSE_STALE_EPOCH, REASON_STALE_EPOCH)
     except (RecordNotFoundError, DraftNotFoundError):
         return await refuse(CLOSE_NOT_FOUND, "not-found")
     except (RecordNotEditableError, ProjectionError):
         return await refuse(CLOSE_NOT_EDITABLE, "not-editable")
-    if epoch != room.draft_epoch:
+    except RoomFailedError:
+        return await refuse(CLOSE_ROOM_CLOSED, REASON_ROOM_CLOSED)
+    if epoch != room.draft_epoch:  # cannot happen: open has checked it
         return await refuse(CLOSE_STALE_EPOCH, REASON_STALE_EPOCH)
     channel = WebSocketChannel(websocket)
     connection = Connection(
@@ -333,6 +406,10 @@ def _room_error(exc: Exception, record_id: UUID) -> ApiError:
         return ApiError(status.HTTP_409_CONFLICT, errors.DRAFT_SUPERSEDED, params)
     if isinstance(exc, ProjectionError):
         return ApiError(422, errors.INVALID_CONTENT, {**params, "projection_code": exc.code})
+    if isinstance(exc, RoomFailedError):
+        return ApiError(
+            status.HTTP_503_SERVICE_UNAVAILABLE, errors.CRDT_WS_UNAVAILABLE, {"error": "room"}
+        )
     raise exc
 
 
@@ -345,6 +422,7 @@ ROOM_ERRORS: Final = (
     DraftSupersededError,
     RoomClosedError,
     ProjectionError,
+    RoomFailedError,
 )
 
 
@@ -411,13 +489,27 @@ async def health_live() -> dict[str, str]:
     return {"status": "ok"}
 
 
+def terminate_process() -> None:
+    """Ask this process to stop (uvicorn shuts down gracefully on ``SIGTERM``)."""
+    signal.raise_signal(signal.SIGTERM)
+
+
 def create_crdt_app(
-    settings: Settings, *, manager_class: type[InMemoryRoomManager] = InMemoryRoomManager
+    settings: Settings,
+    *,
+    manager_class: type[InMemoryRoomManager] = InMemoryRoomManager,
+    instance_lock_seconds: float | None = None,
+    terminate: Callable[[], None] = terminate_process,
 ) -> FastAPI:
-    """Build the ``crdt-ws`` application; ``manager_class`` is replaced only by tests.
+    """Build the ``crdt-ws`` application.
+
+    Only tests pass the keyword arguments: ``manager_class``, ``instance_lock_seconds`` (how
+    long to wait for another process's instance lock) and ``terminate`` (what to do when the
+    instance lock is lost, after the rooms have been dropped).
 
     Raises ``lae.auth.setup.AuthConfigError`` when the authentication settings must not be
-    served (the same checks as ``api``).
+    served (the same checks as ``api``). The lifespan raises
+    ``lae.crdt.instance.InstanceLockError`` when another ``crdt-ws`` serves the database.
     """
     check_auth_settings(settings)
 
@@ -426,17 +518,32 @@ def create_crdt_app(
         engine = create_engine(settings.database_url)
         sessionmaker = create_sessionmaker(engine)
         manager = manager_class(sessionmaker, idle_seconds=float(settings.crdt_room_idle_seconds))
+
+        async def lock_lost() -> None:
+            await manager.abandon()
+            terminate()
+
+        lock_options = (
+            {} if instance_lock_seconds is None else {"acquire_seconds": instance_lock_seconds}
+        )
+        lock = InstanceLock(engine, on_lost=lock_lost, **lock_options)
         app.state.engine = engine
         app.state.sessionmaker = sessionmaker
         app.state.rooms = manager
-        await manager.start()
+        app.state.instance_lock = lock
         try:
-            yield
+            # One crdt-ws per database (decision A4): taken before any room can be opened.
+            await lock.acquire()
+            await manager.start()
+            try:
+                yield
+            finally:
+                await manager.stop()
         finally:
-            await manager.stop()
+            await lock.release()
             await engine.dispose()
 
-    app = FastAPI(title="Linked Art Editor: crdt-ws", version=lae.__version__, lifespan=lifespan)
+    app = FastAPI(title="Laertes: crdt-ws", version=lae.__version__, lifespan=lifespan)
     app.state.settings = settings
     dev.init_dev_state(app.state)
     # The same cookie as api (lae.auth.setup.install_auth), so a browser session authenticates.

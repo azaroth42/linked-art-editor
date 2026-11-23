@@ -67,6 +67,14 @@ class Settings(BaseSettings):
     crdt_room_idle_seconds: int = 600
     """Seconds without a connection or a write after which a room leaves memory (decision B5)."""
 
+    allowed_origins: Annotated[list[str], NoDecode] = []
+    """Browser origins (``scheme://host[:port]``, comma-separated) that may open a draft room.
+
+    The origin of ``base_uri`` is always allowed, and any loopback origin when ``env`` is
+    ``development``. Set this when the editor is served from another origin than the record
+    URIs. ``crdt-ws`` refuses a WebSocket handshake whose ``Origin`` is none of these.
+    """
+
     internal_token: SecretStr | None = None
     """Shared secret for ``/internal/`` endpoints, sent as ``X-Internal-Token`` (conventions §2)."""
 
@@ -97,7 +105,9 @@ class Settings(BaseSettings):
     dev_user: str | None = None
     """Development login bypass, ``<email>:<Role>``; refused when ``env`` is ``production``."""
 
-    @field_validator("github_allowed_orgs", "github_allowed_users", mode="before")
+    @field_validator(
+        "github_allowed_orgs", "github_allowed_users", "allowed_origins", mode="before"
+    )
     @classmethod
     def _split_list(cls, value: object) -> object:
         """Read a comma- or whitespace-separated string (the environment's form) as a list."""

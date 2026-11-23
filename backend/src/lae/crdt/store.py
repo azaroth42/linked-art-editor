@@ -18,6 +18,15 @@ Rules (decisions B5, B6; ADR-0027):
   ``RoomManager.close(discard=True)``, which calls it). A fresh hydration at an epoch that some
   client still holds an older document for would be merged with that document on reconnect;
   two hydrations of one record must never be merged (``lae.projection.hydrate``).
+- **Lock order: the ``records`` row first, then the ``crdt_drafts`` row.** ``load_record`` (for
+  a room being loaded), ``append_update`` and ``delete_draft`` all take a lock on the record's
+  row before they touch its draft, and the publish transaction (Step 1.10) locks ``records``
+  ``FOR UPDATE`` first as well. With one order there is no deadlock between a write, a load and
+  a publish; a write that arrives during a publish waits for it and then finds its draft gone.
+- **``crdt_drafts.last_update_id`` is the draft's version.** ``append_update`` sets it to the id
+  of the row it inserts, in the same statement; compaction leaves it alone. Unlike
+  ``max(crdt_updates.id)`` it survives compaction, so "has the draft changed since this
+  snapshot" is ``draft_unchanged`` (publish asks that inside its transaction).
 """
 
 from __future__ import annotations
@@ -26,7 +35,18 @@ from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
 
-from sqlalchemy import LargeBinary, any_, case, delete, func, insert, literal, select, update
+from sqlalchemy import (
+    BigInteger,
+    LargeBinary,
+    any_,
+    case,
+    delete,
+    func,
+    insert,
+    literal,
+    select,
+    update,
+)
 from sqlalchemy.dialects.postgresql import ARRAY
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.types import Integer, Uuid
@@ -55,22 +75,30 @@ class DraftRow:
     base_version: int
     state: bytes
     contributors: tuple[UUID, ...]
+    last_update_id: int
+    """Id of the last update appended to the draft (0 if none); not reset by compaction."""
 
 
-async def load_record(session: AsyncSession, record_id: UUID) -> RecordRow | None:
-    """Return the record's row, or ``None`` if there is no such record."""
-    row = (
-        await session.execute(
-            select(
-                Record.id,
-                Record.uri,
-                Record.data,
-                Record.version,
-                Record.draft_epoch,
-                Record.status,
-            ).where(Record.id == record_id)
-        )
-    ).one_or_none()
+async def load_record(
+    session: AsyncSession, record_id: UUID, *, for_share: bool = False
+) -> RecordRow | None:
+    """Return the record's row, or ``None`` if there is no such record.
+
+    ``for_share`` locks the row ``FOR SHARE`` until the transaction ends: a publish, which
+    updates the row, cannot commit in between, so what the caller then reads from
+    ``crdt_drafts`` belongs to the ``version``, ``data`` and ``draft_epoch`` returned here.
+    """
+    statement = select(
+        Record.id,
+        Record.uri,
+        Record.data,
+        Record.version,
+        Record.draft_epoch,
+        Record.status,
+    ).where(Record.id == record_id)
+    if for_share:
+        statement = statement.with_for_update(read=True)
+    row = (await session.execute(statement)).one_or_none()
     return None if row is None else RecordRow(*row)
 
 
@@ -84,13 +112,34 @@ async def load_draft(
         CrdtDraft.base_version,
         CrdtDraft.state,
         CrdtDraft.contributors,
+        CrdtDraft.last_update_id,
     ).where(CrdtDraft.record_id == record_id)
     if for_update:
         statement = statement.with_for_update()
     row = (await session.execute(statement)).one_or_none()
     if row is None:
         return None
-    return DraftRow(row[0], row[1], row[2], bytes(row[3]), tuple(row[4]))
+    return DraftRow(row[0], row[1], row[2], bytes(row[3]), tuple(row[4]), row[5])
+
+
+async def draft_unchanged(
+    session: AsyncSession, record_id: UUID, draft_epoch: int, last_update_id: int
+) -> bool:
+    """Lock the draft row and return whether it is still the draft a snapshot was taken of.
+
+    True when the row exists with ``draft_epoch`` and no update has been appended since the one
+    with ``last_update_id`` (``Snapshot.draft_epoch`` / ``Snapshot.last_update_id``). The row
+    stays locked until the transaction ends, so no update can be appended before the caller
+    commits: a publish that gets ``True`` and then deletes the draft has lost no edit. The
+    caller must already hold its lock on the ``records`` row (lock order, see the module
+    docstring).
+    """
+    draft = await load_draft(session, record_id, for_update=True)
+    return (
+        draft is not None
+        and draft.draft_epoch == draft_epoch
+        and draft.last_update_id == last_update_id
+    )
 
 
 async def draft_is_current(session: AsyncSession, record_id: UUID, draft_epoch: int) -> bool:
@@ -149,11 +198,23 @@ async def append_update(
 ) -> int | None:
     """Append one update to the draft's log; return its id, or ``None`` if the draft is gone.
 
-    One statement: it locks the draft row, sets ``last_activity_at``, adds ``user_id`` to
-    ``contributors`` and inserts the ``crdt_updates`` row, all only if the draft row still has
-    ``draft_epoch``. The caller commits **before** it applies or broadcasts the update (B5).
+    Two statements. The first locks the ``records`` row ``FOR KEY SHARE``, the lock the foreign
+    key of ``crdt_updates`` needs anyway, taken first to keep the lock order (a publish holding
+    the row ``FOR UPDATE`` makes this wait here, holding nothing). The second locks the draft
+    row, sets ``last_activity_at`` and ``last_update_id``, adds ``user_id`` to ``contributors``
+    and inserts the ``crdt_updates`` row, all only if the draft row still has ``draft_epoch``.
+    The caller commits **before** it applies or broadcasts the update (B5).
     """
-    values: dict[str, Any] = {"last_activity_at": func.now()}
+    await session.execute(
+        select(Record.id).where(Record.id == record_id).with_for_update(read=True, key_share=True)
+    )
+    values: dict[str, Any] = {
+        "last_activity_at": func.now(),
+        # The id the insert below uses, so that the draft row names its last update.
+        "last_update_id": func.nextval(
+            func.pg_get_serial_sequence(CrdtUpdate.__tablename__, "id"), type_=BigInteger
+        ),
+    }
     if user_id is not None:
         user = literal(user_id, Uuid)
         values["contributors"] = case(
@@ -164,14 +225,15 @@ async def append_update(
         update(CrdtDraft)
         .where(CrdtDraft.record_id == record_id, CrdtDraft.draft_epoch == draft_epoch)
         .values(**values)
-        .returning(CrdtDraft.record_id)
+        .returning(CrdtDraft.record_id, CrdtDraft.last_update_id)
         .cte("touched")
     )
     statement = (
         insert(CrdtUpdate)
         .from_select(
-            ["record_id", "draft_epoch", "update"],
+            ["id", "record_id", "draft_epoch", "update"],
             select(
+                touched.c.last_update_id,
                 touched.c.record_id,
                 literal(draft_epoch, Integer),
                 literal(update_bytes, LargeBinary),
@@ -220,20 +282,24 @@ async def delete_draft(session: AsyncSession, record_id: UUID) -> int | None:
 
     The publish transaction (Step 1.10) increments ``records.draft_epoch`` itself and then calls
     this; in that order the epoch goes up by exactly one. ``records.updated_at`` is not touched.
+    The ``records`` row is locked first (lock order, see the module docstring).
     """
+    current: int | None = await session.scalar(
+        select(Record.draft_epoch).where(Record.id == record_id).with_for_update(key_share=True)
+    )
+    if current is None:
+        return None  # no record, so no draft rows either (they cascade)
     epoch: int | None = await session.scalar(
         delete(CrdtDraft).where(CrdtDraft.record_id == record_id).returning(CrdtDraft.draft_epoch)
     )
     await session.execute(delete(CrdtUpdate).where(CrdtUpdate.record_id == record_id))
-    if epoch is not None:
+    if epoch is not None and current <= epoch:
+        current = epoch + 1
         await session.execute(
             update(Record)
-            .where(Record.id == record_id, Record.draft_epoch <= epoch)
+            .where(Record.id == record_id)
             # updated_at names itself so that its onupdate default does not fire.
-            .values(draft_epoch=epoch + 1, updated_at=Record.updated_at)
+            .values(draft_epoch=current, updated_at=Record.updated_at)
             .execution_options(synchronize_session=False)
         )
-    current: int | None = await session.scalar(
-        select(Record.draft_epoch).where(Record.id == record_id)
-    )
     return current

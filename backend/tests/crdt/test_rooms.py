@@ -26,6 +26,8 @@ from lae.crdt.rooms import (
     RecordNotEditableError,
     RecordNotFoundError,
     Room,
+    RoomClosedError,
+    RoomFailedError,
     RoomManager,
 )
 from lae.db.models import CrdtDraft, CrdtUpdate, Record, RecordStatus
@@ -315,14 +317,63 @@ async def test_an_update_that_cannot_be_persisted_is_not_applied(
             raise OSError("database unreachable")
 
         monkeypatch.setattr(store, "append_update", failing)
-        with pytest.raises(OSError, match="unreachable"):
+        with pytest.raises(RoomFailedError) as failure:
             await manager.apply_update(
                 record_id, change(replica_of(room.ydoc), add_name("Lost")), None
             )
+        assert isinstance(failure.value.__cause__, OSError)
         monkeypatch.undo()
         assert names(project(room.ydoc)) == ["First name"]
         assert await update_count(db_engine, record_id) == 0
         assert room.last_update_id == 0
+        # The room no longer vouches for its Doc: it is dropped and rebuilt from the rows.
+        assert room.closed
+        assert await manager.get(record_id) is None
+        reopened = await manager.open(record_id)
+        assert reopened is not room
+        assert names(project(reopened.ydoc)) == ["First name"]
+
+
+async def test_a_commit_whose_answer_was_lost_is_not_compacted_away(
+    db_engine: AsyncEngine, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The insert is committed but the room is told it failed (the connection broke after it).
+
+    The room must not go on with a ``Doc`` that lacks the row: its next compaction would delete
+    the row and the edit with it. It is dropped; the reopened room has replayed the row.
+    """
+    record_id, _ = await create_record(db_engine)
+    sessions = sessions_of(db_engine)
+    real_append = store.append_update
+    async with manager_for(db_engine, compact_every=2) as manager:
+        room = await manager.open(record_id)
+
+        async def commits_then_breaks(session: Any, *args: Any) -> int:
+            async with sessions() as other, other.begin():
+                await real_append(other, *args)
+            raise OSError("connection lost after the commit")
+
+        monkeypatch.setattr(store, "append_update", commits_then_breaks)
+        with pytest.raises(RoomFailedError):
+            await room.write(change(replica_of(room.ydoc), add_name("Committed")), None)
+        monkeypatch.undo()
+        assert await update_count(db_engine, record_id) == 1
+        assert names(project(room.ydoc)) == ["First name"]  # not applied, not broadcast
+        with pytest.raises(RoomClosedError):
+            await room.write(change(replica_of(room.ydoc), add_name("Too late")), None)
+
+        reopened = await manager.open(record_id)
+        assert names(project(reopened.ydoc)) == ["First name", "Committed"]
+        await manager.apply_update(
+            record_id, change(replica_of(reopened.ydoc), add_name("Next")), None
+        )  # the second update of this draft: compaction
+        assert await update_count(db_engine, record_id) == 0
+    async with manager_for(db_engine) as restarted:
+        assert names((await restarted.snapshot(record_id)).jsonld) == [
+            "First name",
+            "Committed",
+            "Next",
+        ]
 
 
 async def test_a_cancelled_caller_does_not_leave_a_write_half_done(

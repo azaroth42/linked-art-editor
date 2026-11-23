@@ -28,7 +28,9 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 import lae
 from lae import api
 from lae.api.errors import ApiError, api_error_handler
+from lae.api.validation import SNAPSHOT_SOURCE_STATE
 from lae.auth.setup import install_auth
+from lae.crdt.client import CrdtWsClient
 from lae.db.session import create_engine, create_sessionmaker
 from lae.logging import RequestContextMiddleware, get_logger
 from lae.settings import Settings
@@ -162,6 +164,8 @@ def create_app(
         app.state.engine = engine
         app.state.sessionmaker = create_sessionmaker(engine)
         app.state.http_client = http_client
+        # Live drafts are read from crdt-ws (decision A4); validation's DraftSnapshotSource.
+        setattr(app.state, SNAPSHOT_SOURCE_STATE, CrdtWsClient.from_settings(settings, http_client))
         try:
             yield
         finally:

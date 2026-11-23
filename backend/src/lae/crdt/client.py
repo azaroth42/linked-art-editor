@@ -120,11 +120,14 @@ class CrdtWsClient:
         return _ROOM_LIST.validate_json(response.content)
 
     async def snapshot(self, record_id: UUID) -> Snapshot | None:
-        """Return the record's draft projected to JSON-LD, or ``None`` if it has no draft."""
+        """Return the record's draft projected to JSON-LD, or ``None`` if it has no draft.
+
+        ``None`` also when there is no such record. Never creates a draft.
+        """
         try:
             response = await self._call("GET", f"/internal/rooms/{record_id}/snapshot")
         except CrdtWsError as exc:
-            if exc.code == errors.DRAFT_NOT_FOUND:
+            if exc.code in (errors.DRAFT_NOT_FOUND, errors.RECORD_NOT_FOUND):
                 return None
             raise
         return Snapshot.model_validate_json(response.content)
