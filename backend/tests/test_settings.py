@@ -11,6 +11,8 @@ FIELDS = (
     "qlever_url",
     "qlever_update_url",
     "qlever_access_token",
+    "sync_metrics_host",
+    "sync_metrics_port",
     "base_uri",
     "context_version",
     "draft_ttl_days",
@@ -62,6 +64,8 @@ def test_defaults(clean_env: pytest.MonkeyPatch) -> None:
     assert settings.database_url == "postgresql+asyncpg://localhost:5432/lae"
     assert settings.qlever_url is None
     assert settings.qlever_update_url is None
+    assert settings.sync_metrics_host == "127.0.0.1"
+    assert settings.sync_metrics_port is None
     assert settings.base_uri == "http://localhost:8000/id/"
     assert settings.context_version == 1
     assert settings.draft_ttl_days == 5

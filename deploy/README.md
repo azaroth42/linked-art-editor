@@ -216,6 +216,9 @@ The unit templates in `systemd/` assume this layout; adjust paths and the user i
    LAE_QLEVER_UPDATE_URL=http://localhost:7010
    QLEVER_PORT=7010
    LAE_QLEVER_ACCESS_TOKEN=<output of: openssl rand -hex 32>
+   # Optional: the sync worker's Prometheus GET /metrics (outbox_pending, outbox_failed,
+   # sync_lag_seconds, ...) on 127.0.0.1:<port>; unset means no listener.
+   # LAE_SYNC_METRICS_PORT=9100
    LAE_BASE_URI=https://<your host>/id/
    # Required in production: signs the session cookie (shared by api and crdt-ws).
    LAE_SESSION_SECRET=<output of: openssl rand -hex 32>

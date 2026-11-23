@@ -9,7 +9,7 @@ import socket
 import subprocess
 import sys
 import time
-from collections.abc import Iterator
+from collections.abc import Iterator, Sequence
 from pathlib import Path
 from types import ModuleType
 from typing import Any
@@ -153,7 +153,7 @@ def test_process_runs_module_main_with_settings(
 ) -> None:
     received: list[Settings] = []
 
-    def fake_main(settings: Settings) -> int:
+    def fake_main(settings: Settings, argv: Sequence[str] = ()) -> int:
         received.append(settings)
         return 0
 
@@ -172,11 +172,28 @@ def test_process_main_may_be_async_and_its_result_is_the_exit_code(
     settings_env: pytest.MonkeyPatch,
     logging_calls: list[str],
 ) -> None:
-    async def fake_main(settings: Settings) -> int | None:
+    async def fake_main(settings: Settings, argv: Sequence[str] = ()) -> int | None:
         return returned
 
     install_process_module(settings_env, "sync-worker", fake_main)
     assert main(["sync-worker"]) == exit_code
+
+
+def test_sync_worker_gets_its_arguments(
+    settings_env: pytest.MonkeyPatch, logging_calls: list[str]
+) -> None:
+    received: list[list[str]] = []
+
+    def fake_main(settings: Settings, argv: Sequence[str] = ()) -> int:
+        received.append(list(argv))
+        return 0
+
+    install_process_module(settings_env, "sync-worker", fake_main)
+    assert main(["sync-worker", "--once"]) == 0
+    assert main(["sync-worker", "--replay-after", "7", "--target-url", "http://q:7324"]) == 0
+    assert received == [["--once"], ["--replay-after", "7", "--target-url", "http://q:7324"]]
+    with pytest.raises(SystemExit):
+        main(["sync-worker", "--no-such-option"])
 
 
 def test_migrate_upgrades_to_head(monkeypatch: pytest.MonkeyPatch) -> None:

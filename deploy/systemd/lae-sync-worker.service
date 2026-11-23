@@ -1,6 +1,10 @@
 # Template unit for the `sync-worker` process (`lae sync-worker`): applies the outbox to QLever.
-# Needs LAE_QLEVER_UPDATE_URL and LAE_QLEVER_ACCESS_TOKEN. Assumes the layout in
-# deploy/README.md ("Production with systemd"); adjust the paths and user before installing.
+# Needs LAE_QLEVER_URL (LAE_QLEVER_UPDATE_URL if updates go elsewhere) and
+# LAE_QLEVER_ACCESS_TOKEN; it refuses to start (exit 2) without them. One worker per database:
+# a second one waits for the advisory lock. It exits 1 when its database connection is lost and
+# relies on Restart= to come back. LAE_SYNC_METRICS_PORT enables GET /metrics on
+# LAE_SYNC_METRICS_HOST (default 127.0.0.1). Assumes the layout in deploy/README.md
+# ("Production with systemd"); adjust the paths and user before installing.
 
 [Unit]
 Description=Laertes: sync-worker (outbox to QLever)

@@ -38,6 +38,12 @@ class Settings(BaseSettings):
     qlever_access_token: SecretStr | None = None
     """QLever access token, required by its update endpoint (``deploy/Qleverfile``)."""
 
+    sync_metrics_host: str = "127.0.0.1"
+    """Interface the sync worker's ``GET /metrics`` listener binds to (Step 1.11)."""
+
+    sync_metrics_port: int | None = None
+    """Port of the sync worker's ``GET /metrics`` listener; unset means no listener."""
+
     base_uri: str = "http://localhost:8000/id/"
     """Prefix of public record URIs: ``<base_uri><uuid>``."""
 

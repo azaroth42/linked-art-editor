@@ -735,3 +735,32 @@ steps. Notes for the steps that meet it, and two choices the owner may want to c
    to a never-published record is reported only by publish (422 `LAE-PUB-003` with the
    diagnostics). Codes and paths are otherwise identical, because rewriting an `id` moves
    nothing. Decide whether the validate endpoint should do the same (it would need the bundle).
+
+## Step 1.11
+
+1. **Known limit: a request in flight from a worker that lost its connection can land last**
+   (contract `docs/contracts/1.11-sync-worker.md` §4, recorded here as asked, not solved). If a
+   worker's database connection dies after it read a batch and before its HTTP request to QLever
+   completes, its advisory lock is released, a restarted worker can apply later events of the
+   same record, and the old request (up to its 30 s timeout) can still arrive afterwards and
+   reinsert a triple the later event retracted. The worker never reconnects in-process and checks
+   its connection before sending, which narrows the window but cannot close it. The nightly
+   consistency audit (Steps 2.18 / 3.10) is the backstop.
+2. **QLever 0.6.0 statuses the worker's `classify` relies on** (test 36, measured against the
+   Homebrew binary, `deploy/QLEVER_VERSION`): an update without an access token → **403**
+   (`"SPARQL Update requires a valid access token but no access token was provided"`); with a
+   wrong token → **403** (`"Access token was provided but it was invalid"`); a syntax error →
+   **400**. 403 is therefore "unavailable" (a configuration fault that must not dead-letter the
+   queue) and 400 "rejected". The 400 answer echoes the whole update in its `query` field;
+   `last_error` keeps the first 2000 characters.
+3. **`qlever_delta_triples` and where the old triple lives** (test 37). Changing one triple of
+   the built index adds 2 to the metric (one deleted, one inserted), as Spike S1 measured.
+   Changing a triple that an earlier *update* inserted adds only 1: QLever 0.6.0 moves the old
+   triple from the inserted to the deleted delta set (`"before": {"inserted": 2}`, `"after":
+   {"deleted": 1, "inserted": 1}` for one `DELETE DATA`). Test 37 therefore builds the index with
+   the record's first version, as after a bootstrap. Replaying the same update does not lower
+   the metric. Step 2.18's rebuild trigger should keep counting churn, not net change.
+4. **The `sync-integration` CI job** installs QLever from the Homebrew tap `qlever-dev/qlever`
+   pinned at commit `205cc9d5183fd669c227e7ac7e1dbd0164573dd6` (formula `qlever 0.6.0_1`, the
+   prebuilt `qlever_0.6.0-1_macos_arm64.tar.gz`, macOS arm64 only), so it runs on `macos-15`;
+   PostgreSQL 18 and pgvector also come from Homebrew. Run time: see the PR (first run).
