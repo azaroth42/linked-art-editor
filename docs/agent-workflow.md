@@ -56,7 +56,7 @@ cd frontend && corepack pnpm lint && corepack pnpm typecheck && corepack pnpm te
 3. `gh pr create --base main --title "[P<step-id>] <step title>" --body-file -` with: `Closes #<N>`, a summary of what was built, the Verify results (commands and key numbers), any deviations, any `docs/questions.md` entries, and the line "Implemented by: <model>". End the body with `🤖 Generated with [Claude Code](https://claude.com/claude-code)`.
 4. Wait for CI: `gh pr checks <PR> --watch --fail-fast`. Fix failures and push again. (Before Step 0.2 exists there is no CI; local checks suffice.)
 5. **Non-critical steps:** when CI is green and the branch is up to date with main, merge with `gh pr merge <PR> --squash --delete-branch`. If the merge fails because main moved, rebase, re-check, push, wait for CI, and merge.
-6. **Critical steps** (issue labelled `critical-model`): do **not** merge. Leave the PR open and report. A separate reviewer agent on a larger model reviews, fixes, and merges.
+6. **Critical steps** (issue labelled `critical-model`) follow contract → implement → review (`docs/conventions.md` §10). A larger-model agent first merges the contract `docs/contracts/<step-id>-<slug>.md`; the Opus implementer builds to it and does **not** merge (leave the PR open and report); a separate larger-model reviewer checks the core against the contract, fixes, and merges.
 
 ## 6a. Resolving rebase conflicts
 

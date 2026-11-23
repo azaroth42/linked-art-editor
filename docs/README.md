@@ -48,6 +48,7 @@ Detailed per-step checkboxes live at the bottom of each phase guide (Exit Checkl
 | `decisions/REGISTER.md` | Consolidated decision register (architecture, editing, validation, UI, security, tooling). |
 | `decisions/NNNN-*.md` | Architecture Decision Records. `0001`–`0015` and `0017` are Accepted; `0016` is Proposed and is finalized in Phase 3 Step 3.3. |
 | `implementation_phases.md` | Roadmap: phases, exit criteria, cross-phase workstreams, what is deliberately late. |
+| `contracts/` | Contracts for critical steps, written by the larger model before Opus implements them (conventions §10). |
 | `phases/phase-0-foundations.md` | Monorepo, CI, schema, golden corpus, six spikes. |
 | `phases/phase-1-core-loop.md` | Records, RDF layer, projection, labels, API, auth, CRDT rooms, validation, publish, sync, bootstrap, autocomplete, revisions, reaper, frontend foundation, editor, reader, scale gate. |
 | `phases/phase-2-curation-vocab-scale.md` | Vocabulary registry and manager, backlinks, merge/unmerge, search, grid, batch, comments/inbox, workbench, introspection proxy, Mermaid, sidecars, import wizard, activity stream, ops baseline, blue/green rebuilds, backups, 10M gate. |

@@ -42,7 +42,7 @@ Rules for this phase:
 
 ## Step 1.3 — RDF layer: expansion, canonical N-Triples, diff
 
-> **CRITICAL STEP — requires a larger model.** Implement and review this step with a model from the tier above Opus 5.5 (Claude Fable/Mythos class). Opus 5.5 may scaffold files and boilerplate, but the core logic, its tests, and the PR review must come from the larger model. Reason: an ownership or expansion error emits or deletes triples belonging to other records in QLever, and the damage is invisible until a rebuild.
+> **CRITICAL STEP — contract and review by a larger model.** A Fable/Mythos-class model writes this step's contract in `docs/contracts/` and reviews the core diff against it; Opus 5.5 implements everything, core included (`docs/conventions.md` §10). Reason: an ownership or expansion error emits or deletes triples belonging to other records in QLever, and the damage is invisible until a rebuild.
 
 
 **Why:** The sync worker and revisions depend on exact, reproducible triples.
@@ -69,7 +69,7 @@ Rules for this phase:
 
 ## Step 1.4 — Projection layer (JSON-LD ↔ Y.Doc)
 
-> **CRITICAL STEP — requires a larger model.** Implement and review this step with a model from the tier above Opus 5.5 (Claude Fable/Mythos class). Opus 5.5 may scaffold files and boilerplate, but the core logic, its tests, and the PR review must come from the larger model. Reason: this is the production implementation of the round-trip and `_order` rules; bugs here lose cataloger data without any error.
+> **CRITICAL STEP — contract and review by a larger model.** A Fable/Mythos-class model writes this step's contract in `docs/contracts/` and reviews the core diff against it; Opus 5.5 implements everything, core included (`docs/conventions.md` §10). Reason: this is the production implementation of the round-trip and `_order` rules; bugs here lose cataloger data without any error.
 
 
 **Why:** The spike proved the rules; this is the production implementation with tests.
@@ -142,7 +142,7 @@ The specification is rules R1–R19 of `docs/spikes/S3-projection.md` (ADR-0018)
 
 ## Step 1.8 — CRDT room manager and WebSocket server (`crdt-ws`)
 
-> **CRITICAL STEP — requires a larger model.** Implement and review this step with a model from the tier above Opus 5.5 (Claude Fable/Mythos class). Opus 5.5 may scaffold files and boilerplate, but the core logic, its tests, and the PR review must come from the larger model. Reason: persistence ordering, the epoch guard, compaction, and rehydration decide whether edits survive crashes and publishes.
+> **CRITICAL STEP — contract and review by a larger model.** A Fable/Mythos-class model writes this step's contract in `docs/contracts/` and reviews the core diff against it; Opus 5.5 implements everything, core included (`docs/conventions.md` §10). Reason: persistence ordering, the epoch guard, compaction, and rehydration decide whether edits survive crashes and publishes.
 
 
 **Why:** The single live draft per record lives here. Everything that edits goes through it.
@@ -167,7 +167,7 @@ The specification is rules R1–R19 of `docs/spikes/S3-projection.md` (ADR-0018)
 
 ## Step 1.9 — Validation engine
 
-> **CRITICAL STEP — requires a larger model.** Implement and review this step with a model from the tier above Opus 5.5 (Claude Fable/Mythos class). Opus 5.5 may scaffold files and boilerplate, but the core logic, its tests, and the PR review must come from the larger model. Reason: mapping SHACL results back to JSON paths and keeping schema, rules, and shapes consistent is subtle; wrong mappings block or mis-report publishes.
+> **CRITICAL STEP — contract and review by a larger model.** A Fable/Mythos-class model writes this step's contract in `docs/contracts/` and reviews the core diff against it; Opus 5.5 implements everything, core included (`docs/conventions.md` §10). Reason: mapping SHACL results back to JSON paths and keeping schema, rules, and shapes consistent is subtle; wrong mappings block or mis-report publishes.
 
 
 **Do:**
@@ -188,7 +188,7 @@ The specification is rules R1–R19 of `docs/spikes/S3-projection.md` (ADR-0018)
 
 ## Step 1.10 — Publish transaction
 
-> **CRITICAL STEP — requires a larger model.** Implement and review this step with a model from the tier above Opus 5.5 (Claude Fable/Mythos class). Opus 5.5 may scaffold files and boilerplate, but the core logic, its tests, and the PR review must come from the larger model. Reason: the single-transaction publish with bundled stubs, ordered locking, and the drift flag is the system's integrity boundary.
+> **CRITICAL STEP — contract and review by a larger model.** A Fable/Mythos-class model writes this step's contract in `docs/contracts/` and reviews the core diff against it; Opus 5.5 implements everything, core included (`docs/conventions.md` §10). Reason: the single-transaction publish with bundled stubs, ordered locking, and the drift flag is the system's integrity boundary.
 
 
 **Why:** This is the one place where drafts become truth. Everything is in a single database transaction.
@@ -218,7 +218,7 @@ The specification is rules R1–R19 of `docs/spikes/S3-projection.md` (ADR-0018)
 
 ## Step 1.11 — Sync worker (Postgres → QLever)
 
-> **CRITICAL STEP — requires a larger model.** Implement and review this step with a model from the tier above Opus 5.5 (Claude Fable/Mythos class). Opus 5.5 may scaffold files and boilerplate, but the core logic, its tests, and the PR review must come from the larger model. Reason: the diff and drift logic, idempotent replay, and watermark semantics determine whether QLever ever diverges from Postgres.
+> **CRITICAL STEP — contract and review by a larger model.** A Fable/Mythos-class model writes this step's contract in `docs/contracts/` and reviews the core diff against it; Opus 5.5 implements everything, core included (`docs/conventions.md` §10). Reason: the diff and drift logic, idempotent replay, and watermark semantics determine whether QLever ever diverges from Postgres.
 
 
 **Do:**
@@ -276,7 +276,7 @@ The specification is rules R1–R19 of `docs/spikes/S3-projection.md` (ADR-0018)
 
 ## Step 1.14 — Revisions, semantic diff, and revert
 
-> **CRITICAL STEP — requires a larger model.** Implement and review this step with a model from the tier above Opus 5.5 (Claude Fable/Mythos class). Opus 5.5 may scaffold files and boilerplate, but the core logic, its tests, and the PR review must come from the larger model. Reason: the typed semantic diff is reused by publish, history, the graph overlay, and the rebase modal; its node-matching rules must be exact.
+> **CRITICAL STEP — contract and review by a larger model.** A Fable/Mythos-class model writes this step's contract in `docs/contracts/` and reviews the core diff against it; Opus 5.5 implements everything, core included (`docs/conventions.md` §10). Reason: the typed semantic diff is reused by publish, history, the graph overlay, and the rebase modal; its node-matching rules must be exact.
 
 
 **Do:**

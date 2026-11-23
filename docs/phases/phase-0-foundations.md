@@ -206,7 +206,7 @@ All four must exit 0 on the empty skeleton (a trivial placeholder test in each i
 
 ## Step 0.8 — Spike S3: JSON-LD ↔ Y.Doc projection round-trip
 
-> **CRITICAL STEP — requires a larger model.** Implement and review this step with a model from the tier above Opus 5.5 (Claude Fable/Mythos class). Opus 5.5 may scaffold files and boilerplate, but the core logic, its tests, and the PR review must come from the larger model. Reason: the projection rules define lossless round-tripping and concurrent merge semantics; a wrong rule silently corrupts records for every later phase.
+> **CRITICAL STEP — contract and review by a larger model.** A Fable/Mythos-class model writes this step's contract in `docs/contracts/` and reviews the core diff against it; Opus 5.5 implements everything, core included (`docs/conventions.md` §10). Reason: the projection rules define lossless round-tripping and concurrent merge semantics; a wrong rule silently corrupts records for every later phase.
 
 
 **Why:** This is the single most important correctness property in the system.
