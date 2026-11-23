@@ -9,7 +9,7 @@ target has no row keep whatever ``_label`` they have.
 
 from __future__ import annotations
 
-from collections.abc import Mapping, Sequence
+from collections.abc import Collection, Mapping, Sequence
 from typing import Any
 
 from sqlalchemy import Text, any_, bindparam, select
@@ -52,16 +52,27 @@ def resolve_label(
     return default_label if match is None else match
 
 
-async def hydrate_labels(
-    jsonld: Mapping[str, Any], locale_chain: Sequence[str], session: AsyncSession
-) -> dict[str, Any]:
-    """Return a copy of ``jsonld`` with ``_label`` transcluded on its references (one query)."""
-    uris = reference_ids(jsonld)
+async def resolve_labels(
+    uris: Collection[str], locale_chain: Sequence[str], session: AsyncSession
+) -> dict[str, str]:
+    """Return the label for ``locale_chain`` of each of ``uris`` that has an ``entity_labels`` row.
+
+    One query (none when ``uris`` is empty). For callers that need the labels beside the
+    document rather than in it, such as the semantic diff (``lae.diff.semantic``).
+    """
     resolved: dict[str, str] = {}
     if uris:
         rows = await session.execute(_LABEL_ROWS, {"uris": sorted(uris)})
         for uri, labels, default_label in rows:
             resolved[uri] = resolve_label(labels, default_label, locale_chain)
+    return resolved
+
+
+async def hydrate_labels(
+    jsonld: Mapping[str, Any], locale_chain: Sequence[str], session: AsyncSession
+) -> dict[str, Any]:
+    """Return a copy of ``jsonld`` with ``_label`` transcluded on its references (one query)."""
+    resolved = await resolve_labels(reference_ids(jsonld), locale_chain, session)
 
     def transclude(reference: dict[str, Any]) -> dict[str, Any]:
         label = resolved.get(reference["id"])
