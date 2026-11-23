@@ -470,6 +470,7 @@ Points from the rework for a human:
     references are rewritten to it, and the `entity_labels` row for the `vocab.getty.edu` URI
     remains, so autocomplete offers both. 12(a) makes either choice end at the local record. Say
     if the load should delete sidecar rows whose URI became an alias.
+    **Answer (owner, 2026-11-23):** yes: the load deletes label-only rows when there is a full record. Implemented as `lae.bootstrap.rewrite.drop_superseded_labels` (runs in `load` and `rewrite-refs`, before the metatype harvest).
 
 ## Step 1.9
 
