@@ -12,7 +12,7 @@ from fastapi import APIRouter
 
 def routers() -> list[APIRouter]:
     """Return every HTTP API router, in registration order."""
-    from lae.api import drafts, public, records, validation, vocab
+    from lae.api import drafts, profiles, public, records, validation, vocab
     from lae.auth import oidc, tokens
     from lae.search import autocomplete
 
@@ -25,4 +25,5 @@ def routers() -> list[APIRouter]:
         autocomplete.router,
         drafts.router,
         vocab.router,
+        profiles.router,
     ]

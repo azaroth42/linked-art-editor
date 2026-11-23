@@ -1,0 +1,134 @@
+# yaml-language-server: $schema=_schema.json
+# UI Profile for Person. Path syntax and the per-widget path contract are in profiles/README.md;
+# property names follow the Linked Art model (linked.art docs/model/actor/).
+class: Person
+version: 1
+sections:
+  - id: identification
+    label:
+      en: Identification
+    slots:
+      - id: names
+        label:
+          en: Names
+        help_text:
+          en: Names of the person. Mark the main name in each language as the Primary Name.
+        path: identified_by[Name]
+        widget: langtext
+        multiple: true
+        required: true
+        advanced: false
+      - id: identifiers
+        label:
+          en: Identifiers
+        help_text:
+          en: Identifiers assigned to the person, such as authority record numbers.
+        path: identified_by[Identifier]
+        widget: identifier
+        value_set: vocab:identifier_types
+        multiple: true
+        required: false
+        advanced: false
+  - id: classification
+    label:
+      en: Classification
+    slots:
+      - id: occupation
+        label:
+          en: Occupation
+        help_text:
+          en: What the person did, for example painter or printmaker.
+        path: classified_as
+        widget: classification
+        value_set: vocab:occupation
+        multiple: true
+        required: false
+        advanced: false
+      - id: nationality
+        label:
+          en: Nationality
+        help_text:
+          en: Nationalities or cultures the person is associated with.
+        path: classified_as
+        widget: classification
+        value_set: vocab:nationality
+        multiple: true
+        required: false
+        advanced: false
+      - id: gender
+        label:
+          en: Gender
+        help_text:
+          en: The person's gender, when it is known and appropriate to record.
+        path: classified_as
+        widget: classification
+        value_set: vocab:gender
+        multiple: true
+        required: false
+        advanced: true
+  - id: life
+    label:
+      en: Life
+    slots:
+      - id: birth_date
+        label:
+          en: Birth Date
+        help_text:
+          en: "When the person was born, as an EDTF date such as 1606 or 1606-07-15."
+        path: born.timespan
+        widget: edtf
+        multiple: false
+        required: false
+        advanced: false
+      - id: birth_place
+        label:
+          en: Birth Place
+        help_text:
+          en: Where the person was born.
+        path: born.took_place_at
+        widget: entity_ref
+        allowed_classes: [Place]
+        multiple: true
+        required: false
+        advanced: false
+      - id: death_date
+        label:
+          en: Death Date
+        help_text:
+          en: "When the person died, as an EDTF date such as 1669 or 1669-10-04."
+        path: died.timespan
+        widget: edtf
+        multiple: false
+        required: false
+        advanced: false
+      - id: death_place
+        label:
+          en: Death Place
+        help_text:
+          en: Where the person died.
+        path: died.took_place_at
+        widget: entity_ref
+        allowed_classes: [Place]
+        multiple: true
+        required: false
+        advanced: false
+  - id: about
+    label:
+      en: Biography
+    slots:
+      - id: biography
+        label:
+          en: Biography
+        help_text:
+          en: Biographies and other statements about the person, each with a statement type.
+        path: referred_to_by[LinguisticObject]
+        widget: statement
+        value_set: vocab:statement_types
+        multiple: true
+        required: false
+        advanced: false
+grid_columns:
+  - slot: names
+  - slot: occupation
+  - slot: birth_date
+  - slot: death_date

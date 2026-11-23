@@ -1,0 +1,64 @@
+# yaml-language-server: $schema=_schema.json
+# UI Profile for Type (a concept). Path syntax and the per-widget path contract are in
+# profiles/README.md; property names follow the Linked Art model (linked.art docs/model/concept/).
+class: Type
+version: 1
+sections:
+  - id: identification
+    label:
+      en: Identification
+    slots:
+      - id: names
+        label:
+          en: Names
+        help_text:
+          en: Names of the concept. Mark the main name in each language as the Primary Name.
+        path: identified_by[Name]
+        widget: langtext
+        multiple: true
+        required: true
+        advanced: false
+      - id: identifiers
+        label:
+          en: Identifiers
+        help_text:
+          en: Identifiers assigned to the concept, such as thesaurus numbers.
+        path: identified_by[Identifier]
+        widget: identifier
+        value_set: vocab:identifier_types
+        multiple: true
+        required: false
+        advanced: false
+  - id: hierarchy
+    label:
+      en: Hierarchy
+    slots:
+      - id: broader
+        label:
+          en: Broader Concepts
+        help_text:
+          en: More general concepts this one is a kind of.
+        path: broader
+        widget: entity_ref
+        allowed_classes: [Type]
+        multiple: true
+        required: false
+        advanced: false
+  - id: about
+    label:
+      en: Description
+    slots:
+      - id: description
+        label:
+          en: Description
+        help_text:
+          en: Scope notes and other statements about the concept, each with a statement type.
+        path: referred_to_by[LinguisticObject]
+        widget: statement
+        value_set: vocab:statement_types
+        multiple: true
+        required: false
+        advanced: false
+grid_columns:
+  - slot: names
+  - slot: broader

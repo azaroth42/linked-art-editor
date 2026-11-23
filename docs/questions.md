@@ -645,6 +645,38 @@ Points from the rework for a human:
    e2e test sets `LAE_ALLOWED_ORIGINS` to the preview origin); IndexedDB recovery after a browser
    restart (unit tests run without IndexedDB; the store name is tested, not the reload).
 
+## Step 1.18
+
+1. **No `profiles/vocab/phase1_static.yaml`.** Step 2.1 merged first, so the editor reads the
+   registry's `GET /api/vocab/bundle` (Step 2.1, item 4). The e2e global setup runs
+   `lae vocab import` so that the e2e database has the Value Sets.
+2. **Which card shows a classification is decided on the client from the bundle**
+   (`frontend/src/widgets/classifications.ts`): a pinned term, an inline metatype of a rule
+   (ADR-0032), or, for a rule with only `classes`, the reference's class; `exclusions` are never
+   claimed. A rule member the bundle cannot recognise (membership through QLever's
+   `broader+` only) lands in "Other classifications" with remove only, which is lossless but
+   shows less than the server knows. Step 2.2 may want to ship the claim per value instead. A
+   value is shown on the first claiming card only. Value Sets bound to a path without a profile
+   slot (Style on `HumanMadeObject.classified_as`) get a card of their own after the slot's.
+3. **References picked in the editor keep `_label`.** `EntityRefAutocomplete` writes the hit's
+   label (and a created stub's name) as `_label` so the draft can show it; publish removes
+   `_label` from every reference whose target has an `entity_labels` row (`lae.labels.normalize`),
+   so stored records still follow spec §3.2. Classification pills add no `_label` (the bundle
+   labels them). Existing references are labelled from the record as `GET /api/records/{id}`
+   transcluded it.
+4. **`LangTextWidget`'s `dir` select is display-only.** Linked Art has no text-direction
+   property, so the choice (`auto` by default) sets the text area's `dir` and is not stored.
+   The language select offers the 57 languages of `lae.labels.langtags.AAT_LANGUAGE_TAGS`
+   (mirrored in `frontend/src/widgets/languages.ts`, a backend test keeps them equal) and writes
+   the AAT concept; a language outside the table is shown and kept until another is chosen.
+5. **`EdtfWidget` stores the EDTF text as the `TimeSpan`'s `Name` classified
+   `http://id.loc.gov/datatypes/edtf`** (the class `LAE-RULE-002` checks), sets
+   `begin_of_the_begin`/`end_of_the_end` to the outer bounds, and removes `end_of_the_begin` and
+   `begin_of_the_end` when it writes, since the EDTF string then describes the whole span. Other
+   names of the span are kept. `[a..b]` sets ("one of") get the bounds edtf.js gives them, which
+   are those of the first member.
+6. **`wkt` is rendered by `TextWidget`** until a map widget exists (Place's `boundary` slot).
+
 ## Step 2.1
 
 Started early, before Phase 1 is complete, because nothing in it depends on the remaining Phase 1

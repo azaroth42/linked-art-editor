@@ -2,7 +2,9 @@
 
 from __future__ import annotations
 
+import re
 from collections.abc import Iterator
+from pathlib import Path
 from typing import Any
 
 import pytest
@@ -21,6 +23,7 @@ from lae.labels.langtags import (
 
 ENGLISH = "http://vocab.getty.edu/aat/300388277"
 SPANISH = "http://vocab.getty.edu/aat/300389311"
+EDITOR_LANGUAGES = Path(__file__).resolve().parents[3] / "frontend/src/widgets/languages.ts"
 
 
 def _languages(value: Any) -> Iterator[dict[str, Any]]:
@@ -165,3 +168,11 @@ def test_language_tag_falls_back_to_the_aat_id() -> None:
 )
 def test_unknown_language_is_und(language: Any) -> None:
     assert language_tag(language) == UNDETERMINED
+
+
+def test_the_editor_offers_the_same_languages() -> None:
+    # The editor writes a language as the AAT concept of a BCP-47 tag (Step 1.18); both tables
+    # must agree, or a language picked in the editor would read back as another tag.
+    source = EDITOR_LANGUAGES.read_text(encoding="utf-8")
+    pairs = re.findall(r'\["([a-z]+)", "(\d+)"\]', source)
+    assert {aat: tag for tag, aat in pairs} == dict(AAT_LANGUAGE_TAGS)
