@@ -120,7 +120,7 @@ curl -i localhost:8000/api/vocab/bundle | grep -i etag
 
 ## Step 2.6 — Manual merge and unmerge (migration 0011)
 
-> **CRITICAL STEP — requires a larger model.** Implement and review this step with a model from the tier above Opus 5.5 (Claude Fable/Mythos class). Opus 5.5 may scaffold files and boilerplate, but the core logic, its tests, and the PR review must come from the larger model. Reason: merge and unmerge rewrite other records inside one transaction with ordered locks; a mistake corrupts referrers and cannot be undone by the manifest.
+> **CRITICAL STEP — contract and review by a larger model.** A Fable/Mythos-class model writes this step's contract in `docs/contracts/` and reviews the core diff against it; Opus 5.5 implements everything, core included (`docs/conventions.md` §10). Reason: merge and unmerge rewrite other records inside one transaction with ordered locks; a mistake corrupts referrers and cannot be undone by the manifest.
 
 
 **Why:** Agents will propose merges in Phase 3; the human merge must be correct and reversible first.
@@ -307,7 +307,7 @@ curl -i localhost:8000/api/vocab/bundle | grep -i etag
 
 ## Step 2.18 — Blue/green QLever rebuild automation
 
-> **CRITICAL STEP — requires a larger model.** Implement and review this step with a model from the tier above Opus 5.5 (Claude Fable/Mythos class). Opus 5.5 may scaffold files and boilerplate, but the core logic, its tests, and the PR review must come from the larger model. Reason: watermark snapshot, replay, and atomic swap must be exactly right or the rebuilt index silently drops recent publishes.
+> **CRITICAL STEP — contract and review by a larger model.** A Fable/Mythos-class model writes this step's contract in `docs/contracts/` and reviews the core diff against it; Opus 5.5 implements everything, core included (`docs/conventions.md` §10). Reason: watermark snapshot, replay, and atomic swap must be exactly right or the rebuilt index silently drops recent publishes.
 
 
 **Why:** The delta-triple layer grows forever otherwise, and rebuilds must never take the public reader offline.

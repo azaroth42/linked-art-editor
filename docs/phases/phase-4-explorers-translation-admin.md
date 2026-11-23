@@ -200,7 +200,7 @@ Rules for this phase:
 
 ## Step 4.12 — Entity Split Workbench and Unsplit
 
-> **CRITICAL STEP — requires a larger model.** Implement and review this step with a model from the tier above Opus 5.5 (Claude Fable/Mythos class). Opus 5.5 may scaffold files and boilerplate, but the core logic, its tests, and the PR review must come from the larger model. Reason: split reassigns inbound references across many records with ordered locks and must be exactly reversible.
+> **CRITICAL STEP — contract and review by a larger model.** A Fable/Mythos-class model writes this step's contract in `docs/contracts/` and reviews the core diff against it; Opus 5.5 implements everything, core included (`docs/conventions.md` §10). Reason: split reassigns inbound references across many records with ordered locks and must be exactly reversible.
 
 
 **Do:**
@@ -252,7 +252,7 @@ Rules for this phase:
 
 ## Step 4.15 — Rebase Offline Changes Modal (v1)
 
-> **CRITICAL STEP — requires a larger model.** Implement and review this step with a model from the tier above Opus 5.5 (Claude Fable/Mythos class). Opus 5.5 may scaffold files and boilerplate, but the core logic, its tests, and the PR review must come from the larger model. Reason: diffing a stale offline Y.Doc against a newer revision and applying selected changes safely is the hardest client-server interaction in the system.
+> **CRITICAL STEP — contract and review by a larger model.** A Fable/Mythos-class model writes this step's contract in `docs/contracts/` and reviews the core diff against it; Opus 5.5 implements everything, core included (`docs/conventions.md` §10). Reason: diffing a stale offline Y.Doc against a newer revision and applying selected changes safely is the hardest client-server interaction in the system.
 
 
 **Do:**

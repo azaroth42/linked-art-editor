@@ -107,7 +107,7 @@ Decisions made during the November 2026 design review are also written up as ADR
 | F5 | Commit format `<type>(<scope>): <summary>`; one guide step per PR; PR names the step. | fixed | conventions §7 |
 | F6 | Nothing from adjacent repos is imported as a package; code is vendored with a `# Vendored from <repo>/<path> @ <commit>` header and tests. | fixed | conventions §8; reuse_map |
 | F7 | The golden corpus is the 211 linked.art examples plus ≥20 institutional records; 100% round-trip is a hard gate from Phase 1 on. | locked | Phase 0 Step 0.4; Phase 1 Step 1.4 |
-| F8 | Default implementer is Claude Opus 5.5; steps marked **CRITICAL** are implemented and reviewed by a model from the tier above (Claude Fable/Mythos class). | fixed | ADR-0015; conventions §10 |
+| F8 | Default implementer is Claude Opus 5.5 for every step. Steps marked **CRITICAL** follow contract → implement → review: a Fable/Mythos-class model writes the contract (`docs/contracts/`) and reviews the core against it; Opus implements (owner, 2026-11-23). | fixed | ADR-0015; conventions §10 |
 | F9 | Spikes S1–S6 produce written GO/NO-GO reports in `docs/spikes/`; a NO-GO stops the phase until a human acknowledges. | fixed | Phase 0 |
 | F11 | No Docker or containers anywhere: development, CI, and production install PostgreSQL, QLever, and the Python processes natively. | locked | ADR-0017 |
 | F12 | The product is named **Laertes** (Linked Art Editor with Real Time Entity Synchronization) in all user-visible text; internal identifiers (`lae` package and CLI, `LAE_` settings, `lae-*` systemd units) are unchanged. | fixed | Owner, 2026-11-22 |

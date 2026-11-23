@@ -121,7 +121,7 @@ Rules for this phase:
 
 ## Step 3.6 — MCP draft-authoring and validation tools (through the room manager)
 
-> **CRITICAL STEP — requires a larger model.** Implement and review this step with a model from the tier above Opus 5.5 (Claude Fable/Mythos class). Opus 5.5 may scaffold files and boilerplate, but the core logic, its tests, and the PR review must come from the larger model. Reason: `RoomManager.transact` and `apply_change` are the only write path for agents; errors here let agents bypass validation, attribution, or undo.
+> **CRITICAL STEP — contract and review by a larger model.** A Fable/Mythos-class model writes this step's contract in `docs/contracts/` and reviews the core diff against it; Opus 5.5 implements everything, core included (`docs/conventions.md` §10). Reason: `RoomManager.transact` and `apply_change` are the only write path for agents; errors here let agents bypass validation, attribution, or undo.
 
 
 **Why:** Agents edit the same live draft humans see, with a visible presence badge.
@@ -167,7 +167,7 @@ Rules for this phase:
 
 ## Step 3.8 — Curation proposals queue and two-tier merge review
 
-> **CRITICAL STEP — requires a larger model.** Implement and review this step with a model from the tier above Opus 5.5 (Claude Fable/Mythos class). Opus 5.5 may scaffold files and boilerplate, but the core logic, its tests, and the PR review must come from the larger model. Reason: the proposal state machine and blast-radius guardrails decide which merges execute without a human; a logic error over-merges at scale.
+> **CRITICAL STEP — contract and review by a larger model.** A Fable/Mythos-class model writes this step's contract in `docs/contracts/` and reviews the core diff against it; Opus 5.5 implements everything, core included (`docs/conventions.md` §10). Reason: the proposal state machine and blast-radius guardrails decide which merges execute without a human; a logic error over-merges at scale.
 
 
 **Why:** Cross-record merges never run from a single agent call; they pass through a queue with guardrails and human escalation.
@@ -256,7 +256,7 @@ Rules for this phase:
 
 ## Step 3.13 — Embedded Agent Chat (in-process MCP client, SSE, confirmation, turn undo)
 
-> **CRITICAL STEP — requires a larger model.** Implement and review this step with a model from the tier above Opus 5.5 (Claude Fable/Mythos class). Opus 5.5 may scaffold files and boilerplate, but the core logic, its tests, and the PR review must come from the larger model. Reason: permission intersection, the confirmation gate, and in-process MCP client wiring are the defence against prompt-based privilege escalation.
+> **CRITICAL STEP — contract and review by a larger model.** A Fable/Mythos-class model writes this step's contract in `docs/contracts/` and reviews the core diff against it; Opus 5.5 implements everything, core included (`docs/conventions.md` §10). Reason: permission intersection, the confirmation gate, and in-process MCP client wiring are the defence against prompt-based privilege escalation.
 
 
 **Do:**
