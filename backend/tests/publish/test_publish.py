@@ -8,7 +8,7 @@ from typing import Any
 from uuid import UUID
 
 import pytest
-from sqlalchemy import delete
+from sqlalchemy import delete, update
 from sqlalchemy.dialects.postgresql import insert
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 from uuid_utils.compat import uuid7
@@ -25,6 +25,7 @@ from lae.db.models import (
     OutboxEventKind,
     OutboxEventStatus,
     QaFindingStatus,
+    Record,
     RecordStatus,
     SyncState,
     UserKind,
@@ -32,7 +33,7 @@ from lae.db.models import (
 from lae.labels.normalize import normalize_refs
 from lae.labels.refs import reference_ids
 from lae.projection import ops, strip_internal_iris
-from lae.publish import errors
+from lae.publish import errors, service
 from lae.publish.service import publish as publish_service
 from lae.rdf import EXPANDER_VERSION, diff_triples, expand_to_ntriples
 from lae.validation import validate_document
@@ -582,6 +583,47 @@ async def test_a_loaded_version_that_cannot_be_expanded_is_kept_and_flagged(
     assert after.triples(2) == expand_to_ntriples(good, 1, record_uri=uri)
 
 
+async def test_a_version_loaded_under_another_context_than_the_index_is_flagged(
+    served: Served,
+    network: Network,
+    db_engine: AsyncEngine,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """The index must match the record's previous context version too (contract item 12).
+
+    Only context version 1 is pinned, so version 2 is made to expand like it: the loaded data
+    expands, the index was built with the current context and expander, and the one difference
+    left is the context version the record was loaded under.
+    """
+    real = service.expand_to_ntriples
+
+    def expand(data: dict[str, Any], context_version: int, **kwargs: Any) -> Any:
+        return real(data, 1, **kwargs)
+
+    monkeypatch.setattr(service, "expand_to_ntriples", expand)
+    await set_bootstrap_versions(db_engine, 1, EXPANDER_VERSION)
+    editor = await caller(db_engine)
+    uri = new_uri()
+    loaded = titled_record(uri, "A title", "Un titre", f"{AAT}300033618")
+    await insert_record(db_engine, loaded, version=1)
+    record_id = id_of(uri)
+    async with AsyncSession(db_engine) as session:
+        await session.execute(
+            update(Record).where(Record.id == record_id).values(context_version=2)
+        )
+        await session.commit()
+    await open_draft(network, record_id)
+    await edit(network, record_id, editor.id, add_name("Another title"))
+
+    response = await publish(served, editor, record_id)
+
+    assert response.status_code == 200, response.text
+    after = await stored(db_engine, record_id)
+    assert after.revision(1).context_version == 2
+    assert after.triples(1) == expand_to_ntriples(loaded, 1, record_uri=uri)  # it did expand
+    assert after.events[0].payload == {"context_version": 1, "drift_check": True}
+
+
 # -- what else a publish settles ----------------------------------------------------------------
 
 
@@ -646,6 +688,48 @@ async def test_a_reference_to_an_alias_is_stored_as_the_record_uri(
         "/produced_by/carried_out_by/0"
     ]
     assert (await stored(db_engine, wrong_id)).counts == UNTOUCHED
+
+
+async def test_an_alias_in_a_dependent_stub_is_resolved_and_followed(
+    served: Served, db_engine: AsyncEngine
+) -> None:
+    """Every member's snapshot is resolved, not only the published record's (contract item 2).
+
+    The stub names a never-published record by its alias: that record joins the bundle, and
+    the stub's stored data carries its URI.
+    """
+    editor = await caller(db_engine)
+    maker_id, maker_uri = await new_draft(served, editor, "Person", person("Ada"))
+    maker_alias = f"https://old.example.org/person/{maker_id}"
+    await add_alias(db_engine, maker_alias, maker_id)
+    sketch_id, sketch_uri = await new_draft(
+        served, editor, "HumanMadeObject", painting("Sketch", maker_alias)
+    )
+    engine = painting("Engine")
+    engine["produced_by"] = {
+        "type": "Production",
+        "influenced_by": [{"id": sketch_uri, "type": "HumanMadeObject", "_label": "a stale label"}],
+    }
+    engine_id, _ = await new_draft(served, editor, "HumanMadeObject", engine)
+
+    response = await publish(
+        served, editor, engine_id, NO_PRIMARY_NAME, {**NO_PRIMARY_NAME, "record_id": str(sketch_id)}
+    )
+
+    assert response.status_code == 200, response.text
+    assert response.json()["published"] == [
+        str(engine_id),
+        *sorted(map(str, (sketch_id, maker_id))),
+    ]
+    sketch = await stored(db_engine, sketch_id)
+    assert sketch.record is not None
+    assert sketch.record.data["produced_by"]["carried_out_by"] == [
+        {"id": maker_uri, "type": "Person"}
+    ]
+    assert sketch.jsonld(1) == sketch.record.data
+    assert sketch.triples(1) == expand_to_ntriples(sketch.record.data, 1, record_uri=sketch_uri)
+    assert not any("old.example.org" in line for line in sketch.triples(1))
+    assert (await stored(db_engine, maker_id)).record.version == 1  # type: ignore[union-attr]
 
 
 async def test_open_schema_findings_are_resolved_by_the_publish(
