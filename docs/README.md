@@ -22,8 +22,8 @@ Tick a step only when its **Verify** block passes, CI is green, and the commit e
 | Phase | Steps done | Notes |
 | :-- | :-- | :-- |
 | 0 — Foundations & spikes | 12 / 12 | Complete; tracking issue #13 closed. |
-| 1 — Core authoring loop | 3 / 22 | 1.1, 1.2, 1.5 merged; 1.3, 1.4 (critical) and 1.7 in progress. |
-| 2 — Curation, vocabularies, scale | 0 / 20 | |
+| 1 — Core authoring loop | 21 / 22 | All but 1.22 (scale gate) merged; last 1.19 #155, 1.20 #157, 1.14 #153, 1.11 #148. Before closing #36: derived root `_label` (contract in progress, owner decision 2026-11-23), follow-ups #150, #151, #154, and a cross-cutting Fable review of edit → validate → publish → sync. |
+| 2 — Curation, vocabularies, scale | 1 / 20 | 2.1 merged (#140); 2.16 started earlier, paused. |
 | 3 — Semantic search & agents | 0 / 13 | |
 | 4 — Explorers, translation, admin | 0 / 19 | |
 
