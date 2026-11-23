@@ -2,11 +2,46 @@
   "page": {
     "title": "Edit record",
     "record_id": "Record {id}",
-    "history_link": "Revision history"
+    "history_link": "Revision history",
+    "load_error": "This record cannot be opened right now."
   },
   "history": {
     "title": "Revision history",
     "record_id": "Record {id}",
     "editor_link": "Back to the editor"
+  },
+  "connection": {
+    "connecting": "Connecting to the draft…",
+    "connected": "Connected. Changes are saved as you type.",
+    "offline": "Offline. Your changes are kept in this browser and sent when the connection returns.",
+    "closed": "The connection to the draft was closed. Reload the page to continue.",
+    "closed_4400": "The draft could not be opened (bad request). Reload the page to try again.",
+    "closed_4401": "Please sign in again to keep editing.",
+    "closed_4403": "You were disconnected from this draft by an administrator.",
+    "closed_4404": "This record has no draft that you can open.",
+    "closed_4410": "This record has been deleted or merged and cannot be edited."
+  },
+  "read_only": "You can view this draft, but you cannot change it.",
+  "presence": {
+    "label": "Also here:",
+    "alone": "Nobody else has this draft open.",
+    "unknown": "Someone",
+    "read_only": "{name} (viewing)"
+  },
+  "undo": "Undo",
+  "redo": "Redo",
+  "title_field": {
+    "label": "Title"
+  },
+  "raw_inspector": {
+    "show": "Show JSON-LD",
+    "hide": "Hide JSON-LD",
+    "title": "JSON-LD of the draft",
+    "error": "The draft cannot be shown as JSON-LD: {message}"
+  },
+  "stale_epoch": {
+    "title": "This draft has been replaced",
+    "body": "Someone published, discarded or reverted this record while you were editing. Reload to continue with the current draft. Changes that had not reached the server are kept in this browser.",
+    "reload": "Reload"
   }
 }

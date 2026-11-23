@@ -270,8 +270,11 @@ export interface paths {
          * Get Record
          * @description Return the published JSON-LD with internal node IRIs and transcluded labels.
          *
-         *     A never-published record (``version = 0``) is found only while it has a draft. Deleted →
-         *     410; merged → 301 to ``/api/records/{merged_into}``.
+         *     The header ``X-Draft-Epoch`` is the record's current draft epoch: the editor connects to
+         *     ``/ws/rooms/{id}?epoch=<it>``. It changes on publish, discard and revert (ADR-0027), so the
+         *     editor reads it again before every fresh connection. A never-published record
+         *     (``version = 0``) is found only while it has a draft. Deleted → 410; merged → 301 to
+         *     ``/api/records/{merged_into}``.
          */
         get: operations["get_record_api_records__record_id__get"];
         put?: never;
@@ -1134,6 +1137,8 @@ export interface operations {
             /** @description Successful Response */
             200: {
                 headers: {
+                    /** @description The record's current draft epoch (records.draft_epoch). */
+                    "X-Draft-Epoch"?: number;
                     [name: string]: unknown;
                 };
                 content: {
