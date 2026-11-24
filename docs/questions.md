@@ -918,6 +918,48 @@ Choices made in the amendment, for the owner to overturn if wanted:
     1.10 §3 item 13 spells the call with two arguments; when and where it is called is unchanged, so
     this is recorded here and not as an amendment of 1.10.
 
+**Owner's answers to items 5–9 (2026-11-23, issue #162), recorded in contract
+`docs/contracts/1.19b-relabel.md`:**
+
+- Item 5 (an environment variable, read at start, changed with a restart): **accepted.**
+- Item 6 (no backfill): **overturned. A backfill is wanted, admin-level only.**
+- Item 7 (one primary language, no fallback list; then the first primary name, then the first
+  name): **accepted.**
+- Item 8 (AAT rows and a vocabulary `label_override` keep an English default): **overturned. Both
+  must follow the setting.**
+- Item 9 (no run-time check that `api` and `crdt-ws` got the same value): **accepted; no check is
+  wanted.**
+
+Choices made in contract 1.19b, for the owner to overturn if wanted:
+
+11. **The backfill is the CLI command `lae relabel` only; there is no endpoint.** "Admin-level" is
+    read as: the operator who can edit the environment file and restart the processes, which
+    changing the setting needs anyway. No signed-in user can start it. Phase 2 Step 2.17 may put
+    the same function behind `manage_system` with an `admin_audit_log` row; until then the audit
+    trail is the log (`relabel_started`, `relabel_finished`).
+12. **It rewrites `entity_labels.default_label` only. Published records keep their stored
+    `_label`** (and `rdfs:label` in QLever) until each is next published. Rewriting them would be
+    a publish of every record: a new version, revision and outbox event each, and every open
+    draft refused as stale. What users see (reference labels, autocomplete, the drafts list, the
+    vocabulary bundle, the Public Reader title) follows the new language without it. If stored
+    `_label`s must follow too, that is a batch republish for Phase 2 (edit batches, Step 2.8,
+    after the rebuild of Step 2.18).
+13. **With the Phase 1 AAT CSV the setting changes no AAT label**: the CSV has English names only.
+    The rule is in place (the AAT label in the label language, else the English preferred name)
+    and takes effect when AAT rows carry other languages (Phase 2 Step 2.14, which must use the
+    same function).
+14. **A vocabulary term with a `label_override`:** its default label is the label in the label
+    language from the override laid over the `entity_labels` labels; else the override's `en`
+    (every `LangMap` must have one); else the `entity_labels` default; else the URI. So on a `fr`
+    installation a French AAT label beats a curated English override as the default.
+15. **`lae relabel` does not move `entity_labels.updated_at`**, so relabelled rows do not enter
+    the autocomplete overlay. A record published since the last QLever index build is found by
+    its default label only, so after a language change by its new-language name only, until the
+    next index build.
+16. The command is run after `api` and `crdt-ws` were restarted with the new value
+    (`deploy/README.md`); run before, or with one process on the old value, it leaves a mixture
+    that a second run repairs. Nothing detects this (item 9).
+
 ## Step 1.22
 
 1. **Autocomplete p95 misses the 100 ms target at 1M records (owner decision).** On 1M LUX
