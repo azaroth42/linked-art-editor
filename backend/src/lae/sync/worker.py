@@ -45,9 +45,15 @@ nothing to Postgres, so Step 2.18 can replay into a second index. ``process_batc
 listens on ``outbox`` and makes every read and write. A notification or the 1 s poll wakes the
 loop; with ``BATCH_SIZE`` or more events pending it takes a batch at once, otherwise it first
 waits until ``BATCH_WINDOW_S`` after waking. If the connection is lost the process exits 1 and
-never reconnects in-process (a supervisor restarts it), so a lost lock is never used. ``SIGTERM``
-and ``SIGINT`` let the batch in progress finish and exit 0. ``/metrics`` (``lae.sync.metrics``) is
-served from a snapshot the loop refreshes, so the listener needs no connection of its own.
+never reconnects in-process (a supervisor restarts it), so a lost lock is never used. A lost
+connection (``connection_lost``) includes the server ending the session (shutdown, terminated
+backend, a ``FATAL`` error) and a commit that fails that way; it is logged
+``sync_connection_lost``. Any other database error (a bug in our SQL, a violated constraint) is
+not taken for one: it is logged ``sync_worker_failed`` with its traceback, and the process also
+exits 1. Either way the batch in flight stays pending and is sent again after the restart.
+``SIGTERM`` and ``SIGINT`` let the batch in progress finish and exit 0. ``/metrics``
+(``lae.sync.metrics``) is served from a snapshot the loop refreshes, so the listener needs no
+connection of its own.
 
 The access token goes with every update and is removed from every error text the worker logs or
 stores.
@@ -98,7 +104,10 @@ EXIT_CONFIG_ERROR: Final = 2
 """Exit code of a worker that refuses to start (the same value as ``lae.cli.EXIT_CONFIG_ERROR``)."""
 
 EXIT_FAILURE: Final = 1
-"""Exit code when the lock is held (``--once``), the connection is lost, or recording failed."""
+"""Exit code when the lock is held (``--once``), the connection is lost, or recording failed.
+
+Also for any other database error (``run`` logs it ``sync_worker_failed``).
+"""
 
 OUTBOX_CHANNEL: Final = "outbox"
 STOP_SIGNALS: Final = (signal.SIGTERM, signal.SIGINT)
@@ -153,6 +162,40 @@ def classify(error: QLeverError) -> Literal["unavailable", "rejected"]:
 def backoff_seconds(failures: int) -> float:
     """``min(2 ** (failures - 1), 30)``: 1, 2, 4, 8, 16, 30, 30, ... seconds."""
     return float(min(2 ** max(failures - 1, 0), MAX_BACKOFF_S))
+
+
+_SESSION_ENDED: Final[tuple[type[BaseException], ...]] = (
+    ConnectionLostError,
+    OSError,  # the socket: reset, refused, timed out
+    asyncpg.PostgresConnectionError,  # SQLSTATE class 08, and "closed in the middle of operation"
+    asyncpg.AdminShutdownError,  # 57P01: pg_terminate_backend, smart or fast shutdown
+    asyncpg.CrashShutdownError,  # 57P02: another backend crashed; the server restarts
+    asyncpg.CannotConnectNowError,  # 57P03: the server is starting or stopping
+    asyncpg.DatabaseDroppedError,  # 57P04
+    asyncpg.IdleSessionTimeoutError,  # 57P05
+    asyncpg.IdleInTransactionSessionTimeoutError,  # 25P03
+    asyncpg.TransactionTimeoutError,  # 25P04
+)
+"""Errors that mean the server ended the worker's session or the socket is gone."""
+
+_SESSION_ENDING_SEVERITIES: Final = frozenset({"FATAL", "PANIC"})
+
+
+def connection_lost(error: BaseException, *, closed: bool = False) -> bool:
+    """Whether ``error`` means the worker's connection is gone (contract §3 item 22, §4).
+
+    True for the errors in ``_SESSION_ENDED``, for any server error of severity ``FATAL`` or
+    ``PANIC`` (the server ends the session after sending one), and for an ``InterfaceError`` when
+    the connection is ``closed`` ("connection is closed"). Everything else is not: a bug in our
+    SQL, a constraint violation, a cancelled statement, a serialization failure, or a client-side
+    ``InterfaceError`` on an open connection (wrong argument type, overlapping operations).
+    ``run`` exits 1 for both kinds; only a lost connection is logged ``sync_connection_lost``.
+    """
+    if isinstance(error, _SESSION_ENDED):
+        return True
+    if isinstance(error, asyncpg.PostgresError):
+        return getattr(error, "severity_en", None) in _SESSION_ENDING_SEVERITIES
+    return isinstance(error, asyncpg.InterfaceError) and closed
 
 
 def _redact(text: str, client: QLeverClient) -> str:
@@ -755,16 +798,22 @@ async def run(
     except WatermarkError as error:
         print(f"lae sync-worker: refusing to start: {error}", file=sys.stderr)
         return EXIT_CONFIG_ERROR
-    except (
-        asyncpg.PostgresConnectionError,
-        asyncpg.InterfaceError,
-        ConnectionLostError,
-        OSError,
-    ) as error:
-        logger.error("sync_connection_lost", error=str(error))
-        return EXIT_FAILURE
     except (RecordingError, EventError, QLeverError) as error:
         logger.error("sync_worker_failed", error=_redact(str(error), client))
+        return EXIT_FAILURE
+    except (asyncpg.PostgresError, asyncpg.InterfaceError, ConnectionLostError, OSError) as error:
+        # A commit that fails leaves its batch pending (rolled back, or never committed once the
+        # connection closes); the restarted worker sends it again (contract §4).
+        if connection_lost(error, closed=conn.is_closed()):
+            logger.error("sync_connection_lost", error=str(error), error_type=type(error).__name__)
+        else:  # not transient: a bug or a violated constraint; the traceback is logged
+            logger.error(
+                "sync_worker_failed",
+                error=_redact(str(error), client),
+                error_type=type(error).__name__,
+                sqlstate=getattr(error, "sqlstate", None),
+                exc_info=True,
+            )
         return EXIT_FAILURE
     finally:
         if handle_signals:
