@@ -69,7 +69,7 @@ Guide: `phases/phase-1-core-loop.md`
 - **Public Reader v1:** Server-rendered read-only page at `/id/{uuid}` with JSON-LD/Turtle download and Canvas Panel for records with IIIF representations.
 - **i18n & a11y scaffolding:** `react-i18next` + ICU, route-scoped namespaces, logical CSS properties, pseudo-locale toggle, keyboard-only cataloging smoke test in Playwright.
 
-**Exit criteria:** Golden corpus round-trips through the full stack; 1M-record bulk load completed and timed; publish-to-QLever p95 under 1 s; three concurrent editors complete a scripted cataloging session without data loss; autocomplete p95 under 100 ms on the loaded index.
+**Exit criteria:** Golden corpus round-trips through the full stack; 1M-record bulk load completed and timed; publish-to-QLever p95 under 1 s; three concurrent editors complete a scripted cataloging session without data loss; autocomplete p95 under 250 ms on the loaded index (relaxed from 100 ms by the owner on 2026-11-23 after the Step 1.22 measurements: 211 ms on 1M LUX records; search latency is revisited in Phase 2).
 
 ---
 
