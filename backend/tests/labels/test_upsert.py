@@ -37,6 +37,8 @@ async def test_insert_writes_every_column(db_session: AsyncSession) -> None:
 async def test_update_replaces_labels_and_keeps_phase_2_columns(db_session: AsyncSession) -> None:
     data = corpus(NIGHT_WATCH)
     uri = data["id"]
+    # Other tests leave rows behind in the shared database: compare with what was there.
+    others = set((await db_session.execute(select(EntityLabel.uri))).scalars()) - {uri}
     await upsert_entity_labels_for_record(db_session, as_record(data), "en")
     old = datetime(2020, 1, 1, tzinfo=UTC)
     await db_session.execute(
@@ -59,7 +61,7 @@ async def test_update_replaces_labels_and_keeps_phase_2_columns(db_session: Asyn
     assert row.status is EntityLabelStatus.PUBLISHED
     assert row.metatype_uris == [TYPE_OF_WORK] and row.vocab_ids == ["object_types"]
     assert row.updated_at > old
-    assert (await db_session.execute(select(EntityLabel.uri))).scalars().all() == [uri]
+    assert set((await db_session.execute(select(EntityLabel.uri))).scalars()) == others | {uri}
 
 
 async def test_record_without_names(db_session: AsyncSession) -> None:
