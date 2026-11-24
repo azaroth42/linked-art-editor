@@ -4,12 +4,20 @@ This is the Phase 1 stand-in for the AAT sidecar dataset (decision A17); the Pha
 manager replaces it with the full AAT as Linked Art. The input is the ``aat_dataset.csv`` of
 ``linkedart-parser`` (columns ``aat_code``, ``preferred_name``, ``description``). Each row
 becomes ``uri = http://vocab.getty.edu/aat/<aat_code>``, ``type = 'Type'``,
-``labels = {"en": preferred_name}``, ``default_label = preferred_name``, ``source = 'aat'``,
-``status = 'published'``. Running it again updates those columns in place and leaves
-``metatype_uris`` and ``vocab_ids`` alone (Phase 2 maintains them). A row without a numeric code
-or a name, or one that repeats a code, is reported and skipped. At the end the metatypes that
+``labels = {"en": preferred_name}``, ``source = 'aat'``, ``status = 'published'`` (``aat_row``).
+Running it again updates those columns in place and leaves ``metatype_uris`` and ``vocab_ids``
+alone (Phase 2 maintains them). A row without a numeric code or a name, or one that repeats a
+code, is reported and skipped. At the end the metatypes that
 loaded records state inline on AAT concepts are added to the new rows
 (``lae.vocab.metatypes.harvest_all_metatypes``, ADR-0032): the load ran before those rows existed.
+
+**Default label.** It follows ``Settings.label_language`` (Step 1.19b, ADR-0038): the AAT label
+in the label language, else the English preferred name
+(``lae.labels.defaults.default_label_from_labels`` with AAT's own language,
+``SOURCE_LANGUAGES["aat"]``). The Phase 1 CSV holds English names only, so with it every default
+label is the English preferred name under every setting; the rule takes effect for rows that
+carry other languages (Phase 2 Step 2.14). ``lae relabel`` uses the same function, so directly
+after this seed it changes no AAT row.
 
 ``lae bootstrap export-nt`` writes these rows to QLever graph ``urn:graph:sidecar:aat``.
 """
@@ -26,6 +34,7 @@ import asyncpg
 
 from lae.bootstrap.common import CSV_ROW_INVALID, Failure, Report, asyncpg_dsn
 from lae.db.models import EntityLabelStatus
+from lae.labels.defaults import SOURCE_LANGUAGES, default_label_from_labels
 from lae.settings import Settings
 from lae.vocab.metatypes import harvest_all_metatypes
 
@@ -33,7 +42,6 @@ STAGE: Final = "aat-labels"
 AAT_PREFIX: Final = "http://vocab.getty.edu/aat/"
 AAT_SOURCE: Final = "aat"
 AAT_TYPE: Final = "Type"
-AAT_LANGUAGE: Final = "en"
 
 _UPSERT: Final = """
 INSERT INTO entity_labels AS e (uri, type, labels, default_label, source, status)
@@ -54,6 +62,20 @@ class AatTerm(NamedTuple):
 
     uri: str
     label: str
+
+
+def aat_row(term: AatTerm, label_language: str) -> tuple[str, str, str]:
+    """``(uri, labels as JSON text, default_label)`` of the ``entity_labels`` row of ``term``.
+
+    ``label_language`` is ``Settings.label_language``: the default label is the AAT label in it,
+    else the preferred name in AAT's own language.
+    """
+    labels = {SOURCE_LANGUAGES[AAT_SOURCE]: term.label}
+    default_label = (
+        default_label_from_labels(labels, label_language, SOURCE_LANGUAGES[AAT_SOURCE])
+        or term.label
+    )
+    return term.uri, json.dumps(labels), default_label
 
 
 def read_aat_csv(path: Path) -> tuple[list[AatTerm], list[Failure]]:
@@ -100,9 +122,7 @@ async def load_aat_labels(
             )
             await conn.copy_records_to_table(
                 "aat_labels_stage",
-                records=[
-                    (term.uri, json.dumps({AAT_LANGUAGE: term.label}), term.label) for term in terms
-                ],
+                records=[aat_row(term, settings.label_language) for term in terms],
                 columns=("uri", "labels", "default_label"),
             )
             rows = await conn.fetch(

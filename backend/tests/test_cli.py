@@ -64,7 +64,19 @@ def test_expected_commands_exist() -> None:
         "migrate",
         "bootstrap",
         "vocab",
+        "relabel",
     }
+
+
+def test_relabel_is_a_one_shot_command_not_a_process() -> None:
+    assert COMMANDS["relabel"] == (
+        "Recompute entity_labels.default_label under LAE_LABEL_LANGUAGE."
+    )
+    assert HANDLERS["relabel"] is lae.cli.run_relabel
+    assert "relabel" not in PROCESS_MODULES
+    deploy = Path(__file__).resolve().parents[2] / "deploy"
+    assert "relabel" not in (deploy / "Procfile").read_text()
+    assert not list((deploy / "systemd").glob("*relabel*"))
 
 
 def test_every_command_has_exactly_one_implementation() -> None:

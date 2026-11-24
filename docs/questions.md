@@ -1012,6 +1012,41 @@ Choices made in contract 1.19b, for the owner to overturn if wanted:
     (`deploy/README.md`); run before, or with one process on the old value, it leaves a mixture
     that a second run repairs. Nothing detects this (item 9).
 
+**Owner's answers to items 11, 12 and 14 (2026-11-24, issue #162), implemented in Step 1.19b
+(ADR-0038):**
+
+- Item 11 (the backfill is the CLI command `lae relabel` only; no endpoint until Step 2.17):
+  **accepted.**
+- Item 12 (only `entity_labels.default_label` is rewritten; published records keep their stored
+  `_label` and QLever `rdfs:label` until each is next published): **accepted.**
+- Item 14 (on a non-`en` installation, a label in the configured language beats a curated
+  `label_override` that exists only in English): **accepted.**
+
+## Step 1.19b
+
+1. **Timed run on 100 000+ LUX records (measurement, not a gate).** 105,000 records from the
+   start of `export_full_0.jsonl.gz` of the local LUX dump (`gzip -t` passed; the `json` wrapper
+   unwrapped), loaded with `lae bootstrap load` under `en` into the slot database (91 s), then
+   `LAE_LABEL_LANGUAGE=fr lae relabel` on a MacBook (Apple Silicon, Postgres.app 18):
+
+   | Run | `changed_total` | seconds | rows/s |
+   | :-- | --: | --: | --: |
+   | `--dry-run --report …` | 0 | 2.98 | 35,200 |
+   | real run `en` → `fr` | 0 | 3.06 | 34,300 |
+   | second real run | 0 | 3.04 | 34,500 |
+   | worst case, every default made stale first: `--dry-run --report …` | 105,000 | 4.48 | 23,400 |
+   | worst case: real run | 105,000 | 5.44 | 19,300 |
+   | worst case: second real run | 0 | 4.60 | 22,800 |
+
+   No default label of this sample changes under `fr` (nor `ja`, `zh`, `ar`, `de`, `es`, `nl`):
+   every language-tagged LUX name in it is a non-primary name, and the primary names have no
+   language (`und`), so the default stays the first primary name under every setting (checked
+   independently of `relabel` with `labels_from_record`). The worst case (`default_label` of
+   every row set to a stale value by hand, then relabelled) measures the write path: the
+   dry-run and real reports were identical (105,000 lines). **Estimate for 1M rows: about 30 s
+   when little changes, about 55 s when every row changes**, far under the 30 minutes per 1M
+   the contract asks to flag.
+
 ## Step 1.22
 
 1. **Autocomplete p95 misses the 100 ms target at 1M records (owner decision).** On 1M LUX

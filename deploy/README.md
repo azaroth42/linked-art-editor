@@ -223,9 +223,9 @@ The unit templates in `systemd/` assume this layout; adjust paths and the user i
    LAE_BASE_URI=https://<your host>/id/
    # Language of the derived record label (_label) and of entity_labels.default_label: one of the
    # 57 primary language tags of the AAT language table (en, fr, de, ...; default en). Give every
-   # process the same value (api and crdt-ws above all) and restart api and crdt-ws together
-   # after changing it: nothing is migrated, published records keep their label until they are
-   # next published, and open drafts follow at their next read (ADR-0036).
+   # process the same value (api and crdt-ws above all). To change it, follow "Changing the label
+   # language" below: restart api and crdt-ws together, then run `lae relabel` (ADR-0036,
+   # ADR-0038). Open drafts follow at their next read.
    # LAE_LABEL_LANGUAGE=en
    # Required in production: signs the session cookie (shared by api and crdt-ws).
    LAE_SESSION_SECRET=<output of: openssl rand -hex 32>
@@ -277,6 +277,43 @@ The unit templates in `systemd/` assume this layout; adjust paths and the user i
    `qlever.service` runs `qlever start --run-in-foreground` and stops on `SIGINT`; with
    `PERSIST_UPDATES = true`, SPARQL updates survive restarts. Its `ExecStart` uses
    `/usr/bin/qlever`; change it if `command -v qlever` says otherwise.
+
+### Changing the label language
+
+`LAE_LABEL_LANGUAGE` is read once, when a process starts. To change it:
+
+1. Set `LAE_LABEL_LANGUAGE` in the environment of every process (`/etc/lae/lae.env`).
+2. Optional: see what would change. A dry run writes nothing, takes no lock, and may run at any
+   time:
+
+   ```sh
+   sudo -u lae sh -c 'set -a && . /etc/lae/lae.env && /opt/lae/backend/.venv/bin/lae relabel --dry-run --report /tmp/relabel-dry-run.jsonl'
+   ```
+
+3. Restart `api` and `crdt-ws` together: `sudo systemctl restart lae-api lae-crdt-ws`.
+4. **After** the restart, recompute `entity_labels.default_label` under the new value (a process
+   still running with the old value would write old-language labels behind it):
+
+   ```sh
+   sudo -u lae sh -c 'set -a && . /etc/lae/lae.env && /opt/lae/backend/.venv/bin/lae relabel'
+   ```
+
+   It prints a JSON summary. Expect exit code 0; exit code 1 means some rows were locked by
+   other transactions (or the run failed): run it again. Options: `--batch N` (rows per
+   transaction, 1 to 10 000, default 500), `--report PATH` (one JSON line per row changed).
+5. No second restart and no QLever rebuild. Do not run it while `lae bootstrap load`,
+   `lae bootstrap aat-labels` or a `lae vocab` command runs: their rows would be skipped as
+   locked.
+
+`lae relabel` has no language option: it relabels under the value the installation is
+configured with. It may be repeated at any time and changes nothing the second time; switching
+back and running it again restores the previous default labels. It changes only
+`entity_labels.default_label` (what reference labels, autocomplete, the drafts list and the
+vocabulary bundle show; running `api` processes pick up the new bundle without a restart). The
+Public Reader title follows the setting by itself. **Published records keep their stored
+`_label`** (in the raw JSON-LD, the revisions, and `rdfs:label` in QLever) until they are next
+published. AAT rows take the AAT label in the new language when they have one, else the English
+preferred name (the Phase 1 AAT CSV is English only, so they stay English).
 
 ## Dead letters in the sync queue
 
