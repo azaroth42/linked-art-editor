@@ -3,18 +3,25 @@
 **Bundle.** ``get_bundle`` returns every Value Set with its terms, labels resolved, and every
 binding: what the editor loads once at boot so that enumerated pickers need no request
 (``GET /api/vocab/bundle``). A term's ``label`` is its ``entity_labels.labels`` with the curated
-``label_override`` laid over it language by language; ``default_label`` is the override's ``en``,
-else ``entity_labels.default_label``, else the URI. Rule Value Sets are included with their rule
-and pinned shortlist (their members come from ``GET /api/vocab/{id}/terms``), so the client knows
-how to render every binding.
+``label_override`` laid over it language by language. Its ``default_label`` (``_resolved``, Step
+1.19b) follows the installation's label language (``Settings.label_language``, handed in by
+``lae.api.vocab``): without an override it is ``entity_labels.default_label`` (which already
+follows the setting), else the URI; with one, the label in the label language from the merged
+map, else the override's ``en`` (the entry every ``LangMap`` has: the curated label of last
+resort), else ``entity_labels.default_label``, else the URI. Rule Value Sets are included with
+their rule and pinned shortlist (their members come from ``GET /api/vocab/{id}/terms``), so the
+client knows how to render every binding.
 
 **Cache key and ETag.** ``registry_version`` is ``max(vocabularies.updated_at)`` with the number
 of Value Sets (so that deleting one that was not the newest changes it too). The bundle is built
-once per process per version and served from memory; the ``ETag`` is derived from the version, so
-a client revalidates with one cheap query. Every write to the registry moves ``updated_at``
-(``lae.vocab.loader``; the admin endpoints of Step 2.4); Step 2.2 recompiles its validation rules
-on the same key. Labels changed in ``entity_labels`` reach the bundle when the registry next
-changes or the process restarts, which is why the ``ETag`` is weak.
+once per process per version and label language and served from memory; the ``ETag`` is derived
+from the version and the label language (``bundle_etag``), so a client revalidates with one cheap
+query, and a bundle cached under another label language is not answered with 304. Every write
+to the registry moves ``updated_at`` (``lae.vocab.loader``; the admin endpoints of Step 2.4);
+Step 2.2 recompiles its validation rules on the registry version alone. Labels changed in
+``entity_labels`` reach the bundle when the registry next changes or the process restarts, which
+is why the ``ETag`` is weak; ``lae relabel`` moves the registry when it completes, so its new
+default labels reach every running process.
 
 **Terms.** ``search_terms`` answers ``GET /api/vocab/{id}/terms?q=&limit=``. For a rule Value
 Set it is a prefix search (the default label, or any label, starts with ``q`` or has a word that
@@ -141,20 +148,36 @@ async def registry_version(session: AsyncSession) -> str:
     return f"{newest.isoformat() if newest is not None else '-'}|{count}"
 
 
-def bundle_etag(version: str) -> str:
-    """The weak ``ETag`` of the bundle built from registry ``version``."""
-    return 'W/"vocab-' + hashlib.blake2b(version.encode(), digest_size=12).hexdigest() + '"'
+def bundle_etag(version: str, label_language: str) -> str:
+    """The weak ``ETag`` of the bundle built from registry ``version`` under ``label_language``."""
+    key = f"{version}|{label_language}"
+    return 'W/"vocab-' + hashlib.blake2b(key.encode(), digest_size=12).hexdigest() + '"'
+
+
+LAST_RESORT_LANGUAGE: Final = "en"
+"""The ``LangMap`` entry every ``label_override`` must have (``profiles/vocab/_schema.json``):
+the curated label of last resort, consulted only after the label language found nothing."""
 
 
 def _resolved(
-    term: VocabularyTerm, row: tuple[dict[str, str], str] | None
+    term: VocabularyTerm, row: tuple[dict[str, str], str] | None, label_language: str
 ) -> tuple[dict[str, str], str]:
-    """``(label, default_label)`` of a term from its ``entity_labels`` row and its override."""
+    """``(label, default_label)`` of a term from its ``entity_labels`` row and its override.
+
+    ``label_language`` is ``Settings.label_language``. Without an override the default label is
+    the row's, else the URI. With one: the label in ``label_language`` from the merged map
+    (``match_label``), else the override's ``en``, else the row's default label, else the URI.
+    """
     labels = dict(row[0]) if row is not None else {}
     override = term.label_override or {}
     labels.update(override)
-    if "en" in override:
-        return labels, override["en"]
+    if override:
+        found = match_label(labels, (label_language,))
+        if found is not None:
+            return labels, found
+        curated = override.get(LAST_RESORT_LANGUAGE)
+        if curated is not None:
+            return labels, curated
     return labels, row[1] if row is not None else term.uri
 
 
@@ -173,8 +196,8 @@ async def _label_rows(session: AsyncSession, uris: Sequence[str]) -> dict[str, A
     return {row.uri: row for row in rows}
 
 
-async def build_bundle(session: AsyncSession, version: str) -> VocabBundle:
-    """Read the registry and build the bundle (no cache)."""
+async def build_bundle(session: AsyncSession, version: str, label_language: str) -> VocabBundle:
+    """Read the registry and build the bundle under ``label_language`` (no cache)."""
     vocabularies = list(await session.scalars(select(Vocabulary).order_by(Vocabulary.id)))
     terms: dict[str, list[VocabularyTerm]] = {}
     for term in await session.scalars(
@@ -188,7 +211,7 @@ async def build_bundle(session: AsyncSession, version: str) -> VocabBundle:
         for term in terms.get(vocabulary.id, []):
             row = rows.get(term.uri)
             label, default_label = _resolved(
-                term, (row.labels, row.default_label) if row is not None else None
+                term, (row.labels, row.default_label) if row is not None else None, label_language
             )
             bundle_terms.append(
                 BundleTerm(
@@ -243,6 +266,7 @@ class CachedBundle:
     """A built bundle with its ``ETag`` and JSON body."""
 
     version: str
+    label_language: str
     etag: str
     bundle: VocabBundle
     body: bytes
@@ -257,22 +281,33 @@ def clear_bundle_cache() -> None:
     _cached = None
 
 
-async def cached_bundle(session: AsyncSession) -> CachedBundle:
-    """The bundle of the current registry version, built at most once per version per process."""
+async def cached_bundle(session: AsyncSession, label_language: str) -> CachedBundle:
+    """The bundle of the current registry version under ``label_language``.
+
+    One bundle is kept per process; it is reused only when both the registry version and the
+    label language are those it was built for.
+    """
     global _cached
     version = await registry_version(session)
     found = _cached
-    if found is not None and found.version == version:
+    if found is not None and found.version == version and found.label_language == label_language:
         return found
-    bundle = await build_bundle(session, version)
-    found = CachedBundle(version, bundle_etag(version), bundle, orjson.dumps(bundle.model_dump()))
+    bundle = await build_bundle(session, version, label_language)
+    found = CachedBundle(
+        version,
+        label_language,
+        bundle_etag(version, label_language),
+        bundle,
+        orjson.dumps(bundle.model_dump()),
+    )
     _cached = found
     return found
 
 
-async def get_bundle(session: AsyncSession) -> VocabBundle:
-    """Every Value Set with resolved labels and every binding (cached per registry version)."""
-    return (await cached_bundle(session)).bundle
+async def get_bundle(session: AsyncSession, label_language: str) -> VocabBundle:
+    """Every Value Set with resolved labels and every binding (cached per registry version and
+    label language)."""
+    return (await cached_bundle(session, label_language)).bundle
 
 
 # --- term search --------------------------------------------------------------------------------
@@ -300,9 +335,14 @@ def _localized(value: Mapping[str, str] | None, chain: Sequence[str]) -> str | N
 
 
 async def _enumerated_terms(
-    session: AsyncSession, vocabulary_id: str, q: str, limit: int, chain: Sequence[str]
+    session: AsyncSession,
+    vocabulary_id: str,
+    q: str,
+    limit: int,
+    chain: Sequence[str],
+    label_language: str,
 ) -> list[TermOption]:
-    bundle = await get_bundle(session)
+    bundle = await get_bundle(session, label_language)
     vocabulary = next((v for v in bundle.vocabularies if v.id == vocabulary_id), None)
     if vocabulary is None:  # deleted since the caller looked it up
         raise UnknownVocabularyError(vocabulary_id)
@@ -327,7 +367,12 @@ async def _enumerated_terms(
 
 
 async def _rule_terms(
-    session: AsyncSession, vocabulary_id: str, q: str, limit: int, chain: Sequence[str]
+    session: AsyncSession,
+    vocabulary_id: str,
+    q: str,
+    limit: int,
+    chain: Sequence[str],
+    label_language: str,
 ) -> list[TermOption]:
     pinned = {
         term.uri: term
@@ -343,7 +388,7 @@ async def _rule_terms(
         for term in pinned.values():
             row = rows.get(term.uri)
             label, default_label = _resolved(
-                term, (row.labels, row.default_label) if row is not None else None
+                term, (row.labels, row.default_label) if row is not None else None, label_language
             )
             options.append(
                 TermOption(
@@ -403,7 +448,9 @@ async def _rule_terms(
         labels = dict(row.labels)
         default_label = row.default_label
         if listed is not None:
-            labels, default_label = _resolved(listed, (row.labels, row.default_label))
+            labels, default_label = _resolved(
+                listed, (row.labels, row.default_label), label_language
+            )
         options.append(
             TermOption(
                 uri=row.uri,
@@ -419,14 +466,23 @@ async def _rule_terms(
 
 
 async def search_terms(
-    session: AsyncSession, vocabulary_id: str, q: str, limit: int, chain: Sequence[str]
+    session: AsyncSession,
+    vocabulary_id: str,
+    q: str,
+    limit: int,
+    chain: Sequence[str],
+    label_language: str,
 ) -> list[TermOption]:
     """Terms of a Value Set matching ``q`` (see the module docstring); raises
-    ``UnknownVocabularyError``."""
+    ``UnknownVocabularyError``.
+
+    ``label_language`` (``Settings.label_language``) chooses the default label of a term with a
+    ``label_override`` (``_resolved``), which is shown when ``chain`` matches none of its labels.
+    """
     mode = await session.scalar(select(Vocabulary.mode).where(Vocabulary.id == vocabulary_id))
     if mode is None:
         raise UnknownVocabularyError(vocabulary_id)
     q = " ".join(q.split())
     if mode == VocabularyMode.ENUMERATED:
-        return await _enumerated_terms(session, vocabulary_id, q, limit, chain)
-    return await _rule_terms(session, vocabulary_id, q, limit, chain)
+        return await _enumerated_terms(session, vocabulary_id, q, limit, chain, label_language)
+    return await _rule_terms(session, vocabulary_id, q, limit, chain, label_language)

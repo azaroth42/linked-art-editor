@@ -59,7 +59,10 @@ class Settings(BaseSettings):
     One of the 57 tags of ``lae.labels.langtags.AAT_LANGUAGE_TAGS`` (``en``, ``fr``, ``de``, ...);
     case, surrounding whitespace and ISO 639-2 codes are normalized (``fra`` gives ``fr``), and
     any other value stops the process when it starts. Every process of an installation must have
-    the same value; changing it means restarting ``api`` and ``crdt-ws`` together.
+    the same value; changing it means restarting ``api`` and ``crdt-ws`` together, then running
+    ``lae relabel``, which recomputes ``entity_labels.default_label`` under the new value (Step
+    1.19b). The AAT seed and the vocabulary bundle follow it too; published records keep their
+    stored ``_label`` until they are next published.
     """
 
     draft_ttl_days: Annotated[int, Field(ge=1)] = 5
