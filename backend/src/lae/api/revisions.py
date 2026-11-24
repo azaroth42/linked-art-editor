@@ -26,6 +26,15 @@ without one, version 1 is 404 ``LAE-REC-004`` for a diff and for a revert alike.
 draft is compared with the bare record ``{"@context", "id", "type"}``: everything else in the
 draft is reported as added, and ``from_version`` is 0.
 
+**The draft diff pairs a row with a draft of the same version** (issue #154). The ``records``
+row and the draft are read one after the other, so a publish between the two reads could pair
+the old ``records.data`` with the next version's draft (or the published draft with the new
+row) and report the published changes again. The pair is used only when the draft's
+``base_version`` equals ``records.version``; otherwise both are read again, ``DRAFT_DIFF_ATTEMPTS``
+times in all. A draft that is still based on another version then answers 409 ``LAE-PUB-006``
+(the code publish gives the same draft, with the same params): nothing changes a record under a
+live draft today, so in practice only publishes landing between every pair of reads get there.
+
 **Revert** (decision B9, ADR-0027). Only ``crdt-ws`` may delete a draft, so the endpoint calls
 ``close(discard=True)``, which also ends the draft's epoch, and then ``open(content=...)`` with
 the revision's stored JSON-LD, internal node IRIs included: the nodes of the reverted draft are
@@ -50,10 +59,17 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from lae.api.deps import locale_chain
 from lae.api.errors import ApiError
-from lae.api.records import VERSION_NOT_FOUND, RecordVersion, get_record_or_404, load_version
+from lae.api.records import (
+    VERSION_NOT_FOUND,
+    RecordVersion,
+    get_record_or_404,
+    load_version,
+    not_found,
+)
 from lae.auth import CurrentUser, current_user, require
 from lae.crdt import errors as crdt_errors
 from lae.crdt.client import CrdtWsClient, CrdtWsError, crdt_client
+from lae.crdt.rooms import Snapshot
 from lae.db.models import Record, RecordStatus
 from lae.db.session import get_session
 from lae.diff.semantic import Change, semantic_diff
@@ -61,6 +77,11 @@ from lae.labels.refs import reference_ids
 from lae.labels.transclude import resolve_labels
 from lae.logging import bind_log_context, get_logger
 from lae.projection import ProjectionError, hydrate
+from lae.publish import errors as publish_errors
+
+DRAFT_DIFF_ATTEMPTS: Final = 3
+"""How often the draft diff reads the record and the draft before it gives up with 409
+``LAE-PUB-006``."""
 
 REVERT_ATTEMPTS: Final = 3
 """How often revert discards and reopens before it gives up with 409 ``LAE-CRDT-004``."""
@@ -139,9 +160,48 @@ async def diff_revisions(
     )
 
 
+async def _published_and_draft(
+    session: AsyncSession, crdt: CrdtWsClient, record_id: UUID
+) -> tuple[Record, Snapshot]:
+    """Return the ``records`` row and a draft snapshot hydrated from that row's version.
+
+    The two are read one after the other, so a publish in between can pair a row with a draft
+    of another version. They match when ``snapshot.base_version == record.version`` (a version
+    number names one immutable state); otherwise both are read again, ``DRAFT_DIFF_ATTEMPTS``
+    times in all, and the last mismatch is 409 ``LAE-PUB-006``.
+    """
+    for attempt in range(1, DRAFT_DIFF_ATTEMPTS + 1):
+        # Read again, not from the session's identity map. None: unknown, or a never-published
+        # record whose draft was discarded since the last attempt.
+        record = await session.get(Record, record_id, populate_existing=True)
+        if record is None:
+            raise not_found()
+        snapshot = await crdt.snapshot(record_id)
+        if snapshot is None:
+            raise ApiError(
+                status.HTTP_404_NOT_FOUND,
+                crdt_errors.DRAFT_NOT_FOUND,
+                {"record_id": str(record_id)},
+            )
+        if snapshot.base_version == record.version:
+            return record, snapshot
+        if attempt == DRAFT_DIFF_ATTEMPTS:
+            raise publish_errors.stale_base(record_id, snapshot.base_version, record.version)
+        logger.info(
+            "draft_diff_retried",
+            attempt=attempt,
+            base_version=snapshot.base_version,
+            version=record.version,
+        )
+    raise AssertionError("unreachable")  # pragma: no cover
+
+
 @router.post(
     "/{record_id}/draft/diff",
-    responses={status.HTTP_404_NOT_FOUND: {"description": "LAE-REC-001, LAE-CRDT-003"}},
+    responses={
+        status.HTTP_404_NOT_FOUND: {"description": "LAE-REC-001, LAE-CRDT-003"},
+        status.HTTP_409_CONFLICT: {"description": "LAE-PUB-006"},
+    },
 )
 async def diff_draft(
     record_id: UUID,
@@ -150,16 +210,13 @@ async def diff_draft(
     chain: Annotated[list[str], Depends(locale_chain)],
     crdt: Annotated[CrdtWsClient, Depends(crdt_client)],
 ) -> SemanticDiff:
-    """Return the changes that turn the published version into the live draft."""
+    """Return the changes that turn the published version into the live draft.
+
+    409 ``LAE-PUB-006`` if the draft is still not based on the published version after
+    ``DRAFT_DIFF_ATTEMPTS`` reads (see the module docstring).
+    """
     bind_log_context(user_id=user.id, record_id=record_id)
-    record = await get_record_or_404(session, record_id)
-    snapshot = await crdt.snapshot(record_id)
-    if snapshot is None:
-        raise ApiError(
-            status.HTTP_404_NOT_FOUND,
-            crdt_errors.DRAFT_NOT_FOUND,
-            {"record_id": str(record_id)},
-        )
+    record, snapshot = await _published_and_draft(session, crdt, record_id)
     published: dict[str, Any] = record.data
     if record.version == 0:
         published = {key: published[key] for key in SKELETON_KEYS if key in published}
