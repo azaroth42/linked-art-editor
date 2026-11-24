@@ -95,9 +95,29 @@ def test_search_query_text() -> None:
     sparql = build_search_query(["rembrandt", "van"], "rembrandt van", [PERSON], 20)
     parses(sparql)
     assert sparql.count('ql:contains-word "rembrandt* van*"') == 2
-    assert f"FILTER(?class IN (<{PERSON}>))" in sparql
+    assert sparql.count(f"{{ ?entity rdf:type <{PERSON}> . BIND(<{PERSON}> AS ?class) }}") == 2
+    assert "?entity rdf:type ?class" not in sparql
     assert 'STRSTARTS(LCASE(STR(?lit)), "rembrandt van")' in sparql
     assert sparql.endswith("LIMIT 20")
+
+
+def test_search_query_restricts_to_each_class() -> None:
+    group = f"{CRM}E74_Group"
+    sparql = build_search_query(["rem"], "rem", [PERSON, group], 20)
+    parses(sparql)
+    # One UNION branch per class (QLever then reads only those classes' rdf:type triples).
+    branches = f"{{ ?entity rdf:type <{PERSON}> . BIND(<{PERSON}> AS ?class) }} UNION "
+    branches += f"{{ ?entity rdf:type <{group}> . BIND(<{group}> AS ?class) }}"
+    assert sparql.count(branches) == 2
+    assert "FILTER(?class IN" not in sparql
+    # Many classes: one scan of rdf:type and a filter.
+    many = sorted(class_iris(1).values())
+    sparql = build_search_query(["rem"], "rem", many, 20)
+    parses(sparql)
+    assert sparql.count("?entity rdf:type ?class .") == 2
+    assert f"FILTER(?class IN ({', '.join(f'<{k}>' for k in many)}))" in sparql
+    with pytest.raises(ValueError):
+        build_search_query(["rem"], "rem", [], 20)
 
 
 @pytest.mark.parametrize(
