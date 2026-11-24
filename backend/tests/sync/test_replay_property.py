@@ -6,6 +6,10 @@ events ``a … b`` in order, with ``a − 1 ≤ c ≤ b``, leaves exactly ``v_b`
 by the worker's own pure functions (``build_event_update``, ``subjects_of``,
 ``owned_subjects``), in every mode where it is legal: the first event ``INSERT``, a later one
 ``DIFF`` or ``REPLACE``, a final one ``RETRACT``.
+
+Test 54 (contract §7, issue #150) checks the same around dead letters: an event after a run of
+``failed`` events, replaced over the wider range, ends at its own version whatever the failed
+events left behind.
 """
 
 from __future__ import annotations
@@ -225,3 +229,77 @@ def test_two_records_never_touch_each_others_triples(
     assert triples_of(store) == expected_store(last_a | last_b)
     a_subjects = subjects_of(last_a)
     assert all(s.startswith(RECORDS[0]) for s in a_subjects)
+
+
+# -- dead letters (contract §7, test 54) --------------------------------------------------------
+
+
+@settings(max_examples=300, deadline=None, suppress_health_check=[HealthCheck.too_slow])
+@given(
+    versions=versions_strategy,
+    replace=st.lists(st.booleans(), min_size=6, max_size=6),
+    retract=st.booleans(),
+    data=st.data(),
+)
+def test_replaying_around_dead_letters_ends_at_the_last_applied_version(
+    versions: list[frozenset[str]], replace: list[bool], retract: bool, data: st.DataObject
+) -> None:
+    """Marking any event ``failed`` is safe for the events after it (contract §7.1, items 4, 5).
+
+    Event ``i`` takes the record from version ``i - 1`` to version ``i`` (``v0 = ∅``; with
+    ``retract`` a last event deletes the record). From the state ``v_{a-1}``, events ``a … b`` are
+    applied in order, except a random subset marked failed: such an event applies nothing, or a
+    random prefix of its update's operations. An event after a run of failed events is a
+    ``REPLACE`` (or ``RETRACT``) whose retraction range starts at the lowest
+    ``coalesce(from_version, to_version)`` of the run, as ``lae.sync.events`` translates it; any
+    other event keeps a random legal mode. After every applied event the store is exactly that
+    event's ``to_version``.
+    """
+    states = [frozenset[str](), *versions]
+    if retract:
+        states.append(frozenset())
+    count = len(states) - 1
+    b = data.draw(st.integers(1, count), label="b")
+    a = data.draw(st.integers(1, b), label="a")
+    failed = data.draw(st.sets(st.integers(a, b)), label="failed")
+    store = pyoxigraph.Store()
+    if states[a - 1]:
+        store.update(
+            build_event_update(
+                Mode.INSERT, old_lines=frozenset(), new_lines=states[a - 1], retract_subjects=()
+            )
+        )
+    floor: int | None = None  # the lowest coalesce(from_version, to_version) of the failed run
+
+    for i in range(a, b + 1):
+        from_version = i - 1 if i > 1 else None
+        deletes = retract and i == count
+        unhealed = floor is not None and from_version is not None
+        if deletes:
+            mode = Mode.RETRACT
+        elif from_version is None:
+            mode = Mode.INSERT
+        elif unhealed:
+            mode = Mode.REPLACE
+        else:
+            mode = Mode.REPLACE if replace[i - 1] else Mode.DIFF
+        subjects: set[str] = set()
+        if mode in (Mode.REPLACE, Mode.RETRACT):
+            assert from_version is not None
+            low = min(from_version, floor) if floor is not None else from_version
+            subjects = {URI}.union(*(subjects_of(states[v]) for v in range(low, from_version + 1)))
+        update = build_event_update(
+            mode, old_lines=states[i - 1], new_lines=states[i], retract_subjects=subjects
+        )
+        if i in failed:
+            ops = operations(update)
+            cut = data.draw(st.integers(0, len(ops)), label=f"cut {i}")
+            if cut:
+                store.update(" ;\n".join(ops[:cut]))
+            own = from_version if from_version is not None else i
+            floor = own if floor is None else min(floor, own)
+            continue
+        if update:
+            store.update(update)
+        floor = None
+        assert triples_of(store) == expected_store(states[i]), i

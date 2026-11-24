@@ -3,7 +3,16 @@
 Prometheus text format. Gauges: ``outbox_pending``, ``outbox_failed``, ``sync_lag_seconds`` (age
 of the oldest pending event, 0 if none) and ``sync_watermark`` (``NaN`` without one). Counters:
 ``updates_sent_total``, ``sync_events_done_total``, ``sync_dead_letters_total``,
-``sync_unavailable_total``. The first four names are the guide's.
+``sync_unavailable_total``, ``sync_catch_up_events_total`` and
+``sync_catch_up_dead_letters_total``. The first four names are the guide's.
+
+``outbox_failed`` above 0 is the alarm: at least one dead letter, made on the live path or in
+catch-up (contract §7.5). Catch-up (``lae.sync.worker.catch_up``) reports through
+``observe_catch_up`` as each thing is committed: the events it replayed, the updates QLever
+acknowledged (a probe is not counted) and each dead letter, which also counts in
+``sync_dead_letters_total``. A catch-up that is retried because QLever is unavailable or refuses
+every update (the probe was rejected) adds to ``sync_unavailable_total``. The worker starts the
+listener before its first catch-up, so all of this is visible during a long one.
 
 The worker has one database connection and uses it for everything (contract §3 item 22), so the
 listener never queries: the loop calls ``Metrics.refresh`` once per iteration and the listener
@@ -45,6 +54,8 @@ _COUNTERS: Final = (
     ("sync_events_done_total", "Outbox events marked done."),
     ("sync_dead_letters_total", "Outbox events that became dead letters."),
     ("sync_unavailable_total", "Batches not sent because QLever was unavailable."),
+    ("sync_catch_up_events_total", "Done outbox events replayed by catch-up."),
+    ("sync_catch_up_dead_letters_total", "Done outbox events catch-up could not replay."),
 )
 
 
@@ -60,6 +71,8 @@ class Metrics:
     sync_events_done_total: int = 0
     sync_dead_letters_total: int = 0
     sync_unavailable_total: int = 0
+    sync_catch_up_events_total: int = 0
+    sync_catch_up_dead_letters_total: int = 0
     _failed_at: float = field(default=-math.inf, repr=False)
 
     def observe(self, result: BatchResult) -> None:
@@ -67,9 +80,25 @@ class Metrics:
         self.updates_sent_total += result.updates_sent
         self.sync_events_done_total += len(result.done)
         if result.dead_lettered:
-            self.sync_dead_letters_total += 1
+            self._dead_lettered()
         if result.outcome == "unavailable":
             self.sync_unavailable_total += 1
+
+    def observe_catch_up(
+        self, *, replayed: int = 0, updates_sent: int = 0, dead_lettered: bool = False
+    ) -> None:
+        """Add what catch-up just committed: events replayed, updates acknowledged, dead letter."""
+        self.sync_catch_up_events_total += replayed
+        self.updates_sent_total += updates_sent
+        if dead_lettered:
+            self.sync_catch_up_dead_letters_total += 1
+            self._dead_lettered()
+
+    def _dead_lettered(self) -> None:
+        """One more dead letter: counted, shown at once, and recounted at the next refresh."""
+        self.sync_dead_letters_total += 1
+        self.failed += 1
+        self._failed_at = -math.inf
 
     async def refresh(self, conn: asyncpg.Connection) -> None:
         """Read the gauges from Postgres on the worker's connection."""

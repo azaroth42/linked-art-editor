@@ -11,13 +11,20 @@ backend suite runs serially on one database.
 
 ``RecordingClient`` is a ``QLeverClient`` whose ``update`` records the text, then does what its
 ``behaviour`` says (by default: apply the update to a ``pyoxigraph.Store``, which stands in for
-QLever's state). ``store_matches`` compares a store with the triples QLever should hold.
+QLever's state); ``acknowledged`` lists the updates that did not raise. A behaviour tells a
+probe apart by ``sparql == PROBE_UPDATE``, rejects updates that contain a marker
+(``reject_containing``) and scripts failures by request number (``len(client.sent)``).
+``expected_store`` gives the triples QLever should hold.
+
+``logged`` captures the worker's JSON log lines; ``named`` picks the events of one name.
 """
 
 from __future__ import annotations
 
+import io
 import json
-from collections.abc import AsyncIterator, Awaitable, Callable, Iterable
+import logging
+from collections.abc import AsyncIterator, Awaitable, Callable, Iterable, Iterator
 from typing import Any
 from uuid import UUID
 
@@ -29,6 +36,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
 from lae.bootstrap.common import QLEVER_INDEX_WATERMARK, asyncpg_dsn
 from lae.db.models import Record
+from lae.logging import configure_logging
 from lae.rdf import decompress, parse_ntriples
 from lae.sync.events import EVENT_COLUMNS, UPDATE_SEPARATOR, Event, event_from_row
 from lae.sync.qlever_client import QLeverClient, QLeverError
@@ -57,6 +65,7 @@ class RecordingClient(QLeverClient):
         super().__init__("http://qlever.invalid:7024", "http://qlever.invalid:7024", TOKEN)
         self.store = store if store is not None else pyoxigraph.Store()
         self.sent: list[str] = []
+        self.acknowledged: list[str] = []
         self.behaviour: Behaviour | None = None
 
     def apply(self, sparql: str) -> None:
@@ -69,10 +78,44 @@ class RecordingClient(QLeverClient):
             await self.behaviour(self, sparql)
         else:
             self.apply(sparql)
+        self.acknowledged.append(sparql)
 
 
 def unavailable(status: int | None = 503) -> QLeverError:
     return QLeverError("QLever at http://qlever.invalid:7024 refused", status=status, body="down")
+
+
+def reject_containing(marker: str, body: str = "Invalid SPARQL") -> Behaviour:
+    """Reject with 400 every update that contains ``marker``; apply the others."""
+
+    async def behaviour(c: RecordingClient, sparql: str) -> None:
+        if marker in sparql:
+            raise QLeverError("QLever refused", status=400, body=body)
+        c.apply(sparql)
+
+    return behaviour
+
+
+# -- logs ---------------------------------------------------------------------------------------
+
+Logged = Callable[[], list[dict[str, Any]]]
+
+
+@pytest.fixture
+def logged() -> Iterator[Logged]:
+    """Capture the JSON log lines; call the result for the events logged so far."""
+    root = logging.getLogger()
+    saved = root.handlers[:], root.level
+    stream = io.StringIO()
+    configure_logging("info", stream=stream)
+    try:
+        yield lambda: [json.loads(line) for line in stream.getvalue().splitlines() if line]
+    finally:
+        root.handlers, root.level = saved
+
+
+def named(events: list[dict[str, Any]], name: str) -> list[dict[str, Any]]:
+    return [event for event in events if event.get("event") == name]
 
 
 def operations(update: str) -> list[str]:

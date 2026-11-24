@@ -1,14 +1,22 @@
 # Sync worker tests (Phase 1 Step 1.11)
 
-Contract: `docs/contracts/1.11-sync-worker.md` §5.
+Contract: `docs/contracts/1.11-sync-worker.md` §5, and §7.7 for issue #150 (catch-up meets a
+`done` event it cannot replay).
 
 | File | Tests | Needs |
 | :-- | :-- | :-- |
 | `test_events.py` | 1–10 | PostgreSQL |
-| `test_batch.py` | 11–27 | PostgreSQL |
-| `test_replay_property.py` | 28–29 | nothing (hypothesis, pyoxigraph) |
-| `test_qlever_integration.py` | 30–37 | PostgreSQL and a real QLever 0.6.0 |
+| `test_batch.py` | 11–27; 38–53 (§7: the poisoned world, the probe, dead letters in catch-up, `--failed`) | PostgreSQL |
+| `test_replay_property.py` | 28–29; 54 (replaying around dead letters) | nothing (hypothesis, pyoxigraph) |
+| `test_qlever_integration.py` | 30–37; 55 (QLever's own rejection in catch-up, and the probe) | PostgreSQL and a real QLever 0.6.0 |
 | `test_connection_loss.py` | issue #151: how `run` exits on a database error (§3 item 22, §4) | PostgreSQL |
+
+**The poisoned world** (`test_batch.poisoned_world`, contract §7.7): three records published and
+processed live; record R's version 2 adds a marker literal and version 3 removes it. The
+watermark is then lowered and the client rejects every update that contains the marker, so
+catch-up meets a `done` event it cannot replay. The recording client keeps `acknowledged` (the
+updates that did not raise) besides `sent`; a behaviour tells a probe by
+`sparql == PROBE_UPDATE`. `logged` (in `conftest.py`) captures the worker's JSON log lines.
 
 The QLever tests skip, with a reason, when `qlever` (qlever-control) or `qlever-index` is not on
 `PATH` or `LAE_TEST_QLEVER_PORT` is unset. With `LAE_REQUIRE_QLEVER=1` they fail instead of
