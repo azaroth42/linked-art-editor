@@ -894,8 +894,10 @@ Choices made in the amendment, for the owner to overturn if wanted:
    changes no result; it was 568 ms before. A minimum prefix length alone does not reach 100 ms.
    Every option measured is in `docs/spikes/P1-exit-measurements.md` §4.3, for example a
    label-start prefix search in Postgres: 11 ms p95 for 3 characters in SQL, but it matches less
-   than QLever does. Each option changes behaviour, so none is implemented. The Phase 1 exit
-   criterion stays open until the owner chooses.
+   than QLever does. Each option changes behaviour, so none is implemented.
+   **Owner decision, 2026-11-23:** relax the target. The Phase 1 exit criterion becomes p95 under
+   250 ms on the loaded index (met: 211 ms); no behaviour change now; search latency is revisited
+   in Phase 2 (its exit criteria already require the autocomplete p95 targets at full volume).
 2. **High-rate updates into one room lag behind (observation).** Two clients typing into one
    field at about 170 updates per second took 8.4 s to converge after they stopped. Nothing was
    lost, and human typing is far slower. It may matter for Phase 3 agents
