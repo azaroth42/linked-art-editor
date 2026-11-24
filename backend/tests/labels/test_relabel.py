@@ -490,6 +490,66 @@ async def test_a_row_deleted_during_the_run_is_gone_not_skipped(
     assert await defaults(db_url) == expected
 
 
+async def test_a_row_deleted_during_a_dry_run_is_gone_and_the_summary_adds_up(
+    clean: None, db_url: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    await seed_seven(db_url)
+    deleted = f"{AAT}1"
+    page = relabel_module._page
+
+    async def page_then_delete(conn: Any, after: str, limit: int) -> list[str]:
+        uris = await page(conn, after, limit)
+        if deleted in uris:
+            await fetch(db_url, "DELETE FROM entity_labels WHERE uri = $1", deleted)
+        return uris
+
+    monkeypatch.setattr(relabel_module, "_page", page_then_delete)
+    summary = await run(db_url, "fr", dry_run=True)
+
+    assert (summary["rows"], summary["gone"], summary["skipped_locked"]) == (7, 1, 0)
+    assert summary["retried"] == 0 and adds_up(summary)
+
+
+@pytest.mark.parametrize("retry_passes", [0, 1, 3])
+async def test_a_row_held_throughout_gets_exactly_the_retry_passes(
+    clean: None, db_url: str, retry_passes: int, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    await seed_seven(db_url)
+    pauses: list[float] = []
+
+    async def pause(seconds: float) -> None:
+        pauses.append(seconds)
+
+    monkeypatch.setattr(relabel_module, "asyncio", SimpleNamespace(sleep=pause))
+    async with HeldLock(db_url, f"{AAT}1"):
+        summary = await asyncio.wait_for(
+            run(db_url, "fr", retry_passes=retry_passes, retry_pause=0.5), 30
+        )
+
+    assert pauses == [0.5] * retry_passes
+    assert (summary["skipped_locked"], summary["retried"]) == (1, 0) and adds_up(summary)
+
+
+async def test_a_row_of_an_unknown_source_has_no_source_language(clean: None, db_url: str) -> None:
+    # English is AAT's own language, not a fallback for every source (invariant 12).
+    await put_label(db_url, "https://ex.org/w3", {"en": "Painting"}, "w3", source="wikidata")
+    summary = await run(db_url, "fr")
+    assert (summary["kept"], summary["changed_total"]) == (1, 0)
+    assert await defaults(db_url) == {"https://ex.org/w3": "w3"}
+
+
+async def test_a_batch_below_one_is_refused_before_anything_is_done(
+    clean: None, db_url: str, db_engine: AsyncEngine
+) -> None:
+    await import_registry(db_engine)
+    await seed_seven(db_url)
+    before = await dump_all(db_url, ("entity_labels", "vocabularies"))
+    for batch in (0, -1):
+        with pytest.raises(ValueError, match="batch"):
+            await run(db_url, "fr", batch=batch)
+    assert await dump_all(db_url, ("entity_labels", "vocabularies")) == before
+
+
 async def test_a_run_that_fails_midway_keeps_its_batches_and_a_second_run_finishes(
     clean: None, db_url: str, db_engine: AsyncEngine, monkeypatch: pytest.MonkeyPatch
 ) -> None:
