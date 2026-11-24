@@ -199,7 +199,16 @@ def test_a_malformed_path_is_a_syntax_error(path: str) -> None:
 
 
 @pytest.mark.parametrize(
-    "path", ["_label", "identified_by[Name]._label", "_label[Name].content", "a._label"]
+    "path",
+    [
+        "_label",
+        "identified_by[Name]._label",
+        "_label[Name].content",
+        "a._label",
+        # The key ends at the first "[", whatever follows it (a line terminator too).
+        "_label[\nName]",
+        "a._label[",
+    ],
 )
 def test_a_write_path_naming_label_is_refused_before_it_is_parsed(path: str) -> None:
     """Step 1.19a: ``_label`` is ``LAE-PROJ-007`` for a write, as in ``paths.ts``; reading the

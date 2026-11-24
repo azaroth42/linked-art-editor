@@ -253,6 +253,19 @@ def _cases() -> list[tuple[str, str, Document]]:
                 name("Tested", primary=True, language=lang(AAT + GERMAN, notation)),
             ),
         )
+    # The notation is stripped over Python's whitespace, not JavaScript's: U+001C and U+0085
+    # are stripped (JavaScript's trim() keeps them); U+FEFF is not (trim() removes it), so that
+    # notation is malformed and the id decides.
+    for case, notation, expected in (
+        ("a notation padded with U+001C and U+0085 is stripped", "\u001cfr\u0085", "Tested"),
+        ("a notation padded with U+FEFF is malformed: the id decides", "\ufefffr", "English"),
+    ):
+        padded = doc(
+            name("English", primary=True, language=EN),
+            name("Tested", primary=True, language=lang(AAT + GERMAN, notation)),
+        )
+        assert derive_label(padded, "fr") == expected, case
+        add(case, "fr", padded)
     for notation in ("en", "english"):
         add(
             f"notation {notation!r} with the French id is not French",

@@ -225,5 +225,54 @@ describe("projectDraft", () => {
 it("the editor's write path refuses _label", () => {
   const doc = hydrate({ id: URI, type: "HumanMadeObject", _label: "Kept" });
   expect(() => setScalar(doc, "_label", "x")).toThrow(/LAE-PROJ-007|cannot name _label/);
+  // The key ends at the first "[", whatever follows it (a line terminator too), as in Python.
+  for (const path of ["_label[\nName]", "a._label[", "identified_by[Name]._label[\u2028"]) {
+    expect(() => setScalar(doc, path, "x"), JSON.stringify(path)).toThrow(/cannot name _label/);
+  }
   expect(project(doc)._label).toBe("Kept");
+});
+
+const SOURCES = import.meta.glob<string>("../**/*.{ts,tsx}", {
+  eager: true,
+  query: "?raw",
+  import: "default",
+});
+
+it("no production file reads the draft underived or names a label language itself", () => {
+  // Contract §2.3 and invariants 14 and 15: every production reading of the live draft as
+  // JSON-LD is `projectDraft(doc, labelLanguage)`, the language being the record's.
+  const production = Object.entries(SOURCES).filter(
+    ([path]) => !/\.test\.tsx?$|\/testing\.tsx?$|\/spikes\/|\.d\.ts$/.test(path),
+  );
+  expect(production.length).toBeGreaterThan(50);
+  expect(production.map(([path]) => path)).toEqual(
+    expect.arrayContaining([
+      "../editor/ValidationDrawer.tsx",
+      "../editor/EditorPage.tsx",
+      "./RawInspector.tsx",
+    ]),
+  );
+  const offenders: string[] = [];
+  let calls = 0;
+  for (const [path, source] of production) {
+    const code = source.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+    const mayProject = path === "./derivedLabel.ts" || path === "./project.ts";
+    if (!mayProject && /(?<![\w.])project\(/.test(code)) {
+      offenders.push(`${path} calls project()`);
+    }
+    if (path === "./derivedLabel.ts") {
+      continue;
+    }
+    const derivations = /\b(?:projectDraft|withDerivedLabel|deriveLabel)\(([^()]*)\)/g;
+    for (const call of code.matchAll(derivations)) {
+      calls += 1;
+      const language = (call[1] ?? "").split(",")[1]?.trim();
+      if (language !== "labelLanguage") {
+        offenders.push(`${path}: ${call[0]}`);
+      }
+    }
+  }
+  expect(offenders).toEqual([]);
+  // The raw inspector, the drawer's live check and its Validate, the page's snapshot.
+  expect(calls).toBe(4);
 });

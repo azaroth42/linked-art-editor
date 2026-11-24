@@ -4695,6 +4695,196 @@
   {
    "derived": {
     "@context": "https://linked.art/ns/v1/linked-art.json",
+    "_label": "Tested",
+    "id": "https://example.org/object/1",
+    "identified_by": [
+     {
+      "classified_as": [
+       {
+        "_label": "Primary Name",
+        "id": "http://vocab.getty.edu/aat/300404670",
+        "type": "Type"
+       }
+      ],
+      "content": "English",
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000000",
+      "language": [
+       {
+        "id": "http://vocab.getty.edu/aat/300388277",
+        "type": "Language"
+       }
+      ],
+      "type": "Name"
+     },
+     {
+      "classified_as": [
+       {
+        "_label": "Primary Name",
+        "id": "http://vocab.getty.edu/aat/300404670",
+        "type": "Type"
+       }
+      ],
+      "content": "Tested",
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000001",
+      "language": [
+       {
+        "id": "http://vocab.getty.edu/aat/300388344",
+        "notation": "\u001cfr",
+        "type": "Language"
+       }
+      ],
+      "type": "Name"
+     }
+    ],
+    "type": "HumanMadeObject"
+   },
+   "document": {
+    "@context": "https://linked.art/ns/v1/linked-art.json",
+    "id": "https://example.org/object/1",
+    "identified_by": [
+     {
+      "classified_as": [
+       {
+        "_label": "Primary Name",
+        "id": "http://vocab.getty.edu/aat/300404670",
+        "type": "Type"
+       }
+      ],
+      "content": "English",
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000000",
+      "language": [
+       {
+        "id": "http://vocab.getty.edu/aat/300388277",
+        "type": "Language"
+       }
+      ],
+      "type": "Name"
+     },
+     {
+      "classified_as": [
+       {
+        "_label": "Primary Name",
+        "id": "http://vocab.getty.edu/aat/300404670",
+        "type": "Type"
+       }
+      ],
+      "content": "Tested",
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000001",
+      "language": [
+       {
+        "id": "http://vocab.getty.edu/aat/300388344",
+        "notation": "\u001cfr",
+        "type": "Language"
+       }
+      ],
+      "type": "Name"
+     }
+    ],
+    "type": "HumanMadeObject"
+   },
+   "label": "Tested",
+   "language": "fr",
+   "name": "a notation padded with U+001C and U+0085 is stripped",
+   "schema": []
+  },
+  {
+   "derived": {
+    "@context": "https://linked.art/ns/v1/linked-art.json",
+    "_label": "English",
+    "id": "https://example.org/object/1",
+    "identified_by": [
+     {
+      "classified_as": [
+       {
+        "_label": "Primary Name",
+        "id": "http://vocab.getty.edu/aat/300404670",
+        "type": "Type"
+       }
+      ],
+      "content": "English",
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000000",
+      "language": [
+       {
+        "id": "http://vocab.getty.edu/aat/300388277",
+        "type": "Language"
+       }
+      ],
+      "type": "Name"
+     },
+     {
+      "classified_as": [
+       {
+        "_label": "Primary Name",
+        "id": "http://vocab.getty.edu/aat/300404670",
+        "type": "Type"
+       }
+      ],
+      "content": "Tested",
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000001",
+      "language": [
+       {
+        "id": "http://vocab.getty.edu/aat/300388344",
+        "notation": "﻿fr",
+        "type": "Language"
+       }
+      ],
+      "type": "Name"
+     }
+    ],
+    "type": "HumanMadeObject"
+   },
+   "document": {
+    "@context": "https://linked.art/ns/v1/linked-art.json",
+    "id": "https://example.org/object/1",
+    "identified_by": [
+     {
+      "classified_as": [
+       {
+        "_label": "Primary Name",
+        "id": "http://vocab.getty.edu/aat/300404670",
+        "type": "Type"
+       }
+      ],
+      "content": "English",
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000000",
+      "language": [
+       {
+        "id": "http://vocab.getty.edu/aat/300388277",
+        "type": "Language"
+       }
+      ],
+      "type": "Name"
+     },
+     {
+      "classified_as": [
+       {
+        "_label": "Primary Name",
+        "id": "http://vocab.getty.edu/aat/300404670",
+        "type": "Type"
+       }
+      ],
+      "content": "Tested",
+      "id": "https://example.org/object/1/node/01937a4e-0000-7000-8000-000000000001",
+      "language": [
+       {
+        "id": "http://vocab.getty.edu/aat/300388344",
+        "notation": "﻿fr",
+        "type": "Language"
+       }
+      ],
+      "type": "Name"
+     }
+    ],
+    "type": "HumanMadeObject"
+   },
+   "label": "English",
+   "language": "fr",
+   "name": "a notation padded with U+FEFF is malformed: the id decides",
+   "schema": []
+  },
+  {
+   "derived": {
+    "@context": "https://linked.art/ns/v1/linked-art.json",
     "_label": "English",
     "id": "https://example.org/object/1",
     "identified_by": [

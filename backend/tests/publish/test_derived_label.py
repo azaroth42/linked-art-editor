@@ -8,6 +8,7 @@ one ``crdt-ws`` may serve a database at a time, so those tests never use the fix
 
 from __future__ import annotations
 
+import re
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 from typing import Any
@@ -472,3 +473,57 @@ async def test_changing_the_label_language_rederives_drafts_and_keeps_published_
             "The Night Watch",
             "La Ronde de nuit",
         )
+
+
+# --- invariant 14: the other readers of the setting (review of Step 1.19a) ---------------------
+
+GERMAN = {"id": f"{AAT}300388344", "type": "Language"}
+GERMAN_FIRST = {
+    "identified_by": [
+        {
+            "type": "Name",
+            "content": "Die Nachtwache",
+            "classified_as": [PRIMARY_NAME],
+            "language": [GERMAN],
+        },
+        {
+            "type": "Name",
+            "content": "La Ronde de nuit",
+            "classified_as": [PRIMARY_NAME],
+            "language": [FRENCH],
+        },
+    ],
+}
+"""A German and a French primary name, German first: a reader whose locale chain is ``it, en``
+has no name of their own, so they see the default label, which follows the label language."""
+
+
+@pytest.mark.parametrize(
+    ("label_language", "expected"), [("en", "Die Nachtwache"), ("fr", "La Ronde de nuit")]
+)
+async def test_the_drafts_list_and_the_reader_title_follow_the_label_language(
+    db_url: str, db_engine: AsyncEngine, label_language: str, expected: str
+) -> None:
+    """``GET /api/drafts``, ``draft/extend`` and the Public Reader title compute the default
+    label of a record without an ``entity_labels`` row with ``Settings.label_language``."""
+    editor = await caller(db_engine)
+    italian = {**editor.headers, "Accept-Language": "it"}
+    uri = new_uri()
+    published = {**titled_record(uri, "A", "B", f"{AAT}300033618"), **GERMAN_FIRST}
+    await insert_record(db_engine, published)
+    async with stack(db_url, label_language) as (served, _):
+        record_id, _ = await new_draft(served, editor, "HumanMadeObject", GERMAN_FIRST)
+        listed = await served.client.get("/api/drafts", headers=italian)
+        assert listed.status_code == 200, listed.text
+        labels = {draft["record_id"]: draft["label"] for draft in listed.json()}
+        assert labels[str(record_id)] == expected
+        extended = await served.client.post(
+            f"/api/records/{record_id}/draft/extend", headers=italian
+        )
+        assert extended.status_code == 200, extended.text
+        assert extended.json()["label"] == expected
+        page = await served.client.get(
+            f"/id/{id_of(uri)}", headers={"Accept": "text/html", "Accept-Language": "it"}
+        )
+        assert page.status_code == 200, page.text
+        assert re.findall(r"<h1[^>]*>(.*?)</h1>", page.text) == [expected]
