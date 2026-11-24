@@ -203,6 +203,29 @@ def class_iris(context_version: int) -> dict[str, str]:
     return found
 
 
+MAX_CLASS_BRANCHES: Final = 3
+"""Up to this many classes, each gets its own ``rdf:type`` pattern (``class_patterns``)."""
+
+
+def class_patterns(classes: Iterable[str]) -> tuple[str, str]:
+    """``(pattern, filter)`` restricting ``?entity`` to ``classes`` and binding ``?class``.
+
+    For a few classes (what the editor asks for: ``Person,Group``, ``Place``, ``Type``) the
+    pattern is one ``UNION`` branch per class, ``{ ?entity rdf:type <class> . BIND(...) }``, and
+    there is no filter: QLever then reads only the ``rdf:type`` triples of those classes. For
+    more, it is ``?entity rdf:type ?class`` with ``FILTER(?class IN (...))``, because one scan of
+    all ``rdf:type`` triples is cheaper than a dozen. Both give the same rows.
+    """
+    ordered = sorted(classes)
+    if not ordered:
+        raise ValueError("the query has no classes")
+    if len(ordered) <= MAX_CLASS_BRANCHES:
+        branches = [f"{{ ?entity rdf:type {iri(k)} . BIND({iri(k)} AS ?class) }}" for k in ordered]
+        return " UNION ".join(branches), ""
+    allowed = ", ".join(iri(klass) for klass in ordered)
+    return "?entity rdf:type ?class .", f"  FILTER(?class IN ({allowed}))\n"
+
+
 def build_search_query(
     words: Sequence[str], prefix: str, classes: Iterable[str], limit: int
 ) -> str:
@@ -211,11 +234,17 @@ def build_search_query(
     Each word is searched as a prefix. The text scan is repeated inside both branches of the
     ``UNION`` so that QLever joins its few rows to the label and type triples instead of reading
     those predicates whole (measured on QLever 0.6.0).
+
+    For up to ``MAX_CLASS_BRANCHES`` classes, each class has its own ``rdf:type`` pattern
+    (``class_patterns``) instead of ``?entity rdf:type ?class`` with ``FILTER(?class IN (...))``:
+    QLever then scans only the subjects of those classes instead of every ``rdf:type`` triple,
+    which halved the median time at 1M records with the same rows (Step 1.22,
+    ``docs/spikes/P1-exit-measurements.md``).
     """
     if not words:
         raise ValueError("the query has no words")
+    typed, class_filter = class_patterns(classes)
     text = string_literal(" ".join(f"{word}*" for word in words))
-    allowed = ", ".join(iri(klass) for klass in sorted(classes))
     return (
         PREFIXES
         + "SELECT ?entity (SAMPLE(?class) AS ?type) (MIN(?key) AS ?rank) (SAMPLE(?lit) AS ?label)"
@@ -223,15 +252,15 @@ def build_search_query(
         + "  {\n"
         + f"    ?text ql:contains-entity ?lit ; ql:contains-word {text} .\n"
         + "    ?entity rdfs:label ?lit .\n"
-        + "    ?entity rdf:type ?class .\n"
+        + f"    {typed}\n"
         + "  } UNION {\n"
         + f"    ?text ql:contains-entity ?lit ; ql:contains-word {text} .\n"
         + "    ?name crm:P190_has_symbolic_content ?lit .\n"
         + "    ?name rdf:type crm:E33_E41_Linguistic_Appellation .\n"
         + "    ?entity crm:P1_is_identified_by ?name .\n"
-        + "    ?entity rdf:type ?class .\n"
+        + f"    {typed}\n"
         + "  }\n"
-        + f"  FILTER(?class IN ({allowed}))\n"
+        + class_filter
         + f"  FILTER(!REGEX(STR(?entity), {string_literal(NODE_IRI_PATTERN)}))\n"
         + f"  BIND(IF(STRSTARTS(LCASE(STR(?lit)), {string_literal(prefix)}), 0, {NOT_AT_START})"
         + " + STRLEN(STR(?lit)) AS ?key)\n"
