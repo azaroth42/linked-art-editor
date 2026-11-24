@@ -1,4 +1,8 @@
-"""Corpus helpers and fixtures for the label tests."""
+"""Corpus helpers and fixtures for the label tests.
+
+``served`` and ``network`` (the real ``api`` and an in-process ``crdt-ws``, default settings) are
+those of ``tests.api.conftest``; ``test_relabel_publish`` replaces them with ``fr`` ones.
+"""
 
 from __future__ import annotations
 
@@ -11,6 +15,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from lae.corpus import CORPUS_DIR, load_record
 from lae.db.models import Record
+from tests.api.conftest import network, served  # noqa: F401  (fixtures)
 
 MONA_LISA = "linkedart/object-0.json"
 """Primary names in English, French and Italian (``notation`` on each language)."""

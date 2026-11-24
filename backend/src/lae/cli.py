@@ -4,7 +4,11 @@ Sub-command names match the process names in conventions §1, the entries in ``d
 and the ``deploy/systemd/lae-<name>.service`` units. Every command reads ``Settings``
 (``LAE_*``). ``migrate`` runs ``alembic upgrade head`` against ``LAE_DATABASE_URL``;
 ``bootstrap <stage>`` runs one stage of the bulk bootstrap (``lae.bootstrap.cli``); ``vocab
-<action>`` imports, exports and refreshes the Value Set registry (``lae.vocab.cli``); ``api``
+<action>`` imports, exports and refreshes the Value Set registry (``lae.vocab.cli``); ``relabel``
+recomputes ``entity_labels.default_label`` under ``LAE_LABEL_LANGUAGE`` (``lae.labels.relabel``,
+Step 1.19b): run by the administrator after changing the setting and restarting ``api`` and
+``crdt-ws``; it has no language option, is not a process, and exits 1 when rows were locked by
+other transactions (run it again); ``api``
 configures JSON logging and runs uvicorn on ``lae.app.create_app``, and refuses to start (exit
 ``EXIT_CONFIG_ERROR``) when the authentication settings are unsafe, e.g. ``LAE_DEV_USER`` with
 ``LAE_ENV=production`` (``lae.auth.setup.AuthConfigError``).
@@ -24,6 +28,7 @@ import importlib
 import inspect
 import sys
 from collections.abc import Callable, Sequence
+from pathlib import Path
 from types import ModuleType
 
 import uvicorn
@@ -45,6 +50,7 @@ COMMANDS: dict[str, str] = {
     "migrate": "Apply database migrations (alembic upgrade head).",
     "bootstrap": "Bulk-load records into Postgres and QLever.",
     "vocab": "Import, export and refresh the Value Set registry.",
+    "relabel": "Recompute entity_labels.default_label under LAE_LABEL_LANGUAGE.",
 }
 
 PROCESS_MODULES: dict[str, tuple[str, str]] = {
@@ -67,6 +73,43 @@ EXIT_NOT_IMPLEMENTED = 3
 EXIT_CONFIG_ERROR = 2
 """Exit code of a process that refuses to start because of its settings."""
 
+EXIT_FAILED = 1
+"""Exit code of a one-shot command that could not complete (``lae relabel``)."""
+
+MAX_RELABEL_BATCH = 10_000
+"""Largest ``lae relabel --batch``."""
+
+
+def relabel_batch(value: str) -> int:
+    """``--batch`` of ``lae relabel``: an integer from 1 to ``MAX_RELABEL_BATCH``."""
+    try:
+        number = int(value)
+    except ValueError:
+        raise argparse.ArgumentTypeError(f"{value!r} is not an integer") from None
+    if not 1 <= number <= MAX_RELABEL_BATCH:
+        raise argparse.ArgumentTypeError(f"must be from 1 to {MAX_RELABEL_BATCH}")
+    return number
+
+
+def add_relabel_arguments(parser: argparse.ArgumentParser) -> None:
+    """The options of ``lae relabel``. There is deliberately no language option."""
+    from lae.labels.relabel import RELABEL_BATCH
+
+    parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="report what would change; write nothing, take no lock",
+    )
+    parser.add_argument(
+        "--batch",
+        type=relabel_batch,
+        default=RELABEL_BATCH,
+        help=f"rows per transaction, 1 to {MAX_RELABEL_BATCH} (default {RELABEL_BATCH})",
+    )
+    parser.add_argument(
+        "--report", type=Path, help="JSON Lines file: one line per row changed (uri, old, new)"
+    )
+
 
 def build_parser() -> argparse.ArgumentParser:
     """Build the argument parser with one sub-command per process."""
@@ -80,6 +123,8 @@ def build_parser() -> argparse.ArgumentParser:
             vocab_cli.add_arguments(subparser)
         elif name == "sync-worker":
             add_sync_worker_arguments(subparser)
+        elif name == "relabel":
+            add_relabel_arguments(subparser)
     return parser
 
 
@@ -107,6 +152,41 @@ def run_bootstrap(args: argparse.Namespace) -> int:
 def run_vocab(args: argparse.Namespace) -> int:
     """``lae vocab <action>``: manage the Value Set registry (Phase 2, Step 2.1)."""
     return vocab_cli.run(args)
+
+
+def run_relabel(args: argparse.Namespace) -> int:
+    """``lae relabel``: recompute the default labels under ``Settings.label_language``.
+
+    Exit 0 when every row was visited, 1 when rows were locked through every retry (run it
+    again) or the run failed; batches committed before a failure stay.
+    """
+    from lae.bootstrap.common import print_summary
+    from lae.labels.relabel import relabel
+
+    settings = get_settings()
+    configure_logging(settings.log_level)
+    try:
+        summary = asyncio.run(
+            relabel(
+                settings.database_url,
+                settings.label_language,
+                dry_run=args.dry_run,
+                batch=args.batch,
+                report_path=args.report,
+            )
+        )
+    except Exception as error:
+        print(f"lae relabel: {type(error).__name__}: {error}", file=sys.stderr)
+        return EXIT_FAILED
+    print_summary(summary)
+    if summary["skipped_locked"]:
+        print(
+            f"lae relabel: {summary['skipped_locked']} rows were locked by other transactions; "
+            "run the command again",
+            file=sys.stderr,
+        )
+        return EXIT_FAILED
+    return 0
 
 
 def run_api(args: argparse.Namespace) -> int:
@@ -166,6 +246,7 @@ HANDLERS: dict[str, Callable[[argparse.Namespace], int]] = {
     "migrate": run_migrate,
     "bootstrap": run_bootstrap,
     "vocab": run_vocab,
+    "relabel": run_relabel,
 }
 """Sub-commands implemented in this module; the others are in ``PROCESS_MODULES``."""
 
