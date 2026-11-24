@@ -61,8 +61,8 @@ Behaviour = Callable[["RecordingClient", str], Awaitable[None]]
 class RecordingClient(QLeverClient):
     """Records every update; applies it to ``store`` unless ``behaviour`` decides otherwise."""
 
-    def __init__(self, store: pyoxigraph.Store | None = None) -> None:
-        super().__init__("http://qlever.invalid:7024", "http://qlever.invalid:7024", TOKEN)
+    def __init__(self, store: pyoxigraph.Store | None = None, token: str = TOKEN) -> None:
+        super().__init__("http://qlever.invalid:7024", "http://qlever.invalid:7024", token)
         self.store = store if store is not None else pyoxigraph.Store()
         self.sent: list[str] = []
         self.acknowledged: list[str] = []
