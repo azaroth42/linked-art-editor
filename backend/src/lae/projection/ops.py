@@ -12,8 +12,9 @@ Conventions for every function that takes a path:
   ``get_path``) as ``base``, never by encoding its key in the path.
 - A write follows a single chain of nodes (R20). A missing intermediate node is created (R21);
   functions that only read or remove never create anything. A path that is written through
-  never names ``id`` or ``type`` (``LAE-PROJ-007``); ``get_path``, ``list_entries`` and
-  ``get_entry`` may read them.
+  never names ``id``, ``type`` or ``_label`` (``rules.WRITE_FORBIDDEN_KEYS``, ``LAE-PROJ-007``,
+  checked before the path is parsed); ``get_path``, ``list_entries`` and ``get_entry`` may read
+  them.
 - Every write is one transaction and is checked before it changes anything, so a rejected
   call leaves the document as it was. Callers that need an origin wrap the call in their own
   ``doc.transaction(origin=...)``.
@@ -47,7 +48,6 @@ from lae.projection.project import (
 )
 from lae.projection.rules import (
     EMPTY_ARRAY,
-    IDENTITY_KEYS,
     OPAQUE_KEYS,
     ORDER_KEY,
     PROJ_BAD_PATH,
@@ -58,6 +58,7 @@ from lae.projection.rules import (
     RESERVED_KEYS,
     SINGLE_VALUED_CLASSES,
     VALUE_KEY,
+    WRITE_FORBIDDEN_KEYS,
     ProjectionError,
     check_json,
     check_text,
@@ -297,16 +298,19 @@ def value_to_json(value: Any) -> Any:
 
 
 def _write_path(path: str) -> tuple[PathSegment, ...]:
-    """Parse the path of an operation that writes; it may not name ``id`` or ``type`` (R20).
+    """Parse the path of an operation that writes; it may not name ``id``, ``type`` or
+    ``_label`` (R20, Step 1.19a), as ``writePath`` in ``frontend/src/crdt/paths.ts``.
 
-    Checked before anything else: every node a path creates already holds both keys, so a
-    write through either would overwrite a node's identity or fail after creating the node.
+    Checked before anything else, the path grammar included: each ``.``-separated part, up to
+    its first ``[``, is compared with ``WRITE_FORBIDDEN_KEYS``. Every node a path creates
+    already holds ``id`` and ``type``, so a write through either would overwrite a node's
+    identity or fail after creating the node; the root ``_label`` is derived from the names.
     """
-    segments = parse_path(path)
-    for segment in segments:
-        if segment.key in IDENTITY_KEYS:
-            raise ProjectionError(PROJ_BAD_PATH, f"a write path cannot name {segment.key!r}")
-    return segments
+    for part in path.split("."):
+        key = part.split("[", 1)[0]
+        if key in WRITE_FORBIDDEN_KEYS:
+            raise ProjectionError(PROJ_BAD_PATH, f"a write path cannot name {key!r}")
+    return parse_path(path)
 
 
 def _locate(

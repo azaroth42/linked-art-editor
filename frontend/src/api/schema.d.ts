@@ -272,9 +272,10 @@ export interface paths {
          *
          *     The header ``X-Draft-Epoch`` is the record's current draft epoch: the editor connects to
          *     ``/ws/rooms/{id}?epoch=<it>``. It changes on publish, discard and revert (ADR-0027), so the
-         *     editor reads it again before every fresh connection. A never-published record
-         *     (``version = 0``) is found only while it has a draft. Deleted → 410; merged → 301 to
-         *     ``/api/records/{merged_into}``.
+         *     editor reads it again before every fresh connection. The header ``X-Label-Language`` is
+         *     ``Settings.label_language``, with which the editor derives the draft's root ``_label``. A
+         *     never-published record (``version = 0``) is found only while it has a draft. Deleted → 410;
+         *     merged → 301 to ``/api/records/{merged_into}``.
          */
         get: operations["get_record_api_records__record_id__get"];
         put?: never;
@@ -1858,6 +1859,8 @@ export interface operations {
                 headers: {
                     /** @description The record's current draft epoch (records.draft_epoch). */
                     "X-Draft-Epoch"?: number;
+                    /** @description The installation's label language (LAE_LABEL_LANGUAGE): the editor derives the draft's root _label with it. */
+                    "X-Label-Language"?: string;
                     [name: string]: unknown;
                 };
                 content: {

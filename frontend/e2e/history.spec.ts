@@ -55,6 +55,10 @@ test("two versions are compared, the first is restored by revert, and publishing
   await expect(forward.getByTestId("change-list")).toHaveText(
     /Title: changed from “Vase” to “Amphora”/,
   );
+  // The root _label follows the title (Step 1.19a) and is captioned as taken from it.
+  await expect(forward.getByTestId("change-list")).toContainText(
+    "Label (taken from the name): changed from “Vase” to “Amphora”",
+  );
   await expectNoAxeViolations(page);
 
   // The other direction.
@@ -89,7 +93,8 @@ test("two versions are compared, the first is restored by revert, and publishing
   expect(await json<unknown[]>(request, "GET", `/api/records/${id}/revisions`)).toHaveLength(2);
   const draftDiff = await json<Diff>(request, "POST", `/api/records/${id}/draft/diff`);
   const revisionDiff = await json<Diff>(request, "GET", `/api/records/${id}/revisions/2/diff/1`);
-  expect(revisionDiff.changes).toHaveLength(1);
+  // The title and the root _label derived from it (Step 1.19a).
+  expect(revisionDiff.changes).toHaveLength(2);
   expect(draftDiff.changes).toEqual(revisionDiff.changes);
 
   // Publishing the reverted draft makes version 3, the same as version 1.

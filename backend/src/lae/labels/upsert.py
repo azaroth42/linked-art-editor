@@ -35,10 +35,16 @@ def primary_classification(jsonld: Mapping[str, Any]) -> str | None:
     return None
 
 
-async def upsert_entity_labels_for_record(session: AsyncSession, record: Record) -> None:
+async def upsert_entity_labels_for_record(
+    session: AsyncSession, record: Record, label_language: str
+) -> None:
     """Insert or update the ``entity_labels`` row of ``record`` from its published JSON-LD, then
-    harvest the metatypes it states inline."""
-    labels, default_label = labels_from_record(record.data)
+    harvest the metatypes it states inline.
+
+    ``label_language`` is ``Settings.label_language``: the default label prefers a primary name
+    in it (``lae.labels.extract.labels_from_record``, Step 1.19a).
+    """
+    labels, default_label = labels_from_record(record.data, label_language)
     values: dict[str, Any] = {
         "type": record.type,
         "labels": labels,

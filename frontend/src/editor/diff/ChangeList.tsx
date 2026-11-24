@@ -98,6 +98,10 @@ export function ChangeList({ changes, recordUri, profile }: ChangeListProps) {
 
   /** The label of the slot that edits what the change is about, if a slot does. */
   const field = (change: Change): string | null => {
+    // The root _label is derived from the names (Step 1.19a); no slot edits it.
+    if (change.parent.length === 0 && change.property === "_label") {
+      return t("diff.derived_label");
+    }
     const slot = profile === null ? null : slotForSteps(profile, changeSteps(change));
     return slot === null ? null : localized(slot.label, language);
   };

@@ -9,7 +9,7 @@ import { PAGE_HEADING, PRIMARY_BUTTON, SECONDARY_BUTTON, STANDALONE_LINK } from 
 import { useAuth } from "../app/useAuth.ts";
 import { useDocumentTitle } from "../app/useDocumentTitle.ts";
 import { useErrorMessage } from "../app/useErrorMessage.ts";
-import { project } from "../crdt/project.ts";
+import { projectDraft } from "../crdt/derivedLabel.ts";
 import { RawInspector } from "../crdt/RawInspector.tsx";
 import type { JsonObject } from "../crdt/rules.ts";
 import { CLOSE_STALE_EPOCH, useRecordDoc } from "../crdt/useRecordDoc.ts";
@@ -58,6 +58,8 @@ export function EditorPage() {
     user: user === null ? null : { id: user.id, displayName: user.display_name },
   });
   const jsonld = record.data?.jsonld;
+  /** The installation's label language, as the server sent it with this record (Step 1.19a). */
+  const labelLanguage = record.data?.labelLanguage ?? null;
   const recordClass = typeof jsonld?.type === "string" ? jsonld.type : null;
   const recordUri = typeof jsonld?.id === "string" ? jsonld.id : "";
   const profile = useProfile(recordClass);
@@ -96,11 +98,11 @@ export function EditorPage() {
   );
   const snapshot = useCallback((): JsonObject => {
     try {
-      return doc === null ? {} : project(doc);
+      return doc === null || labelLanguage === null ? {} : projectDraft(doc, labelLanguage);
     } catch {
       return {};
     }
-  }, [doc]);
+  }, [doc, labelLanguage]);
 
   const closePublish = useCallback(() => {
     setPublishing(false);
@@ -167,7 +169,7 @@ export function EditorPage() {
       {record.isError && (
         <p className="text-red-800">{errorMessage(record.error) ?? t("page.load_error")}</p>
       )}
-      {live.session !== null && doc !== null && (
+      {live.session !== null && doc !== null && labelLanguage !== null && (
         <>
           <p className="text-slate-700" data-testid="connection-status">
             {ending ? t("publish.reloading") : status}
@@ -221,12 +223,13 @@ export function EditorPage() {
               </>
             )}
           </div>
-          {inspecting && <RawInspector doc={doc} id={INSPECTOR_ID} />}
+          {inspecting && <RawInspector doc={doc} id={INSPECTOR_ID} labelLanguage={labelLanguage} />}
           {mayEdit && (
             <ValidationDrawer
               recordId={id}
               recordClass={recordClass}
               doc={doc}
+              labelLanguage={labelLanguage}
               profile={profile.data ?? null}
               ready={live.synced}
               onJump={jump}

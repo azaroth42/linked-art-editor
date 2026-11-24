@@ -30,6 +30,7 @@ from lae.db.models import (
     SyncState,
     UserKind,
 )
+from lae.labels.derive import with_derived_label
 from lae.labels.normalize import normalize_refs
 from lae.labels.refs import reference_ids
 from lae.projection import ops, strip_internal_iris
@@ -222,8 +223,9 @@ async def test_corpus_records_publish_end_to_end(
         assert len(after.revision(1).accepted_warnings) == len(
             {(w.code, w.path) for w in warnings}
         ), name
-        # Nothing of the source record is lost: the public form is the template again.
-        original = {**template, "id": uri}
+        # Nothing of the source record is lost: the public form is the template again, with
+        # the root _label derived from its names (Step 1.19a).
+        original = with_derived_label({**template, "id": uri}, "en")
         assert _without_reference_labels(strip_internal_iris(data, uri)) == (
             _without_reference_labels(strip_internal_iris(original, template["id"]))
         ), name
@@ -321,6 +323,7 @@ async def test_references_inside_the_bundle_lose_their_labels_whatever_the_order
                     {"id": "https://nowhere.example/unknown", "type": "Type", "_label": "Kept"}
                 ],
             },
+            label_language="en",
         ),
     )
 

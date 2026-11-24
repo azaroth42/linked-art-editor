@@ -462,10 +462,12 @@ async def _write_record(
     summary: str,
     bundle_uris: set[str],
     context_version: int,
+    label_language: str,
 ) -> None:
     """Write the next version of one locked record from its validated snapshot.
 
     ``record`` is locked ``FOR UPDATE`` and its draft was found unchanged in this transaction.
+    ``label_language`` (``Settings.label_language``) chooses the ``entity_labels`` default label.
     """
     snapshot = document.snapshot
     previous_version = record.version
@@ -530,7 +532,7 @@ async def _write_record(
     )
     await session.flush()
     # Also harvests the metatypes of inline Type references onto existing rows (ADR-0032).
-    await upsert_entity_labels_for_record(session, record)
+    await upsert_entity_labels_for_record(session, record, label_language)
     await _resolve_schema_findings(session, record.id, user.id)
     epoch = await store.delete_draft(session, record.id)
     if epoch != record.draft_epoch:
@@ -547,6 +549,7 @@ async def _write_bundle(
     user: CurrentUser,
     summary: str,
     context_version: int,
+    label_language: str,
 ) -> dict[UUID, Record]:
     """Lock, re-check and write the whole bundle; the caller's transaction makes it atomic."""
     order = sorted(bundle)
@@ -583,6 +586,7 @@ async def _write_bundle(
             summary=summary,
             bundle_uris=bundle_uris,
             context_version=context_version,
+            label_language=label_language,
         )
     return records
 
@@ -624,6 +628,7 @@ async def publish(
             user=user,
             summary=summary,
             context_version=settings.context_version,
+            label_language=settings.label_language,
         )
         version = records[record_id].version
         draft_epoch = records[record_id].draft_epoch

@@ -39,6 +39,11 @@ the method named after it.
    compact away rows the other one's ``Doc`` does not contain. ``crdt-ws`` holds a PostgreSQL
    advisory lock for as long as it runs and a second process does not start.
 
+The derived root ``_label`` (Step 1.19a, ADR-0036). ``Room.snapshot`` returns the projection
+with the root ``_label`` derived from the names in the room's ``label_language`` (the
+``Settings.label_language`` the process was started with, given to every room by the manager).
+Nothing is written for it: no update, no ``last_update_id``, no observer on the ``Doc``.
+
 Presence (awareness). The server stamps ``user_id``, ``display_name``, ``kind`` (``"human"`` or
 ``"agent"``) and ``read_only`` on every state a socket publishes, so a client cannot pose as
 someone else; states relayed for other clients are ignored. A joining socket receives every
@@ -84,6 +89,7 @@ from lae.crdt.protocol import (
     is_integrated,
 )
 from lae.db.models import RecordStatus
+from lae.labels.derive import DEFAULT_LABEL_LANGUAGE, with_derived_label
 from lae.logging import get_logger
 from lae.projection import hydrate, project
 
@@ -188,7 +194,9 @@ class Snapshot(BaseModel):
 
     record_id: UUID
     jsonld: dict[str, Any]
-    """The draft projected to JSON-LD, **with** internal node IRIs (``lae.projection.project``)."""
+    """The draft projected to JSON-LD, **with** internal node IRIs (``lae.projection.project``),
+    and the root ``_label`` derived from its names in the room's label language
+    (``lae.labels.derive.with_derived_label``, Step 1.19a). Nothing is written for the label."""
     contributors: list[UUID]
     """Users whose updates the draft contains, in no particular order."""
     draft_epoch: int
@@ -283,6 +291,7 @@ class Room(YRoom):
         uncompacted: int = 0,
         unintegrated: list[bytes] | None = None,
         compact_every: int = COMPACT_EVERY,
+        label_language: str = DEFAULT_LABEL_LANGUAGE,
     ) -> None:
         super().__init__(
             ready=True, ydoc=doc, log=_yroom_log, exception_handler=_yroom_exception_handler
@@ -299,6 +308,8 @@ class Room(YRoom):
         self.unintegrated: list[bytes] = unintegrated or []
         """Updates the ``Doc`` holds as pending; compaction keeps them (invariant 4)."""
         self.compact_every = compact_every
+        self.label_language = label_language
+        """Language of the derived root ``_label`` (``Settings.label_language``, Step 1.19a)."""
         self.connections: set[Connection] = set()
         self.lock = asyncio.Lock()
         """Serialises persist-then-apply and compaction."""
@@ -347,10 +358,10 @@ class Room(YRoom):
     # -- reading -----------------------------------------------------------------------------
 
     def snapshot(self) -> Snapshot:
-        """Project the draft as it is now."""
+        """Project the draft as it is now, with its derived root ``_label`` (Step 1.19a)."""
         return Snapshot(
             record_id=self.record_id,
-            jsonld=project(self.ydoc),
+            jsonld=with_derived_label(project(self.ydoc), self.label_language),
             contributors=sorted(self.contributors),
             draft_epoch=self.draft_epoch,
             base_version=self.base_version,
@@ -746,11 +757,14 @@ class InMemoryRoomManager:
         idle_seconds: float = IDLE_SECONDS,
         compact_every: int = COMPACT_EVERY,
         sweep_seconds: float = SWEEP_SECONDS,
+        label_language: str = DEFAULT_LABEL_LANGUAGE,
     ) -> None:
         self._sessions = sessions
         self.idle_seconds = idle_seconds
         self.compact_every = compact_every
         self.sweep_seconds = sweep_seconds
+        self.label_language = label_language
+        """Given to every room this manager opens (``create_crdt_app``: the setting)."""
         self._rooms: dict[UUID, Room] = {}
         self._locks: dict[UUID, tuple[asyncio.Lock, int]] = {}
         self._tasks: set[asyncio.Task[None]] = set()
@@ -914,6 +928,7 @@ class InMemoryRoomManager:
                         base_version=record.version,
                         contributors=set(),
                         compact_every=self.compact_every,
+                        label_language=self.label_language,
                     )
                 if content is not None:
                     raise DraftExistsError(str(record_id))
@@ -945,6 +960,7 @@ class InMemoryRoomManager:
             uncompacted=len(updates),
             unintegrated=[u for u in replayed if not is_integrated(doc, u)],
             compact_every=self.compact_every,
+            label_language=self.label_language,
         )
 
     async def get(self, record_id: UUID) -> Room | None:

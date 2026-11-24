@@ -139,7 +139,7 @@ async def test_publishing_a_record_harvests_its_metatypes(
     data = person_with(concept(dutch, NATIONALITY), uri=record_uri)
     record = Record(id=uuid7(), uri=record_uri, type="Person", data=data)
     async with AsyncSession(db_engine) as session:
-        await upsert_entity_labels_for_record(session, record)
+        await upsert_entity_labels_for_record(session, record, "en")
         await session.commit()
     row = await labels.get(dutch)
     assert row is not None and row.metatype_uris == [NATIONALITY]
@@ -150,7 +150,7 @@ async def test_publishing_a_record_harvests_its_metatypes(
     own = {"id": concept_uri, "type": "Type", "classified_as": [{"id": OCCUPATION}]}
     async with AsyncSession(db_engine) as session:
         await upsert_entity_labels_for_record(
-            session, Record(id=uuid7(), uri=concept_uri, type="Type", data=own)
+            session, Record(id=uuid7(), uri=concept_uri, type="Type", data=own), "en"
         )
         await session.commit()
     own_row = await labels.get(concept_uri)

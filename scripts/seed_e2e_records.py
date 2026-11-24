@@ -80,7 +80,7 @@ async def seed(records: list[dict[str, Any]], settings: Settings) -> int:
                 await session.execute(
                     statement.on_conflict_do_update(index_elements=[Record.id], set_=values)
                 )
-                await upsert_entity_labels_for_record(session, row)
+                await upsert_entity_labels_for_record(session, row, settings.label_language)
     finally:
         await engine.dispose()
     return len(rows)

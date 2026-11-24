@@ -6,7 +6,7 @@ import { ApiError } from "../api/client.ts";
 import type { UiProfile } from "../api/hooks/editing.ts";
 import { type Diagnostic, useRecordSchema, validateDraft } from "../api/hooks/publishing.ts";
 import { SECONDARY_BUTTON } from "../app/styles.ts";
-import { project } from "../crdt/project.ts";
+import { projectDraft } from "../crdt/derivedLabel.ts";
 import { type JsonObject, ProjectionError } from "../crdt/rules.ts";
 import { HELP } from "../widgets/styles.ts";
 import { DiagnosticList, type LocatedDiagnostic } from "./validation/DiagnosticList.tsx";
@@ -83,9 +83,9 @@ export function mergeFindings(
 
 type Live = { findings: Findings } | { error: string } | null;
 
-function checkNow(doc: Y.Doc, check: SchemaCheck): Live {
+function checkNow(doc: Y.Doc, check: SchemaCheck, labelLanguage: string): Live {
   try {
-    const document = project(doc);
+    const document = projectDraft(doc, labelLanguage);
     return { findings: { items: checkSchema(check, document), document } };
   } catch (error) {
     if (error instanceof ProjectionError) {
@@ -99,6 +99,11 @@ interface ValidationDrawerProps {
   recordId: string;
   recordClass: string | null;
   doc: Y.Doc;
+  /**
+   * The record's label language (`EditorRecord.labelLanguage`): the draft is checked with its
+   * root `_label` derived in it (`projectDraft`), as the server's snapshot is.
+   */
+  labelLanguage: string;
   profile: UiProfile | null;
   /** The draft is loaded (synced): before that the document is empty. */
   ready: boolean;
@@ -123,6 +128,7 @@ export function ValidationDrawer({
   recordId,
   recordClass,
   doc,
+  labelLanguage,
   profile,
   ready,
   onJump,
@@ -155,7 +161,7 @@ export function ValidationDrawer({
     }
     let timer: ReturnType<typeof setTimeout> | null = null;
     if (check !== null) {
-      setLive(checkNow(doc, check));
+      setLive(checkNow(doc, check, labelLanguage));
     }
     const onUpdate = () => {
       setStale(true);
@@ -167,7 +173,7 @@ export function ValidationDrawer({
       }
       timer = setTimeout(() => {
         timer = null;
-        setLive(checkNow(doc, check));
+        setLive(checkNow(doc, check, labelLanguage));
       }, LIVE_CHECK_DELAY);
     };
     doc.on("update", onUpdate);
@@ -177,14 +183,14 @@ export function ValidationDrawer({
         clearTimeout(timer);
       }
     };
-  }, [doc, check, ready]);
+  }, [doc, check, ready, labelLanguage]);
 
   const validate = async () => {
     setPending(true);
     setFailure(null);
     let document: JsonObject;
     try {
-      document = project(doc);
+      document = projectDraft(doc, labelLanguage);
     } catch {
       document = {};
     }

@@ -106,7 +106,7 @@ def test_new_record_data_rekeys_nodes_of_the_template_source() -> None:
         "identified_by": [{"id": f"{source}/node/{uuid7()}", "type": "Name", "content": "A"}],
     }
     uri = new_uri()
-    data = new_record_data("Person", uri, 1, template)
+    data = new_record_data("Person", uri, 1, template, label_language="en")
     assert data["@context"] == CONTEXT_URL
     assert (data["id"], data["type"]) == (uri, "Person")
     assert data["identified_by"][0]["id"].startswith(node_prefix(uri))

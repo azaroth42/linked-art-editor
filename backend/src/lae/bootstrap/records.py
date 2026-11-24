@@ -128,7 +128,9 @@ def parse(item: SourceItem) -> ParsedItem | Failure:
     return ParsedItem(item.source, source_uri, cleaned.document, len(cleaned.repaired))
 
 
-def _build(parsed: ParsedItem, base_uri: str, context_version: int) -> PreparedRecord | Failure:
+def _build(
+    parsed: ParsedItem, base_uri: str, context_version: int, label_language: str
+) -> PreparedRecord | Failure:
     document, source_uri = parsed.document, parsed.source_uri
     try:
         schema_name_for(document)
@@ -154,7 +156,9 @@ def _build(parsed: ParsedItem, base_uri: str, context_version: int) -> PreparedR
         detail = f"{type(error).__name__}: {error}"
         return Failure(STAGE, parsed.source, EXPANSION_FAILED, source_uri, [detail])
     findings = schema_findings(validate_schema(stored, uri, context_version=context_version))
-    labels, default_label = labels_from_record(stored)
+    # The source _label is stored as given (ADR-0030); only the entity_labels row follows the
+    # label language (Step 1.19a).
+    labels, default_label = labels_from_record(stored, label_language)
     return PreparedRecord(
         id=record_id,
         uri=uri,
@@ -171,27 +175,31 @@ def _build(parsed: ParsedItem, base_uri: str, context_version: int) -> PreparedR
     )
 
 
-def build(parsed: ParsedItem, base_uri: str, context_version: int) -> PreparedRecord | Failure:
+def build(
+    parsed: ParsedItem, base_uri: str, context_version: int, label_language: str
+) -> PreparedRecord | Failure:
     """Turn a parsed item into its rows, or the reason it is rejected (module docstring).
 
-    Never raises for a bad document: anything unexpected is reported as ``LAE-BOOT-010``, so one
-    record cannot stop a load of millions.
+    ``label_language`` is ``Settings.label_language``: the default label of the record's
+    ``entity_labels`` row prefers a primary name in it. Never raises for a bad document:
+    anything unexpected is reported as ``LAE-BOOT-010``, so one record cannot stop a load of
+    millions.
     """
     try:
-        return _build(parsed, base_uri, context_version)
+        return _build(parsed, base_uri, context_version, label_language)
     except Exception as error:  # noqa: BLE001 - reported per record, see the docstring
         detail = f"{type(error).__name__}: {error}"
         return Failure(STAGE, parsed.source, PREPARE_FAILED, parsed.source_uri, [detail[:500]])
 
 
 def prepare(
-    item: SourceItem, base_uri: str, context_version: int
+    item: SourceItem, base_uri: str, context_version: int, label_language: str
 ) -> tuple[PreparedRecord | None, Failure | None]:
     """``parse`` then ``build`` for one input item: ``(record, None)`` or ``(None, failure)``."""
     parsed = parse(item)
     if isinstance(parsed, Failure):
         return None, parsed
-    built = build(parsed, base_uri, context_version)
+    built = build(parsed, base_uri, context_version, label_language)
     if isinstance(built, Failure):
         return None, built
     return built, None
@@ -210,13 +218,15 @@ def parse_batch(items: Iterable[SourceItem]) -> tuple[list[ParsedItem], list[Fai
     return parsed, failures
 
 
-def build_batch(parsed: Iterable[ParsedItem], base_uri: str, context_version: int) -> PreparedBatch:
+def build_batch(
+    parsed: Iterable[ParsedItem], base_uri: str, context_version: int, label_language: str
+) -> PreparedBatch:
     """Build the rows of a batch of parsed items; rejected ones are returned as failures."""
     cpu0 = time.process_time()
     records: list[PreparedRecord] = []
     failures: list[Failure] = []
     for item in parsed:
-        result = build(item, base_uri, context_version)
+        result = build(item, base_uri, context_version, label_language)
         if isinstance(result, Failure):
             failures.append(result)
         else:

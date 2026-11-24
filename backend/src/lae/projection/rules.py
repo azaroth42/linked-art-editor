@@ -37,11 +37,17 @@ OPAQUE_KEYS: Final = frozenset({"@context"})
 """Keys whose value is opaque at any depth, whatever its form (R3)."""
 
 IDENTITY_KEYS: Final = frozenset({"id", "type"})
-"""Keys a write path may not name (``profiles/README.md``; R5, R20): the identity of an object.
+"""The identity of an object (``profiles/README.md``; R5, R20).
 
 ``id`` is immutable (R5) and every node a path creates already holds both, so a write through
 either could only overwrite the identity of a node or fail after the node was created.
 """
+
+WRITE_FORBIDDEN_KEYS: Final = frozenset({*IDENTITY_KEYS, "_label"})
+"""Keys a write path may not name, at any depth (``LAE-PROJ-007``): the identity keys, and
+``_label``, which is derived from the names at the root (Step 1.19a, ADR-0036) and on a
+reference is set only with the reference (``add_reference(label=...)``). Mirrors
+``WRITE_FORBIDDEN_KEYS`` of ``frontend/src/crdt/rules.ts``."""
 
 ENTRY_KEY_PREFIX: Final = "["
 """A map key that starts with this is the key text of an entry key or an escaped property key."""

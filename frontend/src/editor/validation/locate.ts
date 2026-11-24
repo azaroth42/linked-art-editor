@@ -14,12 +14,15 @@
  * - Ties go to the slot that comes first in the profile.
  * - A `LAE-SCHEMA-required` diagnostic is about the missing property: it is looked up as a step
  *   below its path first (`missing: ["timespan"]` at `/produced_by`).
- * - Nothing matches the record itself (`""`), or a property no slot edits.
+ * - Nothing matches the record itself (`""`), or a property no slot edits, except a missing
+ *   root `_label`: it is derived from the names (Step 1.19a), so it goes to the first slot whose
+ *   path is `identified_by[Name]` (`isMissingRootLabel`).
  */
 import type { ProfileSlot, UiProfile } from "../../api/hooks/editing.ts";
 import type { Diagnostic } from "../../api/hooks/publishing.ts";
 import { parsePath, type PathSegment, PathSyntaxError } from "../../crdt/pathSyntax.ts";
 import { isObject } from "../../crdt/rules.ts";
+import { isMissingRootLabel, NAME_SLOT_PATH } from "./messages.ts";
 
 /** One property on the way from the record to what a pointer names. */
 export interface PointerStep {
@@ -124,6 +127,9 @@ export function slotForDiagnostic(
   document: unknown,
   diagnostic: Pick<Diagnostic, "code" | "path" | "params">,
 ): ProfileSlot | null {
+  if (isMissingRootLabel(diagnostic)) {
+    return profileSlots(profile).find((slot) => slot.path === NAME_SLOT_PATH) ?? null;
+  }
   const steps = pointerSteps(document, diagnostic.path);
   const missing = diagnostic.params.missing;
   if (diagnostic.code === "LAE-SCHEMA-required" && Array.isArray(missing)) {

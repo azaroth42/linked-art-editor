@@ -2,7 +2,7 @@ import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
 import type * as Y from "yjs";
 
-import { project } from "./project.ts";
+import { projectDraft } from "./derivedLabel.ts";
 import { canonicalJson, ProjectionError } from "./rules.ts";
 
 /** The inspector re-projects the document at most this often (milliseconds). */
@@ -10,9 +10,9 @@ export const REFRESH_INTERVAL = 1000;
 
 type View = { json: string } | { error: string };
 
-function view(doc: Y.Doc): View {
+function view(doc: Y.Doc, labelLanguage: string): View {
   try {
-    return { json: canonicalJson(project(doc), 2) };
+    return { json: canonicalJson(projectDraft(doc, labelLanguage), 2) };
   } catch (error) {
     if (error instanceof ProjectionError) {
       return { error: error.code };
@@ -22,13 +22,23 @@ function view(doc: Y.Doc): View {
 }
 
 /**
- * Read-only drawer with the draft's projected JSON-LD (the TypeScript `project()` mirror,
- * internal node IRIs kept, keys sorted), refreshed at most once per {@link REFRESH_INTERVAL}.
- * Mounted only while open, so a closed inspector costs nothing.
+ * Read-only drawer with the draft's projected JSON-LD (the TypeScript `project()` mirror with
+ * the root `_label` derived in `labelLanguage`, `projectDraft`; internal node IRIs kept, keys
+ * sorted), refreshed at most once per {@link REFRESH_INTERVAL}. Mounted only while open, so a
+ * closed inspector costs nothing.
  */
-export function RawInspector({ doc, id }: { doc: Y.Doc; id: string }) {
+export function RawInspector({
+  doc,
+  id,
+  labelLanguage,
+}: {
+  doc: Y.Doc;
+  id: string;
+  /** The record's label language (`EditorRecord.labelLanguage`). */
+  labelLanguage: string;
+}) {
   const { t } = useTranslation(["editor", "errors"]);
-  const [current, setCurrent] = useState<View>(() => view(doc));
+  const [current, setCurrent] = useState<View>(() => view(doc, labelLanguage));
 
   useEffect(() => {
     let last = Date.now();
@@ -36,14 +46,14 @@ export function RawInspector({ doc, id }: { doc: Y.Doc; id: string }) {
     const refresh = () => {
       timer = null;
       last = Date.now();
-      setCurrent(view(doc));
+      setCurrent(view(doc, labelLanguage));
     };
     const onUpdate = () => {
       if (timer === null) {
         timer = setTimeout(refresh, Math.max(0, REFRESH_INTERVAL - (Date.now() - last)));
       }
     };
-    setCurrent(view(doc));
+    setCurrent(view(doc, labelLanguage));
     doc.on("update", onUpdate);
     return () => {
       doc.off("update", onUpdate);
@@ -51,7 +61,7 @@ export function RawInspector({ doc, id }: { doc: Y.Doc; id: string }) {
         clearTimeout(timer);
       }
     };
-  }, [doc]);
+  }, [doc, labelLanguage]);
 
   return (
     <section

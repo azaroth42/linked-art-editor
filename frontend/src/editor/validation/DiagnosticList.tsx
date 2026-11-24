@@ -7,7 +7,7 @@ import { useFormatters } from "../../i18n/useFormatters.ts";
 import { SMALL_BUTTON } from "../../widgets/styles.ts";
 import { useLanguage } from "../../widgets/environment.ts";
 import { localized } from "../../widgets/vocab.ts";
-import { messageParams } from "./messages.ts";
+import { isMissingRootLabel, messageParams } from "./messages.ts";
 
 /** A diagnostic with the slot it is about (`locate.ts`), ready to list. */
 export interface LocatedDiagnostic {
@@ -30,16 +30,21 @@ export function diagnosticKey(diagnostic: Diagnostic, recordId: string | null = 
 
 /**
  * The localized message of a diagnostic: the `errors` entry of its code with its params (ICU).
- * A code without an entry falls back to the server's `message_en`, then to the code.
+ * A code without an entry falls back to the server's `message_en`, then to the code. A missing
+ * root `_label` asks for a name instead: the label is derived from it (Step 1.19a).
  */
 export function useDiagnosticMessage(): (diagnostic: Diagnostic) => string {
-  const { t, i18n } = useTranslation("errors");
+  const { t, i18n } = useTranslation(["errors", "editor"]);
   const { locale } = useFormatters();
   return useCallback(
-    (diagnostic: Diagnostic) =>
-      i18n.exists(`errors:${diagnostic.code}`)
+    (diagnostic: Diagnostic) => {
+      if (isMissingRootLabel(diagnostic)) {
+        return t("editor:validation.missing_label");
+      }
+      return i18n.exists(`errors:${diagnostic.code}`)
         ? t(`errors:${diagnostic.code}`, messageParams(diagnostic.params, locale))
-        : diagnostic.message_en || diagnostic.code,
+        : diagnostic.message_en || diagnostic.code;
+    },
     [t, i18n, locale],
   );
 }

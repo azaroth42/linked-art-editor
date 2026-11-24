@@ -50,14 +50,49 @@ BASE_URI = "http://localhost:8000/id/"
 
 
 def sample_record(uri: str) -> dict[str, Any]:
-    """A small ``HumanMadeObject`` with a name and a statement (a ``Text``)."""
+    """A small ``HumanMadeObject`` with a name and a statement (a ``Text``).
+
+    Its ``_label`` is the one derived from its name (Step 1.19a), so a snapshot of the draft
+    equals the projection of its document until the first name changes.
+    """
     return {
         "@context": "https://linked.art/ns/v1/linked-art.json",
         "id": uri,
         "type": "HumanMadeObject",
-        "_label": "Test object",
+        "_label": "First name",
         "identified_by": [{"type": "Name", "content": "First name"}],
         "referred_to_by": [{"type": "LinguisticObject", "content": "A statement"}],
+    }
+
+
+AAT = "http://vocab.getty.edu/aat/"
+PRIMARY_NAME = {"id": f"{AAT}300404670", "type": "Type"}
+ENGLISH = {"id": f"{AAT}300388277", "type": "Language"}
+FRENCH = {"id": f"{AAT}300388306", "type": "Language"}
+
+
+def bilingual_record(uri: str) -> dict[str, Any]:
+    """A ``HumanMadeObject`` with an English and a French primary name, English first, and a
+    stale stored ``_label`` (Step 1.19a: a snapshot derives it in the room's label language)."""
+    return {
+        "@context": "https://linked.art/ns/v1/linked-art.json",
+        "id": uri,
+        "type": "HumanMadeObject",
+        "_label": "Stale label",
+        "identified_by": [
+            {
+                "type": "Name",
+                "content": "The Night Watch",
+                "classified_as": [PRIMARY_NAME],
+                "language": [ENGLISH],
+            },
+            {
+                "type": "Name",
+                "content": "La Ronde de nuit",
+                "classified_as": [PRIMARY_NAME],
+                "language": [FRENCH],
+            },
+        ],
     }
 
 
@@ -72,8 +107,9 @@ async def create_record(
     version: int = 1,
     draft_epoch: int = 0,
     status: RecordStatus = RecordStatus.ACTIVE,
+    data: Callable[[str], dict[str, Any]] = sample_record,
 ) -> tuple[UUID, str]:
-    """Insert a record (committed) and return ``(id, uri)``."""
+    """Insert a record (committed) and return ``(id, uri)``; ``data(uri)`` is its JSON-LD."""
     record_id = uuid7()
     uri = record_uri(record_id, base_uri=BASE_URI)
     async with AsyncSession(engine, expire_on_commit=False) as session:
@@ -82,7 +118,7 @@ async def create_record(
             uri=uri,
             type="HumanMadeObject",
             etag="W/1",
-            data=sample_record(uri),
+            data=data(uri),
             context_version=1,
         )
         record.version = version

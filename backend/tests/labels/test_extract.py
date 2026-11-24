@@ -48,13 +48,13 @@ def record(*names: dict[str, Any], **extra: Any) -> dict[str, Any]:
 
 
 def test_mona_lisa_has_english_french_and_italian_labels() -> None:
-    labels, default = labels_from_record(corpus(MONA_LISA))
+    labels, default = labels_from_record(corpus(MONA_LISA), "en")
     assert labels == {"en": "Mona Lisa", "fr": "La Joconde", "it": "La Gioconda"}
     assert default == "Mona Lisa"
 
 
 def test_night_watch_has_english_and_dutch_labels() -> None:
-    labels, default = labels_from_record(corpus(NIGHT_WATCH))
+    labels, default = labels_from_record(corpus(NIGHT_WATCH), "en")
     assert labels == {"en": "The Night Watch", "nl": "De Nachtwacht"}
     assert default == "The Night Watch"
 
@@ -62,42 +62,42 @@ def test_night_watch_has_english_and_dutch_labels() -> None:
 def test_first_language_of_a_name_is_its_language() -> None:
     # The only name lists Spanish, then English: it is a Spanish label and, there being no
     # English primary name, also the default.
-    labels, default = labels_from_record(corpus(HACHA))
+    labels, default = labels_from_record(corpus(HACHA), "en")
     assert labels == {"es": "Hacha (Ceremonial Axe)"}
     assert default == "Hacha (Ceremonial Axe)"
 
 
 def test_spanish_only_record() -> None:
-    assert labels_from_record(corpus(SPANISH_ONLY)) == ({"es": "Hacha"}, "Hacha")
+    assert labels_from_record(corpus(SPANISH_ONLY), "en") == ({"es": "Hacha"}, "Hacha")
 
 
 def test_language_from_the_aat_id_without_notation() -> None:
-    labels, default = labels_from_record(corpus(YUAG_OBJECT))
+    labels, default = labels_from_record(corpus(YUAG_OBJECT), "en")
     assert labels == {"en": "Female Sensibility"}
     assert default == "Female Sensibility"
 
 
 def test_names_without_language_are_und() -> None:
-    labels, default = labels_from_record(corpus(YCBA_PERSON))
+    labels, default = labels_from_record(corpus(YCBA_PERSON), "en")
     assert labels == {"en": "Haveill Gillbank", "und": "Gillbank Haveill, 18th–19th centuries"}
     assert default == "Haveill Gillbank"
 
 
 def test_record_without_names_uses_its_label() -> None:
     data = corpus("institutional/yuag-agt-36724.json")
-    assert labels_from_record(data) == ({}, data["_label"])
+    assert labels_from_record(data, "en") == ({}, data["_label"])
 
 
 def test_record_without_names_or_label_uses_its_id() -> None:
     data = corpus("linkedart/event-1.json")
     assert "_label" not in data
-    assert labels_from_record(data) == ({}, data["id"])
+    assert labels_from_record(data, "en") == ({}, data["id"])
 
 
 def test_every_corpus_record_has_a_default_label() -> None:
     by_language: dict[str, int] = {}
     for path, data in iter_corpus():
-        labels, default = labels_from_record(data)
+        labels, default = labels_from_record(data, "en")
         assert isinstance(default, str) and default.strip(), path
         contents = {n.content for n in iter_names(data)}
         assert set(labels.values()) <= contents, path
@@ -113,7 +113,7 @@ def test_english_primary_name_is_the_default_wherever_there_is_one() -> None:
     for path, data in iter_corpus():
         english_primaries = [n for n in iter_names(data) if n.primary and n.language == "en"]
         if english_primaries:
-            assert labels_from_record(data)[1] == english_primaries[0].content, path
+            assert labels_from_record(data, "en")[1] == english_primaries[0].content, path
             seen += 1
     assert seen >= 15
 
@@ -123,58 +123,64 @@ def test_english_primary_name_is_the_default_wherever_there_is_one() -> None:
 
 def test_primary_name_wins_within_a_language() -> None:
     labels, _ = labels_from_record(
-        record(name("Alt", "en"), name("Main", "en", primary=True), name("Later", "en"))
+        record(name("Alt", "en"), name("Main", "en", primary=True), name("Later", "en")), "en"
     )
     assert labels == {"en": "Main"}
 
 
 def test_first_name_of_a_language_without_primary() -> None:
-    labels, _ = labels_from_record(record(name("First", "fr"), name("Second", "fr")))
+    labels, _ = labels_from_record(record(name("First", "fr"), name("Second", "fr")), "en")
     assert labels == {"fr": "First"}
 
 
 def test_first_primary_name_of_a_language_wins() -> None:
     labels, _ = labels_from_record(
-        record(name("One", "de", primary=True), name("Two", "de", primary=True))
+        record(name("One", "de", primary=True), name("Two", "de", primary=True)), "en"
     )
     assert labels == {"de": "One"}
 
 
 def test_default_is_the_english_primary_name_even_if_not_first() -> None:
     _, default = labels_from_record(
-        record(name("Nom", "fr", primary=True), name("Alt", "en"), name("Name", "en", primary=True))
+        record(
+            name("Nom", "fr", primary=True), name("Alt", "en"), name("Name", "en", primary=True)
+        ),
+        "en",
     )
     assert default == "Name"
 
 
 def test_english_variant_counts_as_english() -> None:
     gb = name("Colour", primary=True) | {"language": [LANG["en"] | {"notation": "en-GB"}]}
-    labels, default = labels_from_record(record(name("Farbe", "de", primary=True), gb))
+    labels, default = labels_from_record(record(name("Farbe", "de", primary=True), gb), "en")
     assert labels == {"de": "Farbe", "en-GB": "Colour"}
     assert default == "Colour"
 
 
 def test_default_is_any_primary_name_without_an_english_one() -> None:
     _, default = labels_from_record(
-        record(name("Alt", "en"), name("名前", "ja", primary=True), name("Nom", "fr", primary=True))
+        record(
+            name("Alt", "en"), name("名前", "ja", primary=True), name("Nom", "fr", primary=True)
+        ),
+        "en",
     )
     assert default == "名前"
 
 
 def test_default_is_the_first_name_without_any_primary() -> None:
-    _, default = labels_from_record(record(name("Erste", "de"), name("First", "en")))
+    _, default = labels_from_record(record(name("Erste", "de"), name("First", "en")), "en")
     assert default == "Erste"
 
 
 def test_default_falls_back_to_label_then_id() -> None:
-    assert labels_from_record(record(_label="Root label")) == ({}, "Root label")
-    assert labels_from_record(record(_label="  ")) == ({}, "https://example.org/id/1")
-    assert labels_from_record({"type": "Person"}) == ({}, "")
+    assert labels_from_record(record(_label="Root label"), "en") == ({}, "Root label")
+    assert labels_from_record(record(_label="  "), "en") == ({}, "https://example.org/id/1")
+    assert labels_from_record({"type": "Person"}, "en") == ({}, "")
 
 
 def test_notation_beats_the_aat_language() -> None:
     swiss = name("Grüezi", primary=True) | {"language": [LANG["de"] | {"notation": "de-CH"}]}
-    assert labels_from_record(record(swiss))[0] == {"de-CH": "Grüezi"}
+    assert labels_from_record(record(swiss), "en")[0] == {"de-CH": "Grüezi"}
 
 
 @pytest.mark.parametrize(
@@ -190,7 +196,7 @@ def test_notation_beats_the_aat_language() -> None:
     ],
 )
 def test_unusable_entries_are_ignored(entry: Any) -> None:
-    labels, default = labels_from_record(record(entry, name("Kept", "en")))
+    labels, default = labels_from_record(record(entry, name("Kept", "en")), "en")
     assert (labels, default) == ({"en": "Kept"}, "Kept")
 
 
@@ -204,7 +210,7 @@ def test_single_objects_are_treated_as_arrays() -> None:
             "language": LANG["fr"],
         },
     }
-    assert labels_from_record(data) == ({"fr": "Solo"}, "Solo")
+    assert labels_from_record(data, "en") == ({"fr": "Solo"}, "Solo")
 
 
 def test_is_primary_name_accepts_every_aat_spelling() -> None:
@@ -219,5 +225,5 @@ def test_is_primary_name_accepts_every_aat_spelling() -> None:
 def test_input_is_not_modified() -> None:
     data = corpus(MONA_LISA)
     before = corpus(MONA_LISA)
-    labels_from_record(data)
+    labels_from_record(data, "en")
     assert data == before

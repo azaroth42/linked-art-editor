@@ -31,7 +31,7 @@ def stored_rows() -> list[tuple[str, str, int]]:
     """``(uri, data, context_version)`` of every corpus record the load would store."""
     rows = []
     for item in iter_source(CORPUS_DIR):
-        record, _ = prepare(item, BASE_URI, 1)
+        record, _ = prepare(item, BASE_URI, 1, "en")
         if record is not None:
             rows.append((record.uri, record.data, 1))
     return rows

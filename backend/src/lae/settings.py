@@ -14,6 +14,8 @@ from typing import Annotated, Literal
 from pydantic import Field, SecretStr, field_validator
 from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
+from lae.labels.langtags import AAT_LANGUAGE_TAGS, normalize_tag
+
 Environment = Literal["development", "test", "staging", "production"]
 LogLevel = Literal["debug", "info", "warning", "error", "critical"]
 
@@ -49,6 +51,16 @@ class Settings(BaseSettings):
 
     context_version: int = 1
     """Version of the pinned Linked Art ``@context`` (``profiles/context/v<N>.json``)."""
+
+    label_language: str = "en"
+    """Language preferred for a record's derived ``_label`` and for ``entity_labels.default_label``
+    (Step 1.19a).
+
+    One of the 57 tags of ``lae.labels.langtags.AAT_LANGUAGE_TAGS`` (``en``, ``fr``, ``de``, ...);
+    case, surrounding whitespace and ISO 639-2 codes are normalized (``fra`` gives ``fr``), and
+    any other value stops the process when it starts. Every process of an installation must have
+    the same value; changing it means restarting ``api`` and ``crdt-ws`` together.
+    """
 
     draft_ttl_days: Annotated[int, Field(ge=1)] = 5
     """Days without activity after which a draft is discarded (decision B7; at least 1)."""
@@ -125,6 +137,19 @@ class Settings(BaseSettings):
         if isinstance(value, str):
             return [item for item in value.replace(",", " ").split() if item]
         return value
+
+    @field_validator("label_language", mode="before")
+    @classmethod
+    def _check_label_language(cls, value: object) -> str:
+        """Normalize the tag (``normalize_tag``); accept only a language of the AAT table."""
+        tag = normalize_tag(value) if isinstance(value, str) else None
+        if tag is None or tag not in LABEL_LANGUAGES:
+            raise ValueError(f"{value!r} is not one of the tags of AAT_LANGUAGE_TAGS")
+        return tag
+
+
+LABEL_LANGUAGES: frozenset[str] = frozenset(AAT_LANGUAGE_TAGS.values())
+"""The values ``Settings.label_language`` accepts: the tags of the AAT language table."""
 
 
 @lru_cache(maxsize=1)

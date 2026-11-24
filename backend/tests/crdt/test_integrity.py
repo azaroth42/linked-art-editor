@@ -48,6 +48,11 @@ def names(jsonld: dict[str, Any]) -> list[str]:
     return [name["content"] for name in jsonld["identified_by"]]
 
 
+MARKER = "x_published"
+"""A key the publish below sets: which version a draft was hydrated from. (Not ``_label``, which
+a snapshot derives from the names since Step 1.19a.)"""
+
+
 async def publish(session: AsyncSession, record_id: UUID, label: str) -> None:
     """The draft-related part of Step 1.10's transaction, in its order; the caller commits."""
     record = (
@@ -57,7 +62,7 @@ async def publish(session: AsyncSession, record_id: UUID, label: str) -> None:
         update(Record)
         .where(Record.id == record_id)
         .values(
-            data={**record.data, "_label": label},
+            data={**record.data, MARKER: label},
             version=Record.version + 1,
             draft_epoch=Record.draft_epoch + 1,
         )
@@ -92,7 +97,7 @@ async def test_a_publish_cannot_commit_between_the_two_reads_of_a_load(
         monkeypatch.undo()
         # The load won: a consistent draft of version 1 at epoch 0 ...
         assert (room.draft_epoch, room.base_version) == (0, 1)
-        assert room.snapshot().jsonld["_label"] == "Test object"
+        assert MARKER not in room.snapshot().jsonld
         # ... which the publish, queued behind it, then cleared.
         await asyncio.wait_for(publishing[0], 5)
         assert await record_epoch(db_engine, record_id) == 1
@@ -100,7 +105,7 @@ async def test_a_publish_cannot_commit_between_the_two_reads_of_a_load(
         fresh = await manager.open(record_id)
         assert fresh is not room
         assert (fresh.draft_epoch, fresh.base_version) == (1, 2)
-        assert fresh.snapshot().jsonld["_label"] == "Published meanwhile"
+        assert fresh.snapshot().jsonld[MARKER] == "Published meanwhile"
 
 
 async def test_a_write_during_a_publish_waits_and_is_refused_without_a_deadlock(

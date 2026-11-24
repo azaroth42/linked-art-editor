@@ -362,9 +362,18 @@ class _Builder:
         return tuple(found)
 
 
-def record_title(record: Mapping[str, Any], chain: Sequence[str], catalogue: Catalogue) -> Value:
-    """The record's label in the caller's locale chain (``entity_labels`` rules), with language."""
-    labels, default_label = labels_from_record(record)
+def record_title(
+    record: Mapping[str, Any],
+    chain: Sequence[str],
+    catalogue: Catalogue,
+    preferred_language: str,
+) -> Value:
+    """The record's label in the caller's locale chain (``entity_labels`` rules), with language.
+
+    ``preferred_language`` is ``Settings.label_language``: the default label prefers a primary
+    name in it, as the record's ``entity_labels`` row does (Step 1.19a).
+    """
+    labels, default_label = labels_from_record(record, preferred_language)
     if not labels and not (isinstance(record.get(LABEL), str) and record[LABEL].strip()):
         return Value(catalogue.t("record.untitled"))
     label = resolve_label(labels, default_label, chain)
@@ -383,16 +392,20 @@ def build_page(
     catalogue: Catalogue,
     base_uri: str,
     label_languages: Mapping[str, str],
+    preferred_language: str,
     version: PageVersion,
     signed_in: bool,
     script_src: str,
     jsonld_type: str,
 ) -> RecordPage:
-    """Return the view model of the Public Reader page of ``record`` (see the module docstring)."""
+    """Return the view model of the Public Reader page of ``record`` (see the module docstring).
+
+    ``preferred_language`` is ``Settings.label_language`` (``record_title``).
+    """
     t = catalogue.t
     locale = catalogue.locale
     builder = _Builder(catalogue, base_uri, label_languages)
-    title = record_title(record, chain, catalogue)
+    title = record_title(record, chain, catalogue, preferred_language)
     kind = record.get("type")
     class_label = None
     if isinstance(kind, str):

@@ -65,7 +65,7 @@ async def test_yjs_and_y_websocket_interoperate(db_url: str, db_engine: AsyncEng
             "--viewer-id",
             str(viewer_id),
             "--label",
-            "Test object",
+            "First name",  # sample_record's stored _label
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )

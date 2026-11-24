@@ -182,6 +182,7 @@ async def test_bundles_that_share_stubs_lock_them_in_one_order(
             first_uri,
             1,
             {**person("First workshop"), "member_of": [{"id": second_uri, "type": "Group"}]},
+            label_language="en",
         ),
     )
     one_id, _ = await new_draft(served, editor, "HumanMadeObject", painting("One", first_uri))
@@ -414,7 +415,13 @@ async def test_a_crash_before_the_commit_leaves_everything_as_it_was(
     assert (await publish(served, editor, object_id, NO_PRIMARY_NAME)).status_code == 200
     await network.rooms.open(
         object_id,
-        content=new_record_data("HumanMadeObject", object_uri, 1, painting("Engine", maker_uri)),
+        content=new_record_data(
+            "HumanMadeObject",
+            object_uri,
+            1,
+            painting("Engine", maker_uri),
+            label_language="en",
+        ),
     )
     await edit(network, object_id, editor.id, add_name("Analytical Engine"))
     bundle = (object_id, maker_id)

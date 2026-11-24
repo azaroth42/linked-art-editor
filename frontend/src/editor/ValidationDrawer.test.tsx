@@ -4,6 +4,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { stubFetch } from "../api/testing.ts";
 import { addNode, setScalar } from "../crdt/paths.ts";
+import { project } from "../crdt/project.ts";
 import { draft, renderWidget } from "../widgets/testing.tsx";
 import { finding, PROFILE, servedSchema } from "./validation/testing.ts";
 import { ValidationDrawer } from "./ValidationDrawer.tsx";
@@ -16,7 +17,10 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function renderDrawer(doc = draft({ _label: "A vase", "@context": CONTEXT })) {
+function renderDrawer(
+  doc = draft({ _label: "A vase", "@context": CONTEXT }),
+  labelLanguage = "en",
+) {
   const onJump = vi.fn();
   const onAnnounce = vi.fn();
   renderWidget(
@@ -24,6 +28,7 @@ function renderDrawer(doc = draft({ _label: "A vase", "@context": CONTEXT })) {
       recordId={ID}
       recordClass={CLASS}
       doc={doc}
+      labelLanguage={labelLanguage}
       profile={PROFILE}
       ready
       onJump={onJump}
@@ -43,13 +48,11 @@ describe("ValidationDrawer", () => {
       "GET /api/profiles/schema/HumanMadeObject": () =>
         Response.json(servedSchema("HumanMadeObject")),
     });
-    const { doc, onJump } = renderDrawer(draft({ "@context": CONTEXT }));
+    const { doc, onJump } = renderDrawer(draft({ "@context": CONTEXT, _label: "A vase" }));
     const drawer = await screen.findByRole("complementary", { name: "Checks" });
-    // The draft has no _label: a finding about the whole record, without a field.
     expect(
-      await within(drawer).findByText("Error: Required properties are missing: _label."),
+      await within(drawer).findByText("No structural problems. Validate to run every check."),
     ).toBeTruthy();
-    expect(within(drawer).getByText("This applies to the record as a whole.")).toBeTruthy();
 
     // A Name whose content is a number: found after the pause, with a way to the Title field.
     act(() => {
@@ -64,8 +67,53 @@ describe("ValidationDrawer", () => {
     await user.click(go);
     expect(onJump).toHaveBeenCalledWith("title");
 
-    await user.click(within(drawer).getByRole("button", { name: /^Hide findings \(2 errors/ }));
+    await user.click(within(drawer).getByRole("button", { name: /^Hide findings \(1 error/ }));
     expect(within(drawer).queryByRole("button", { name: "Go to Title" })).toBeNull();
+  });
+
+  it("a draft with a name and no _label has no missing-_label finding", async () => {
+    stubFetch({
+      "GET /api/profiles/schema/HumanMadeObject": () =>
+        Response.json(servedSchema("HumanMadeObject")),
+    });
+    const doc = draft({ "@context": CONTEXT });
+    act(() => {
+      addNode(doc, "identified_by[Name]", { content: "A  vase " });
+    });
+    expect(project(doc)._label).toBeUndefined();
+    renderDrawer(doc);
+    const drawer = await screen.findByRole("complementary", { name: "Checks" });
+    expect(
+      await within(drawer).findByText("No structural problems. Validate to run every check."),
+    ).toBeTruthy();
+    expect(within(drawer).queryByText(/_label/)).toBeNull();
+    // Nothing was written into the document for it.
+    expect(project(doc)._label).toBeUndefined();
+  });
+
+  it("a draft with neither shows the name message and jumps to the title slot", async () => {
+    const user = userEvent.setup();
+    stubFetch({
+      "GET /api/profiles/schema/HumanMadeObject": () =>
+        Response.json(servedSchema("HumanMadeObject")),
+    });
+    const { doc, onJump } = renderDrawer(draft({ "@context": CONTEXT }));
+    const drawer = await screen.findByRole("complementary", { name: "Checks" });
+    const message = "Error: Give the record a name; its label is taken from the name.";
+    const item = (await within(drawer).findByText(message)).closest("li") as HTMLElement;
+    expect(item.dataset.code).toBe("LAE-SCHEMA-required");
+    expect(within(drawer).queryByText("This applies to the record as a whole.")).toBeNull();
+    await user.click(within(item).getByRole("button", { name: "Go to Title" }));
+    expect(onJump).toHaveBeenCalledWith("title");
+
+    // Typing a name makes the finding go away after the pause.
+    act(() => {
+      addNode(doc, "identified_by[Name]", { content: "A vase" });
+    });
+    await waitFor(() => expect(within(drawer).queryByText(message)).toBeNull());
+    expect(
+      within(drawer).getByText("No structural problems. Validate to run every check."),
+    ).toBeTruthy();
   });
 
   it("validates on the server, announces the summary, and notices later changes", async () => {

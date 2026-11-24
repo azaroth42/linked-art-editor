@@ -255,6 +255,7 @@ def reader_page(
         catalogue=catalogue,
         base_uri=settings.base_uri,
         label_languages=label_languages,
+        preferred_language=settings.label_language,
         version=PageVersion(version, record.version, found.modified),
         signed_in=signed_in,
         script_src=SCRIPT_SRC,

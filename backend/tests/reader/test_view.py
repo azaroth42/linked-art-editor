@@ -116,6 +116,7 @@ def page_of(
         catalogue=catalogue_for(list(chain)),
         base_uri=BASE,
         label_languages=languages or {},
+        preferred_language="en",
         version=version or PageVersion(None, 1, PUBLISHED),
         signed_in=signed_in,
         script_src="/reader/assets/reader.js",

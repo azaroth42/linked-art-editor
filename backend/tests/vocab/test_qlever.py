@@ -190,7 +190,7 @@ async def concept_rows(indexed: Indexed, db_engine: AsyncEngine, labels: Labels)
         # Publishing the person harvests the Dutch metatype it states inline (ADR-0032).
         person = indexed.person
         await upsert_entity_labels_for_record(
-            session, Record(id=uuid7(), uri=person["id"], type="Person", data=person)
+            session, Record(id=uuid7(), uri=person["id"], type="Person", data=person), "en"
         )
         local = {
             "id": indexed.local_nationality,
@@ -199,7 +199,7 @@ async def concept_rows(indexed: Indexed, db_engine: AsyncEngine, labels: Labels)
             "classified_as": [{"id": NATIONALITY, "type": "Type"}],
         }
         await upsert_entity_labels_for_record(
-            session, Record(id=uuid7(), uri=local["id"], type="Type", data=local)
+            session, Record(id=uuid7(), uri=local["id"], type="Type", data=local), "en"
         )
         await session.commit()
     return labels
