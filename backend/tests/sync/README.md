@@ -8,6 +8,7 @@ Contract: `docs/contracts/1.11-sync-worker.md` §5.
 | `test_batch.py` | 11–27 | PostgreSQL |
 | `test_replay_property.py` | 28–29 | nothing (hypothesis, pyoxigraph) |
 | `test_qlever_integration.py` | 30–37 | PostgreSQL and a real QLever 0.6.0 |
+| `test_connection_loss.py` | issue #151: how `run` exits on a database error (§3 item 22, §4) | PostgreSQL |
 
 The QLever tests skip, with a reason, when `qlever` (qlever-control) or `qlever-index` is not on
 `PATH` or `LAE_TEST_QLEVER_PORT` is unset. With `LAE_REQUIRE_QLEVER=1` they fail instead of
