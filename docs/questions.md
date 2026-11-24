@@ -813,15 +813,55 @@ steps. Notes for the steps that meet it, and two choices the owner may want to c
    and ignoring `failed` events at or below it in the heal rule), and should say what its own
    replay into the second index does with an event that cannot be replayed (`replay` still
    raises).
-9. **For the owner: should the live path confirm a rejection with the probe too?** On the live
-   path (contract item 21, unchanged) an event rejected five times is a dead letter. If the
-   update URL is wrong in a way that answers 404 or 405 (not 401/403/5xx), every pending event
-   is rejected and they become dead letters one by one, about 15 s each, until someone notices
-   `outbox_failed`. Each is healed by the record's next publish or a rebuild, so nothing is
-   lost for good, but many records fall behind. The #150 amendment adds a probe for catch-up
-   only (a rejected probe means the endpoint refuses every update, so no event is blamed).
-   Extending it to `process_batch` is a small change to a reviewed invariant; it was left out
-   to keep #150 narrow. Proposed: a follow-up issue, critical, after #150 and #151 merge.
+9. **Decided (issue #171, contract `docs/contracts/1.11-sync-worker.md` §8, 2026-11-24): the
+   live path confirms a rejection with the probe too.** Before: an update URL that answers 404
+   or 405 rejected every update, and the pending events became dead letters one by one, about
+   15 s each (contract item 21). Now an attempt is counted only when the event is rejected
+   alone, the probe update is then accepted, and the event is rejected alone again: the same
+   sequence and the same code (`confirm_rejection`) as catch-up. A rejected probe writes
+   nothing, counts no attempt, logs `sync_updates_refused` (`during="live"`) and is retried with
+   the capped backoff, so a refusing endpoint never makes a dead letter. The five attempts and
+   their backoff stay. Cost: two more requests per counted attempt (at most 10 per dead
+   letter), none on the normal path. Consequence to know: if QLever ever rejects the probe
+   itself, a poisoned event holds the queue until that is fixed instead of being skipped after
+   15 s (the rule catch-up already has).
+10. **Decided (issue #171, contract §8.5): exit codes and the systemd unit.** `lae sync-worker`
+    exits 0 (stopped, or done), 1 (may pass by itself or unknown: database unreachable,
+    connection lost, any other database error, QLever failures of `--once` and
+    `--replay-after`), 2 (refuses to start), and new **4** (a database error that cannot pass by
+    itself: SQLSTATE classes 42, 23, 22 and 0A, for example our own SQL against the wrong
+    schema, a violated constraint, a missing privilege). The unit gets
+    `RestartPreventExitStatus=2 4` and `StartLimitIntervalSec=0`: exit 1 is restarted every 5 s
+    without limit, so a Postgres outage of any length recovers by itself; 2 and 4 leave the unit
+    `failed` until a person starts it. A start limit (`StartLimitBurst=`) was rejected: systemd
+    counts starts, not causes, so any limit that stops a loop on a bug also stops the loop of a
+    long or repeated outage, and the unit would stay down after Postgres is back.
+    `--replay-after` and `--failed` classify and log a database error the same way and no
+    longer raise a traceback. **For the owner to confirm:** (a) exit 2 (missing setting,
+    watermark not an integer) is no longer restarted either; before, the unit retried every 5 s
+    and came back by itself once the setting or the row was fixed, now it needs
+    `systemctl start`. (b) A worker that meets the schema half-way during a migration or a
+    restore into the live database stops with 4 and must be started afterwards
+    (`deploy/README.md` will say so).
+11. **Known limit (issue #171, not solved): a database error of unknown kind that does not pass
+    is still a restart loop.** Everything outside the four classes of item 10 (a cancelled
+    statement, a deadlock, a full disk, a read-only server, an internal error of class XX, a
+    client-side `InterfaceError` on an open connection) exits 1 and is restarted every 5 s,
+    because some of these pass by themselves and stopping the worker on one of them would break
+    self-recovery. If such an error persists, the loop stays, with a traceback in the log each
+    time, and each restart sends the batch in flight again (harmless for correctness, contract
+    item 17, but it adds to `qlever_delta_triples` when the error strikes after QLever applied).
+    A slower loop would need `RestartSteps=`/`RestartMaxDelaySec=` (systemd 254 or later, and it
+    also delays the recovery from a long outage) or a delay before exit in the worker. Proposed:
+    leave it until one is seen in production; the signal is `sync_worker_failed` with
+    `persistent=false` repeating.
+12. **Decided (issue #171, contract §8.6): the access token is removed before an error text is
+    cut or encoded.** `rejected()` cut QLever's answer to 2000 characters before the token was
+    removed, so a token across the cut left its first part in `last_error`. Found while writing
+    the amendment: the removal also ran on the JSON-encoded string, so a token containing `"`,
+    `\` or a non-ASCII character would not have been found at all (tokens made with
+    `openssl rand -hex` are not affected). Now: redact the raw answer, then truncate, then
+    encode, in one helper, with one limit.
 
 ## Step 1.14
 
