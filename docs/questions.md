@@ -798,7 +798,8 @@ steps. Notes for the steps that meet it, and two choices the owner may want to c
    alone, a probe update (`DELETE WHERE` on a subject nobody owns) is then accepted, and the
    event is rejected again; an unavailable QLever or a rejected probe writes nothing and is
    retried with backoff. The watermark is not moved by the dead letter. No migration and no new
-   code. Operator action: contract §7.5 (to be copied into `deploy/README.md`).
+   code. Operator action: contract §7.5, copied into `deploy/README.md` ("Dead letters in the
+   sync queue"); ADR-0037.
 8. **Open, for Step 2.18 (found while writing the #150 amendment): dead letters and damaged
    revisions outlive a rebuild.** (a) The heal rule (contract item 5) looks only at statuses: a
    `failed` event still makes the record's next event a `REPLACE` over a range starting at the

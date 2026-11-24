@@ -217,7 +217,8 @@ The unit templates in `systemd/` assume this layout; adjust paths and the user i
    QLEVER_PORT=7010
    LAE_QLEVER_ACCESS_TOKEN=<output of: openssl rand -hex 32>
    # Optional: the sync worker's Prometheus GET /metrics (outbox_pending, outbox_failed,
-   # sync_lag_seconds, ...) on 127.0.0.1:<port>; unset means no listener.
+   # sync_lag_seconds, ...) on 127.0.0.1:<port>; unset means no listener. Alert on
+   # outbox_failed > 0 (see "Dead letters in the sync queue" below).
    # LAE_SYNC_METRICS_PORT=9100
    LAE_BASE_URI=https://<your host>/id/
    # Language of the derived record label (_label) and of entity_labels.default_label: one of the
@@ -276,3 +277,50 @@ The unit templates in `systemd/` assume this layout; adjust paths and the user i
    `qlever.service` runs `qlever start --run-in-foreground` and stops on `SIGINT`; with
    `PERSIST_UPDATES = true`, SPARQL updates survive restarts. Its `ExecStart` uses
    `/usr/bin/qlever`; change it if `command -v qlever` says otherwise.
+
+## Dead letters in the sync queue
+
+`sync-worker` applies the outbox to QLever. An event it cannot apply becomes a **dead letter**:
+its row in `outbox_events` gets `status = 'failed'` and the cause in `last_error`, and the worker
+goes on with the next event. This happens on the live path (an event QLever rejects five times,
+or one that cannot be translated) and in catch-up (a `done` event above a lowered watermark,
+after an index rebuild or restore, that QLever now rejects or whose stored revision cannot be
+read; `last_error` then has `"catch_up": true`). Only the record of that event falls behind in
+QLever; every other record stays current. Contract: `docs/contracts/1.11-sync-worker.md` §7
+(ADR-0037).
+
+What to watch (`GET /metrics` needs `LAE_SYNC_METRICS_PORT`; the listener is up before the first
+catch-up starts):
+
+| Signal | Where | Meaning |
+| :-- | :-- | :-- |
+| `outbox_failed` > 0 | sync worker `GET /metrics` | at least one dead letter (live or catch-up). **This is the alarm:** alert on any value above 0 |
+| `sync_catch_up_dead_letters_total`, `sync_dead_letters_total` increase | same | a dead letter was just made (in catch-up; in total) |
+| `sync_catch_up_events_total` increases | same | a catch-up is replaying (an index was rebuilt or restored) |
+| `sync_unavailable_total` grows, `sync_watermark` does not move | same | QLever is down, or refuses every update |
+| log `sync_dead_letter`, level error, with `event_id`, `record_id`, `error` and `during` (`catch_up` or `live`) | worker log | one per dead letter |
+| log `sync_updates_refused`, level error, with `status`, `body` (first 2000 characters, token removed), `consecutive` | worker log | the probe update was rejected; retried with backoff; no event is touched |
+| log `sync_caught_up`, level info (warning with a dead letter), with `events` and `dead_letters` | worker log | catch-up finished |
+| `outbox_events` rows with `status = 'failed'` | Postgres; `lae sync-worker --failed` | the durable list of dead letters and their causes |
+
+What to do:
+
+1. List them: `lae sync-worker --failed` (from `backend/`, `uv run lae sync-worker --failed`; in
+   production `sudo -u lae sh -c 'set -a && . /etc/lae/lae.env && /opt/lae/backend/.venv/bin/lae
+   sync-worker --failed'`). It prints one JSON line per dead letter (`id`, `kind`, `record_id`,
+   `from_version`, `to_version`, `attempts`, `created_at`, `processed_at`, `last_error`), only
+   reads, needs no QLever settings, and can run while the worker runs. Each line names the
+   record and the cause.
+2. `LAE-SYNC-004` (QLever rejected the update; `body` holds its answer): the record is behind in
+   QLever by at least one version. Publish the record again with any edit; its next event
+   replaces all its triples. Or wait for the next index rebuild, which reads the current data.
+3. `LAE-SYNC-001` or `-002` (a revision is missing or unreadable): the damage is in Postgres
+   (`record_revisions`), not in QLever. Restore that row from a backup; until then every later
+   event of the record is a dead letter too. A rebuild makes the index right for the record's
+   current version in the meantime.
+4. `LAE-SYNC-003`: the worker is older than the code that wrote the event. Deploy the matching
+   version, then treat as 2.
+5. `sync_updates_refused` in the log: fix `LAE_QLEVER_URL` / `LAE_QLEVER_UPDATE_URL` or the
+   server. The worker recovers by itself and no event is lost.
+6. Never set a `failed` row back to `pending` or `done` by hand: an old event sent on its own can
+   undo a later one.
