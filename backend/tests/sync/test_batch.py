@@ -32,7 +32,13 @@ from lae.logging import configure_logging
 from lae.rdf import compress, expand_to_ntriples
 from lae.settings import Settings
 from lae.sync import worker
-from lae.sync.errors import REJECTED, REVISION_MISSING, UNREADABLE, UNTRANSLATABLE
+from lae.sync.errors import (
+    REJECTED,
+    REVISION_MISSING,
+    UNREADABLE,
+    UNTRANSLATABLE,
+    EventError,
+)
 from lae.sync.events import translate_event
 from lae.sync.metrics import Metrics
 from lae.sync.qlever_client import QLeverClient, QLeverError
@@ -1615,6 +1621,10 @@ async def test_the_worker_keeps_running_past_a_poisoned_done_event(
     assert [(d["level"], d["during"], d["event_id"], d["record_id"]) for d in dead] == [
         ("error", "catch_up", p.e, str(p.r))
     ]
+    caught_up = named(logged(), "sync_caught_up")
+    assert [(c["level"], c["events"], c["dead_letters"]) for c in caught_up] == [
+        ("warning", len(p.above_k) - 1, 1)
+    ]
     assert triples_of(client.store) == await p.expected(delta["record_id"])
 
 
@@ -1701,3 +1711,127 @@ async def test_failed_lists_the_dead_letters_as_json_lines(
     for combined in (["--failed", "--once"], ["--failed", "--replay-after", "0"]):
         with pytest.raises(SystemExit):
             worker.parse_arguments(combined)
+
+
+# -- added in review (PR #170): branches the §7.7 mutation run found untested -------------------
+
+
+async def test_a_lone_event_accepted_on_the_second_send_is_replayed(world: World) -> None:
+    """Test 40 for a batch of one: rejected, the probe accepted, accepted the second time."""
+    p = await poisoned_world(world, tail=False)
+    await set_watermark(world.conn, p.before_e[-1])
+    client = p.client(at=len(p.ids) - 2)
+    rejections = 0
+
+    async def flaky(c: RecordingClient, sparql: str) -> None:
+        nonlocal rejections
+        if MARKER in sparql and not rejections:
+            rejections += 1
+            raise QLeverError("QLever refused", status=400, body="once")
+        c.apply(sparql)
+
+    client.behaviour = flaky
+    e_update = await translate_event(world.conn, await event(world.conn, p.e))
+    metrics = Metrics()
+
+    replayed = await catch_up(world.conn, client, metrics=metrics)
+
+    assert replayed == 1
+    assert client.sent == [e_update, PROBE_UPDATE, e_update]
+    assert {row["status"] for row in (await p.rows()).values()} == {"done"}
+    assert await watermark(world.conn) == ("number", str(p.e))
+    assert triples_of(client.store) == await p.expected()
+    assert (metrics.sync_catch_up_events_total, metrics.updates_sent_total) == (1, 1)
+    assert (metrics.sync_dead_letters_total, metrics.failed) == (0, 0)
+
+
+async def test_a_watermark_changed_during_a_catch_up_batch_is_not_overwritten(
+    world: World, other: asyncpg.Connection
+) -> None:
+    """Item 28: the watermark write after an acknowledged batch is compared, as in item 14."""
+    _, ids = await five_events(world)
+    assert (await process_batch(world.conn, RecordingClient())).outcome == "done"
+    await set_watermark(world.conn, ids[1])
+    client = RecordingClient()
+    seen: list[Any] = []
+
+    async def lower_during_the_first_batch(c: RecordingClient, sparql: str) -> None:
+        if len(c.sent) == 1:
+            await set_watermark(other, ids[0])
+        else:
+            seen.append(await watermark(other))
+        c.apply(sparql)
+
+    client.behaviour = lower_during_the_first_batch
+
+    replayed = await catch_up(world.conn, client)
+
+    assert seen == [("number", str(ids[0]))]  # not overwritten by the batch in flight
+    assert len(client.sent) == 2 and replayed == 4  # started again from the lowered value
+    assert len(operations(client.sent[1])) > len(operations(client.sent[0]))
+    assert await watermark(world.conn) == ("number", str(ids[-1]))
+
+
+@pytest.mark.parametrize("answer", [404, 503])
+async def test_once_exits_1_when_catch_up_cannot_reach_qlever_and_blames_no_event(
+    world: World, db_url: str, slept: list[float], answer: int
+) -> None:
+    """Item 26: with ``--once`` a refused probe or an outage is exit 1, and nothing is written."""
+    p = await poisoned_world(world)
+    before = await snapshot_tables(world.conn)
+    client = p.client()
+
+    async def refuse_everything(c: RecordingClient, sparql: str) -> None:
+        raise unavailable(answer)
+
+    client.behaviour = refuse_everything
+
+    assert await worker.run(worker_settings(db_url), once=True, client=client) == 1
+
+    assert slept == []
+    assert await snapshot_tables(world.conn) == before
+    if answer == 404:  # the batch, its first event alone, the probe
+        assert len(client.sent) == 3 and client.sent[-1] == PROBE_UPDATE
+
+
+async def test_catch_up_sends_nothing_more_once_the_connection_is_closed(
+    world: World, db_url: str
+) -> None:
+    """Item 22 in catch-up: no event is sent alone, and no probe, on a closed connection."""
+    p = await poisoned_world(world)
+    before = await snapshot_tables(world.conn)
+    client = p.client()
+    dying = await asyncpg.connect(asyncpg_dsn(db_url))
+    reject = reject_containing(MARKER)
+
+    async def close_during_the_first_request(c: RecordingClient, sparql: str) -> None:
+        if not dying.is_closed():
+            await dying.close()
+        await reject(c, sparql)
+
+    client.behaviour = close_during_the_first_request
+
+    with pytest.raises(worker.ConnectionLostError):
+        await catch_up(dying, client)
+
+    assert len(client.sent) == 1
+    assert await snapshot_tables(world.conn) == before
+
+
+async def test_replay_raises_on_an_untranslatable_event_and_writes_nothing(world: World) -> None:
+    """Test 52 for a translation error: ``replay`` neither skips it nor marks it ``failed``."""
+    c = await world.new("Corrupt")
+    await world.new("Alpha")
+    await world.edit(c, rename("Corrupt two"))
+    await world.new("Beta")
+    ids, _ = await process_live(world)
+    await corrupt(world.conn, c, 2, "corrupt zstd")
+    before = await snapshot_tables(world.conn)
+    for batch_size in (BATCH_SIZE, 1):
+        client = RecordingClient()
+        with pytest.raises(EventError) as raised:
+            await replay(world.conn, client, after_id=ids[0], batch_size=batch_size)
+        assert raised.value.code == UNREADABLE
+        assert len(client.sent) == 1  # Alpha v1; nothing at or after the bad event
+        assert PROBE_UPDATE not in client.sent
+    assert await snapshot_tables(world.conn) == before
