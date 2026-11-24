@@ -507,3 +507,49 @@ batch), and `bootstrap_rewrite_since` stayed; during pass 2, the next `load` wro
 ran pass 2 from the kept time and left no reference to an alias (checked with a join of every
 `id` below the root against `record_aliases`); `rewrite-refs` afterwards changed nothing. No
 worker process or database session survived the kill.
+
+## Phase 1 gate run (Step 1.22, 2026-11-23)
+
+The Phase 1 exit gate loads **real data**: 1,000,000 records sampled from the local LUX dump, not
+the generator. `scripts/load/bootstrap_1m.sh` drew the sample (`scripts/load/sample_lux.py`) and
+ran `aat-labels`, `load`, `export-nt` and `build-index` as they are on `main`, with their defaults
+(18 workers, 4 streams). The script appended the table below; the notes after it are added by hand.
+
+| | |
+| :-- | :-- |
+| Input | All 24 files of `/Users/rs2668/Development/lux/dataset/jsonl/` (61 GB gzip, 44,017,795 records; every line wraps the record in a `json` member, which the sampler unwraps). Sample: the 1,000,000 records with the smallest keyed BLAKE2b-64 of their `id` (key `lae-step-1.22`), so every record type is in proportion to its share of the dump. 7.40 GB of JSON Lines, SHA-256 `a68b1147…c2ed36f`. `gzip -dc` read every file to the end, so the dump is complete (a truncated file fails the sample and the script falls back to the generator). |
+| Sample by class | LinguisticObject 351,533; HumanMadeObject 337,846; Person 121,720; DigitalObject 121,460; Group 23,050; Place 13,966; Type 11,403; VisualItem 7,521; Set 7,292; Activity 3,927; Period 255; Language 25; Material 1; MeasurementUnit 1 |
+| Database | Slot database `lae_i35` at the head migration, stock Postgres.app settings; `LAE_BASE_URI=http://127.0.0.1:9035/id/`, so every record is re-minted (ADR-0030) |
+| QLever | Index `lae_i35` in `/tmp/lae-i35/1m/qlever`, port 7035, `deploy/Qleverfile` |
+| Machine | As above (M5 Max, 18 cores, 128 GB). Shared: the 1-minute load average was 54-68 during `load` (other agents' work and this load's own 18 workers) and 3-10 during `export-nt` and `build-index` |
+
+| Stage | Wall | Notes |
+| :-- | --: | :-- |
+| input (lux) | 65.7 s | 46.8 s to read all 24 files (12 processes), 18.8 s to cut the candidates to 1M |
+| `aat-labels` | 1.7 s | 58,799 AAT terms |
+| `load` | 873.8 s | 1,000,000 read, 999,994 written, 6 rejected (2 `LAE-BOOT-003`, 4 `LAE-BOOT-007`), 804,190 flagged. Pass 1: 734.0 s, 1,362 records/s, worker CPU 9,549 s (**9.5 ms per record**). Pass 2: 63.8 s, 118,421 references rewritten, 19,323,309 `_label`s stripped. 4,867 metatypes harvested. |
+| `export-nt` | 248.9 s | 999,994 records, 70,708,377 triples (70.7 per record), 117,598 sidecar quads, 15.9 GB; 4,036 records/s, worker CPU 4.2 ms per record, workers 94 % busy; none failed |
+| `build-index` | 182.6 s | 70,825,975 distinct triples, peak RSS 4.26 GiB, index 2.98 GB, ready 1.4 s after the build |
+| **Bootstrap (aat-labels + load + export-nt + build-index)** | **1307.0 s (21.8 min)** | |
+
+What the real data changes, against the synthetic ADR-0030 rerun above (734 s in all for 1M):
+
+1. **LUX records are bigger and cost twice as much to load.** 7.4 KB of JSON per record against
+   4.4 KB, 70.7 triples per record against 49.9, and 9.5 ms of worker CPU per record in pass 1
+   against 4.8 ms. Load took 2.4x its synthetic time, the export 1.1x and the index build 1.3x.
+   Part of the load figure is the busy machine (load average 54-68), so the CPU per record is
+   the better comparison.
+2. **80 % of the LUX sample is flagged** (`qa_findings`), against 37 % of the synthetic records:
+   most LUX records carry LUX-internal properties the upstream JSON Schema does not allow
+   (`additionalProperties` findings, most often `_content_html` on statements, then
+   `created_by` and `identified_by` where the schema has none, and the
+   `_seconds_since_epoch_*` time-span helpers), a `const` mismatch (255,422 findings, e.g. a
+   dimension unit typed `Type` instead of `MeasurementUnit`) or a missing required property
+   (200,488). The records still load and are served; publishing one from the editor needs its
+   violations fixed first.
+3. **10M projection** (linear in records, as above): load about 2.4 h, export about 41 min,
+   index build about 37-42 min (707M triples, `b = 1.08-1.14`): **about 3.7-3.8 h**, inside the
+   8-hour window.
+
+Raw summaries: `/tmp/lae-i35/1m/bootstrap-1m.json` (not committed). Every other Phase 1 exit
+measurement (publish storm, autocomplete, collaboration) is in `docs/spikes/P1-exit-measurements.md`.

@@ -843,3 +843,20 @@ if wanted:
    `LAE-PUB-003`. Bulk load keeps the source `_label`; the first publish through the editor
    replaces it with the derived one, which the publish diff shows.
 4. Step 1.17 item 2 is settled: a write path naming `_label` is `LAE-PROJ-007` in Python too.
+
+## Step 1.22
+
+1. **Autocomplete p95 misses the 100 ms target at 1M records (owner decision).** On 1M LUX
+   records, the p95 for 200 random prefixes is 211 ms (264 ms for 2 characters, 184 ms for 3,
+   151 ms for 4-8). That is after this step's query-plan fix, which halves QLever's median and
+   changes no result; it was 568 ms before. A minimum prefix length alone does not reach 100 ms.
+   Every option measured is in `docs/spikes/P1-exit-measurements.md` §4.3, for example a
+   label-start prefix search in Postgres: 11 ms p95 for 3 characters in SQL, but it matches less
+   than QLever does. Each option changes behaviour, so none is implemented. The Phase 1 exit
+   criterion stays open until the owner chooses.
+2. **High-rate updates into one room lag behind (observation).** Two clients typing into one
+   field at about 170 updates per second took 8.4 s to converge after they stopped. Nothing was
+   lost, and human typing is far slower. It may matter for Phase 3 agents
+   (`docs/spikes/P1-exit-measurements.md` §3).
+3. **Overlay and QLever disagree on word starts (minor).** The overlay finds a word only after a
+   space; QLever's text index also finds it after punctuation (§4.1).
