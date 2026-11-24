@@ -838,8 +838,47 @@ if wanted:
    update per keystroke, undo entries and stale snapshots.
 2. **The preferred language is `en`, a constant**, as for `entity_labels.default_label`. Open: a
    per-installation setting needs a way to tell the browser, which no step provides yet.
+   **Overturned (owner, 2026-11-23): it must be a setting.** See below.
 3. **A record without any name keeps the `_label` it has** (141 of the 276 corpus records have
    no usable name); with neither, publish is refused with the existing `LAE-SCHEMA-required` /
    `LAE-PUB-003`. Bulk load keeps the source `_label`; the first publish through the editor
    replaces it with the derived one, which the publish diff shows.
 4. Step 1.17 item 2 is settled: a write path naming `_label` is `LAE-PROJ-007` in Python too.
+
+**Owner's answers (2026-11-23, at resume), recorded in the amended contract:**
+
+- (a) **Derive on read is accepted** as a reading of "set on every draft write": `Room.snapshot` and
+  the browser's `projectDraft` derive the label; it is never written into the CRDT. Item 1 stands.
+- (b) **The preferred label language must be a setting, not the constant `en`.** Item 2 is replaced:
+  `LAE_LABEL_LANGUAGE` (`Settings.label_language`, default `en`; one of the 57 primary language tags
+  of `AAT_LANGUAGE_TAGS`, normalized, anything else stops the process at start), read by `api`,
+  `crdt-ws` and `lae bootstrap` and handed to the pure functions as an argument. The browser gets it
+  as the header `X-Label-Language` of `GET /api/records/{id}`, next to `X-Draft-Epoch`, so it holds
+  the value before a draft document exists and keeps it offline. A name matches by its `notation`
+  or, without one, by its AAT language id (57 languages).
+  `entity_labels.default_label` follows the
+  same setting (`labels_from_record` takes the language; results under `en` are unchanged).
+- (c) **Accepted:** the first publish of a bulk-loaded record may show a `_label` change nobody asked
+  for (63 of the 135 named corpus records). Item 3 stands.
+
+Choices made in the amendment, for the owner to overturn if wanted:
+
+5. **The setting is an environment variable, read at start, and not a `system_settings` row**
+   (Phase 2 Step 2.17 must not make it editable at run time without a contract: `api`, every room
+   of `crdt-ws` and every open browser would have to change together). Changing it means restarting
+   `api` and `crdt-ws`.
+6. **No backfill when the setting changes.** Drafts re-derive at their next read. Published records
+   and `entity_labels.default_label` keep the label they were stored with until the record is next
+   published, whose diff then shows a `_label` change nobody made. Open: whether a command that
+   recomputes `entity_labels.default_label` for all local records is wanted.
+7. **Only a primary language is accepted** (`fr`, not `fr-CA`), and only one, with no fallback list:
+   when no primary name is in that language, the first primary name is used, else the first name.
+8. **Rows that do not come from a record keep an English default label** whatever the setting: the
+   AAT rows of `lae.bootstrap.aat` and a vocabulary `label_override`'s `en`. Open: whether those
+   should follow the setting (not in this step).
+9. **Nothing checks at run time that `api` and `crdt-ws` were given the same value**, and a browser
+   page open across a restart with another value keeps the old one until the record is loaded again.
+   Neither loses data: what is validated, diffed and stored is always the server's snapshot.
+10. `upsert_entity_labels_for_record` gains a `label_language` argument, passed by publish. Contract
+    1.10 §3 item 13 spells the call with two arguments; when and where it is called is unchanged, so
+    this is recorded here and not as an amendment of 1.10.
