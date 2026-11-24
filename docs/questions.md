@@ -785,10 +785,42 @@ steps. Notes for the steps that meet it, and two choices the owner may want to c
    form. When the build's versions differ from those the replayed events were written under,
    the replay should translate every event as `REPLACE` (always correct, contract item 6); that
    needs a flag on `replay`, which this step does not have.
-7. **Open: a `done` event that can no longer be replayed stops the worker.** If `catch_up` meets
-   an event QLever now rejects or whose revision is unreadable, the worker exits 1 and does so
-   again at each restart (pending events wait). Nothing in this step can produce that state; a
-   later step should decide between skipping with an alarm and a rebuild.
+7. **Decided (issue #150, contract `docs/contracts/1.11-sync-worker.md` §7, 2026-11-23): a
+   `done` event that can no longer be replayed is skipped as a dead letter.** Before: if
+   `catch_up` met an event QLever now rejects or whose revision is unreadable, the worker exited
+   1 and did so again at each restart (pending events waited). Now: in catch-up such an event
+   goes from `done` to `failed` and catch-up continues. "Refuse with a rebuild-required state"
+   was rejected: it leaves every record published since the lowered watermark behind until a
+   person rebuilds, where the skip leaves one record behind, recorded (`status = 'failed'`,
+   `last_error` with `"catch_up": true`, `outbox_failed` > 0, an error log line,
+   `lae sync-worker --failed`) and repaired by the record's next event (a `REPLACE`, as after a
+   live dead letter) or by any rebuild. A rejection counts only when the event is rejected
+   alone, a probe update (`DELETE WHERE` on a subject nobody owns) is then accepted, and the
+   event is rejected again; an unavailable QLever or a rejected probe writes nothing and is
+   retried with backoff. The watermark is not moved by the dead letter. No migration and no new
+   code. Operator action: contract §7.5 (to be copied into `deploy/README.md`).
+8. **Open, for Step 2.18 (found while writing the #150 amendment): dead letters and damaged
+   revisions outlive a rebuild.** (a) The heal rule (contract item 5) looks only at statuses: a
+   `failed` event still makes the record's next event a `REPLACE` over a range starting at the
+   dead letter's `from_version`, even after an index rebuild has made the record right. That is
+   correct but wider than needed. (b) It is a real fault when a revision in that range is
+   missing or unreadable: every later event of the record then fails translation
+   (`LAE-SYNC-001`/`-002`) and becomes a dead letter, on the live path and in catch-up, so the
+   record stays behind in QLever until the `record_revisions` row is restored, although
+   `records.data` is intact. Step 2.18's contract should let a rebuild close the dead letters it
+   covers (for example by recording the id up to which the index was built from current data,
+   and ignoring `failed` events at or below it in the heal rule), and should say what its own
+   replay into the second index does with an event that cannot be replayed (`replay` still
+   raises).
+9. **For the owner: should the live path confirm a rejection with the probe too?** On the live
+   path (contract item 21, unchanged) an event rejected five times is a dead letter. If the
+   update URL is wrong in a way that answers 404 or 405 (not 401/403/5xx), every pending event
+   is rejected and they become dead letters one by one, about 15 s each, until someone notices
+   `outbox_failed`. Each is healed by the record's next publish or a rebuild, so nothing is
+   lost for good, but many records fall behind. The #150 amendment adds a probe for catch-up
+   only (a rejected probe means the endpoint refuses every update, so no event is blamed).
+   Extending it to `process_batch` is a small change to a reviewed invariant; it was left out
+   to keep #150 narrow. Proposed: a follow-up issue, critical, after #150 and #151 merge.
 
 ## Step 1.14
 
