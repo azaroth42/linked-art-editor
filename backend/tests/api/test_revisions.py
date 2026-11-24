@@ -18,7 +18,7 @@ from uuid_utils.compat import uuid7
 
 from lae.api import revisions
 from lae.crdt.rooms import EpochMismatchError
-from lae.db.models import CrdtDraft, RecordRevision, RecordStatus
+from lae.db.models import CrdtDraft, Record, RecordRevision, RecordStatus
 from lae.diff.semantic import same_json
 from lae.projection import canonical_json, ops
 from tests.api.conftest import (
@@ -404,6 +404,72 @@ async def test_draft_diff_without_a_draft_a_record_or_crdt_ws(
     down = await served.client.post(f"/api/records/{record_id}/draft/diff", headers=headers)
     assert down.status_code == 503
     assert down.json()["code"] == "LAE-CRDT-009"
+
+
+class PublishBeforeSnapshot(Network):
+    """A network on which ``before_snapshot()`` runs once, just before the first draft snapshot
+    reaches ``crdt-ws``: after the endpoint has read the ``records`` row. Counts snapshots."""
+
+    def __init__(self, inner: Network, before_snapshot: Any = None) -> None:
+        super().__init__(inner.crdt_app)
+        self.before_snapshot = before_snapshot
+        self.snapshots = 0
+
+    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/snapshot"):
+            self.snapshots += 1
+            injected, self.before_snapshot = self.before_snapshot, None
+            if injected is not None:
+                await injected()
+        return await super().handle_async_request(request)
+
+
+async def test_draft_diff_is_not_fooled_by_a_publish_between_its_reads(
+    served: Served, network: Network, db_engine: AsyncEngine
+) -> None:
+    """Issue #154: the row is read before the publish, the draft after it."""
+    record_id, who = await published_versions(served, network, db_engine)
+    await edit(network, record_id, who.id, add_name("Fourth"))
+
+    async def publish_and_reconnect() -> None:
+        assert (await publish(served, who, record_id)).json()["version"] == 4
+        await open_draft(network, record_id)  # an editor's socket reconnects
+
+    racing = PublishBeforeSnapshot(network, publish_and_reconnect)
+    served.app.state.http_client._transport = racing
+    response = await served.client.post(f"/api/records/{record_id}/draft/diff", headers=who.headers)
+    assert response.status_code == 200, response.text
+    # Paired with version 3 the new draft would show the published Name as added again.
+    snapshot = await network.rooms.snapshot(record_id)
+    assert (snapshot.base_version, snapshot.draft_epoch) == (4, response.json()["draft_epoch"])
+    assert (response.json()["from_version"], response.json()["changes"]) == (4, [])
+    # The publish's own snapshot, the endpoint's mismatched one, and the one it re-read.
+    assert racing.snapshots == 3
+
+
+async def test_draft_diff_gives_up_with_409_on_a_draft_of_another_version(
+    served: Served, network: Network, db_engine: AsyncEngine
+) -> None:
+    """A draft that stays based on an older version (nothing does that yet; a Phase 2 merge
+    that rewrites a record under its draft will) gets publish's own conflict."""
+    record_id, _, _ = await three_versions(db_engine)
+    await network.rooms.open(record_id)
+    async with AsyncSession(db_engine) as session:
+        record = await session.get(Record, record_id)
+        assert record is not None
+        record.version = 4
+        await session.commit()
+    counting = PublishBeforeSnapshot(network)
+    served.app.state.http_client._transport = counting
+    path = f"/api/records/{record_id}/draft/diff"
+    response = await served.client.post(path, headers=await editor(db_engine))
+    assert response.status_code == 409
+    assert response.json() == {
+        "code": "LAE-PUB-006",
+        "path": path,
+        "params": {"id": str(record_id), "base_version": 3, "version": 4},
+    }
+    assert counting.snapshots == revisions.DRAFT_DIFF_ATTEMPTS
 
 
 # --- POST /revisions/{n}/revert -----------------------------------------------------------------

@@ -26,6 +26,7 @@ from pydantic import TypeAdapter
 from lae.corpus import corpus_files, load_record
 from lae.diff.semantic import CHANGE_KINDS, Change, same_json, semantic_diff
 from lae.projection import assign_node_iris, canonical_json, hydrate, project
+from lae.projection.rules import OPAQUE_KEYS
 from tests.diff.applier import apply_changes
 from tests.diff.mutations import mutate, reorderable
 from tests.projection.strategies import RECORD_URI, records
@@ -50,6 +51,12 @@ def check_pair(old: dict[str, Any], new: dict[str, Any], record_uri: str) -> lis
     changes = semantic_diff(old, new)
     assert (canonical_json(old), canonical_json(new)) == before, "an input was modified"
     assert (not changes) == same_json(old, new)
+    # A value opaque by its key (``@context``) is one literal whatever its form, also when it
+    # appears or disappears (§3 item 6, amendment 2). Applying the list cannot show this: the
+    # applier writes such a value the same way whatever the change's kind.
+    for change in changes:
+        if change.property in OPAQUE_KEYS:
+            assert change.kind == "update_literal", change
     # Deterministic, and independent of key order.
     shuffled = {key: new[key] for key in reversed(list(new))}
     assert CHANGES.dump_json(semantic_diff(old, shuffled)) == CHANGES.dump_json(changes)

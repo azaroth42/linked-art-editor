@@ -361,6 +361,9 @@ export interface paths {
         /**
          * Diff Draft
          * @description Return the changes that turn the published version into the live draft.
+         *
+         *     409 ``LAE-PUB-006`` if the draft is still not based on the published version after
+         *     ``DRAFT_DIFF_ATTEMPTS`` reads (see the module docstring).
          */
         post: operations["diff_draft_api_records__record_id__draft_diff_post"];
         delete?: never;
@@ -2040,6 +2043,13 @@ export interface operations {
             };
             /** @description LAE-REC-001, LAE-CRDT-003 */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description LAE-PUB-006 */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
