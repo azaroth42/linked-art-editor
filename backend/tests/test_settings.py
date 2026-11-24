@@ -3,6 +3,7 @@
 import pydantic
 import pytest
 
+from lae.labels.langtags import AAT_LANGUAGE_TAGS
 from lae.settings import Settings, get_settings
 
 FIELDS = (
@@ -15,6 +16,7 @@ FIELDS = (
     "sync_metrics_port",
     "base_uri",
     "context_version",
+    "label_language",
     "draft_ttl_days",
     "api_host",
     "api_port",
@@ -68,6 +70,7 @@ def test_defaults(clean_env: pytest.MonkeyPatch) -> None:
     assert settings.sync_metrics_port is None
     assert settings.base_uri == "http://localhost:8000/id/"
     assert settings.context_version == 1
+    assert settings.label_language == "en"
     assert settings.draft_ttl_days == 5
     assert settings.api_host == "127.0.0.1"
     assert settings.api_port == 8000
@@ -160,6 +163,56 @@ def test_unknown_choices_are_rejected(
     clean_env.setenv(variable, value)
     with pytest.raises(pydantic.ValidationError):
         Settings()
+
+
+# --- the label language (Step 1.19a) -----------------------------------------------------------
+
+
+def test_label_language_defaults_to_en(clean_env: pytest.MonkeyPatch) -> None:
+    assert Settings().label_language == "en"
+    clean_env.setenv("LAE_LABEL_LANGUAGE", "fr")
+    assert Settings().label_language == "fr"
+
+
+@pytest.mark.parametrize(
+    ("value", "stored"),
+    [("FR", "fr"), (" fr ", "fr"), ("fra", "fr"), ("fre", "fr"), ("deu", "de"), ("En", "en")],
+)
+def test_label_language_is_normalized(
+    clean_env: pytest.MonkeyPatch, value: str, stored: str
+) -> None:
+    assert Settings(label_language=value).label_language == stored
+    clean_env.setenv("LAE_LABEL_LANGUAGE", value)
+    assert Settings().label_language == stored
+
+
+@pytest.mark.parametrize(
+    "value",
+    # "ast" (Asturian) is a well-formed tag the AAT language table does not map.
+    ["", "  ", "en-GB", "zh-Hant", "und", "xx", "english", "e", "ast", "fr_FR", "*"],
+)
+def test_a_bad_label_language_is_refused(clean_env: pytest.MonkeyPatch, value: str) -> None:
+    with pytest.raises(pydantic.ValidationError) as refused:
+        Settings(label_language=value)
+    assert [error["loc"] for error in refused.value.errors()] == [("label_language",)]
+    clean_env.setenv("LAE_LABEL_LANGUAGE", value)
+    with pytest.raises(pydantic.ValidationError) as refused:
+        Settings()
+    assert "label_language" in str(refused.value)
+
+
+def test_a_label_language_that_is_not_a_string_is_refused() -> None:
+    for value in (None, 1, ["en"]):
+        with pytest.raises(pydantic.ValidationError):
+            Settings(label_language=value)
+
+
+def test_every_aat_language_tag_is_accepted() -> None:
+    tags = set(AAT_LANGUAGE_TAGS.values())
+    assert len(tags) == 57
+    for tag in tags:
+        assert Settings(label_language=tag).label_language == tag
+        assert Settings(label_language=tag.upper()).label_language == tag
 
 
 def test_unprefixed_variables_are_ignored(clean_env: pytest.MonkeyPatch) -> None:

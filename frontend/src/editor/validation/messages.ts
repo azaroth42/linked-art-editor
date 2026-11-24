@@ -31,3 +31,27 @@ export function messageParams(
   }
   return out;
 }
+
+/** The slot a missing root `_label` sends the user to: the record's names (Step 1.19a). */
+export const NAME_SLOT_PATH = "identified_by[Name]";
+
+/**
+ * Whether a diagnostic is the schema's missing root `_label` (`LAE-SCHEMA-required` at `""` with
+ * `missing` exactly `["_label"]`). Since Step 1.19a the label is derived from the record's
+ * names, so the drawer asks for a name instead (`editor:validation.missing_label`) and jumps to
+ * the first {@link NAME_SLOT_PATH} slot; code, path and params are unchanged.
+ */
+export function isMissingRootLabel(diagnostic: {
+  code: string;
+  path: string;
+  params: Record<string, unknown>;
+}): boolean {
+  const missing = diagnostic.params.missing;
+  return (
+    diagnostic.code === "LAE-SCHEMA-required" &&
+    diagnostic.path === "" &&
+    Array.isArray(missing) &&
+    missing.length === 1 &&
+    missing[0] === "_label"
+  );
+}

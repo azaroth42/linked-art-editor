@@ -32,10 +32,12 @@ from lae.crdt.rooms import (
 )
 from lae.db.models import CrdtDraft, CrdtUpdate, Record, RecordStatus
 from lae.ids import is_internal_node_iri
+from lae.labels.derive import with_derived_label
 from lae.projection import ProjectionError, ops, project
 from lae.projection.project import record_map
 from tests.auth.conftest import create_user
 from tests.crdt.helpers import (
+    bilingual_record,
     change,
     crash,
     create_record,
@@ -786,3 +788,117 @@ async def test_record_map_is_the_only_root(db_engine: AsyncEngine) -> None:
     async with manager_for(db_engine) as manager:
         room = await manager.open(record_id)
         assert record_map(room.ydoc)["id"] == uri
+
+
+# --- the derived root _label (Step 1.19a, contract 1.19a §5 tests 11-13a) ----------------------
+
+
+def retitle(index: int, insert: str, at: int = 0) -> Any:
+    """An edit inserting ``insert`` at ``at`` into the content of the ``index``-th Name."""
+
+    def edit(doc: Doc[Any]) -> None:
+        entry = ops.list_entries(doc, "identified_by")[index][1]
+        ops.splice_text(doc, "content", at, 0, insert, base=entry)
+
+    return edit
+
+
+async def test_snapshot_carries_the_derived_label(db_engine: AsyncEngine) -> None:
+    record_id, _ = await create_record(db_engine, data=bilingual_record)
+    async with manager_for(db_engine) as manager:
+        room = await manager.open(record_id)
+        # Hydrated with a stale _label: the snapshot has the English primary name instead.
+        assert record_map(room.ydoc)["_label"] == "Stale label"
+        snapshot = await manager.snapshot(record_id)
+        assert snapshot.jsonld["_label"] == "The Night Watch"
+        assert snapshot.jsonld == with_derived_label(project(room.ydoc), "en")
+
+        # It follows an edit of the name made through a replica, as a socket's update is.
+        replica = replica_of(room.ydoc)
+        await manager.apply_update(record_id, change(replica, retitle(0, "  Corporal  ")), None)
+        snapshot = await manager.snapshot(record_id)
+        assert snapshot.jsonld["identified_by"][0]["content"] == "  Corporal  The Night Watch"
+        assert snapshot.jsonld["_label"] == "Corporal The Night Watch"
+        assert snapshot.jsonld == with_derived_label(project(replica), "en")
+        # The Doc itself still holds the stale label: nothing was written for it.
+        assert record_map(room.ydoc)["_label"] == "Stale label"
+
+        # Without a usable name the document's own label is kept.
+        def blank_every_name(doc: Doc[Any]) -> None:
+            for _, entry in ops.list_entries(doc, "identified_by"):
+                ops.set_scalar(doc, "content", " ", base=entry)
+
+        await manager.apply_update(record_id, change(replica, blank_every_name), None)
+        assert (await manager.snapshot(record_id)).jsonld["_label"] == "Stale label"
+
+
+async def test_deriving_writes_nothing(db_engine: AsyncEngine) -> None:
+    """Invariant 6: no crdt_updates row, no last_update_id, no Doc transaction for the label."""
+    record_id, _ = await create_record(db_engine, data=bilingual_record)
+    user_id = await create_user(db_engine, "Editor")
+    async with manager_for(db_engine) as manager:
+        room = await manager.open(record_id)
+        transactions: list[Any] = []
+        subscription = room.ydoc.observe(transactions.append)
+        replica = replica_of(room.ydoc)
+        for number in range(3):
+            state = room.ydoc.get_state()
+            last_update_id = room.last_update_id
+            rows = await update_count(db_engine, record_id)
+            row = await draft_row(db_engine, record_id)
+            seen = len(transactions)
+            for _ in range(3):
+                assert (await manager.snapshot(record_id)).jsonld["_label"]
+                assert room.snapshot().jsonld["_label"]
+            assert room.ydoc.get_state() == state
+            assert room.last_update_id == last_update_id
+            assert await update_count(db_engine, record_id) == rows == number
+            after = await draft_row(db_engine, record_id)
+            assert row is not None and after is not None
+            assert (after.state, after.contributors, after.last_update_id) == (
+                row.state,
+                row.contributors,
+                row.last_update_id,
+            )
+            assert len(transactions) == seen
+            # One client update: exactly one row appended, one transaction.
+            await manager.apply_update(record_id, change(replica, retitle(0, "x")), user_id)
+            assert await update_count(db_engine, record_id) == number + 1
+            assert len(transactions) == seen + 1
+        room.ydoc.unobserve(subscription)
+
+
+async def test_concurrent_name_edits_give_one_label_in_either_order(
+    db_engine: AsyncEngine,
+) -> None:
+    labels = []
+    for first_is_a in (True, False):
+        record_id, _ = await create_record(db_engine, data=bilingual_record)
+        async with manager_for(db_engine) as manager:
+            room = await manager.open(record_id)
+            a, b = replica_of(room.ydoc), replica_of(room.ydoc)
+            from_a = change(a, retitle(0, " (A)", at=len("The Night Watch")))
+            from_b = change(b, retitle(0, "B: "))
+            order = (from_a, from_b) if first_is_a else (from_b, from_a)
+            for update in order:
+                await manager.apply_update(record_id, update, None)
+            a.apply_update(from_b)
+            b.apply_update(from_a)
+            snapshot = await manager.snapshot(record_id)
+            for replica in (a, b):
+                assert snapshot.jsonld == with_derived_label(project(replica), "en")
+            labels.append(snapshot.jsonld["_label"])
+    assert labels == ["B: The Night Watch (A)", "B: The Night Watch (A)"]
+
+
+async def test_a_room_derives_in_its_managers_label_language(db_engine: AsyncEngine) -> None:
+    record_id, _ = await create_record(db_engine, data=bilingual_record)
+    async with manager_for(db_engine, label_language="fr") as manager:
+        room = await manager.open(record_id)
+        assert room.label_language == "fr"
+        assert (await manager.snapshot(record_id)).jsonld["_label"] == "La Ronde de nuit"
+        await manager.close(record_id, discard=False)
+        # A room rebuilt from the rows gets the manager's language too.
+        assert (await manager.snapshot(record_id)).jsonld["_label"] == "La Ronde de nuit"
+    async with manager_for(db_engine) as manager:
+        assert (await manager.snapshot(record_id)).jsonld["_label"] == "The Night Watch"

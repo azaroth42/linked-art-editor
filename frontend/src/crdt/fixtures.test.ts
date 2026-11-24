@@ -67,7 +67,7 @@ function runFixture(fixture: Fixture): Map<string, Y.Doc> {
 }
 
 describe("the shared projection fixtures", () => {
-  it("are all eleven files of backend/tests/projection/fixtures", () => {
+  it("are all twelve files of backend/tests/projection/fixtures", () => {
     expect(FIXTURES.map(([stem]) => stem)).toEqual([
       "concurrent-first-inserts",
       "intermediate-nodes",
@@ -80,6 +80,7 @@ describe("the shared projection fixtures", () => {
       "single-value-and-entries",
       "text-code-points",
       "text-surrogates-and-combining",
+      "write-forbidden-keys",
     ]);
   });
 

@@ -324,7 +324,7 @@ async def test_the_overlay_returns_an_entity_published_after_the_build(
             id=new_uuid7(), uri=uri, type="Person", status=RecordStatus.ACTIVE, data=data
         )
         async with AsyncSession(db_engine) as session:
-            await upsert_entity_labels_for_record(session, record)
+            await upsert_entity_labels_for_record(session, record, "en")
             await session.commit()
 
         # QLever has the triples but its text index cannot see the new name (Spike S1).

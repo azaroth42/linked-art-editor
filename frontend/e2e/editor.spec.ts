@@ -75,9 +75,11 @@ test("two windows see each other's edits and presence", async ({ browser }) => {
     await expect(title(page)).toHaveValue("A Night Scene");
   }
 
-  // The raw inspector shows the projected JSON-LD of the shared draft.
+  // The raw inspector shows the projected JSON-LD of the shared draft, its _label derived
+  // from the title (Step 1.19a).
   await b.getByRole("button", { name: "Show JSON-LD" }).click();
   await expect(b.getByTestId("raw-jsonld")).toContainText('"content": "A Night Scene"');
+  await expect(b.getByTestId("raw-jsonld")).toContainText('"_label": "A Night Scene"');
   await expectNoAxeViolations(b);
 
   // When B leaves, A's presence list empties.
@@ -167,6 +169,9 @@ test("a corpus HumanMadeObject is edited through its profile", async ({ browser 
     ...expected.identified_by[0],
     content: "Portrait of Lisa Gherardini",
   };
+  // The root _label follows the English primary name (Step 1.19a).
+  expect(before._label).toBe("Mona Lisa");
+  expected._label = "Portrait of Lisa Gherardini";
   expected.made_of = [
     ...expected.made_of.filter((material) => material.id !== OIL_PAINT),
     { id: CANVAS, type: "Material" },

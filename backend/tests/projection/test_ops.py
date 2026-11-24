@@ -189,13 +189,42 @@ def test_get_path_prefers_entries_over_a_single_value() -> None:
     assert project(doc)["x_both"] == ["entry"]
 
 
-@pytest.mark.parametrize("path", ["", "identified_by[0]", "a..b", "_label", "a.[B]", "A"])
+@pytest.mark.parametrize("path", ["", "identified_by[0]", "a..b", "_note", "a.[B]", "A"])
 def test_a_malformed_path_is_a_syntax_error(path: str) -> None:
     doc = hydrate(record())
     with pytest.raises(PathSyntaxError):
         ops.get_path(doc, path)
     with pytest.raises(PathSyntaxError):
         ops.set_scalar(doc, path, "x")
+
+
+@pytest.mark.parametrize(
+    "path",
+    [
+        "_label",
+        "identified_by[Name]._label",
+        "_label[Name].content",
+        "a._label",
+        # The key ends at the first "[", whatever follows it (a line terminator too).
+        "_label[\nName]",
+        "a._label[",
+    ],
+)
+def test_a_write_path_naming_label_is_refused_before_it_is_parsed(path: str) -> None:
+    """Step 1.19a: ``_label`` is ``LAE-PROJ-007`` for a write, as in ``paths.ts``; reading the
+    same path is still a syntax error (the path grammar has no ``_label``)."""
+    doc = hydrate(record(_label="Kept", identified_by=names("a")))
+    before = doc.get_update()
+    with pytest.raises(ProjectionError) as refused:
+        ops.set_scalar(doc, path, "x")
+    assert refused.value.code == "LAE-PROJ-007"
+    with pytest.raises(ProjectionError) as refused:
+        ops.remove_value(doc, path)
+    assert refused.value.code == "LAE-PROJ-007"
+    assert doc.get_update() == before
+    assert project(doc)["_label"] == "Kept"
+    with pytest.raises(PathSyntaxError):
+        ops.get_path(doc, path)
 
 
 # --- list_entries, get_entry ----------------------------------------------------------------

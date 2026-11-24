@@ -335,6 +335,7 @@ async def rewrite_refs(
                 dsn,
                 settings.base_uri,
                 settings.context_version,
+                settings.label_language,
                 draft_epoch,
                 new_uuid7(),
                 context.Semaphore(streams),

@@ -688,6 +688,33 @@ CASES["text-surrogates-and-combining"] = case(
 )
 
 
+CASES["write-forbidden-keys"] = case(
+    "A write path never names id, type or _label, at any depth: each dot-separated part of the "
+    "path, up to its first '[', is checked before the path is parsed or anything is written, "
+    "and the call is LAE-PROJ-007 with the document unchanged. The root _label is derived from "
+    "the record's names when the draft is read (Step 1.19a); a reference's _label is set only "
+    "with the reference. Reading such a path is not a write.",
+    ["R5", "R20", "R25"],
+    record(
+        _label="Stored label",
+        identified_by=[name(1, "A name", _label="A name label")],
+        produced_by={"id": n(2), "type": "Production"},
+    ),
+    [
+        op("a", "set_scalar", path="_label", value="typed"),
+        op("a", "set_scalar", path="identified_by[Name]._label", value="typed"),
+        op("a", "set_scalar", path="id", value="https://example.org/id/another"),
+        op("a", "set_scalar", path="produced_by.type", value="Activity"),
+        op("a", "remove_value", path="_label"),
+        op("a", "set_object", path="_label", obj={"type": "Name", "content": "x"}),
+        op("a", "add_node", path="_label[Name]", node={"content": "x"}),
+        op("a", "add_reference", path="produced_by._label", uri=AAT + "1", type="Type"),
+        op("a", "splice_text", path="identified_by[Name]._label", index=0, delete=0, insert="x"),
+        op("a", "set_scalar", path="x_note._label.content", value="through a missing node"),
+    ],
+)
+
+
 def main() -> None:
     FIXTURE_DIR.mkdir(exist_ok=True)
     for stem, fixture in CASES.items():

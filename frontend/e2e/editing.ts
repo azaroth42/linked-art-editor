@@ -4,14 +4,14 @@ import { login } from "./auth.ts";
 
 /**
  * Create a `HumanMadeObject` titled `title` through the API and return its id. The root
- * `_label` is set too: publish requires one and no profile slot edits it yet.
+ * `_label` is derived from the name (Step 1.19a).
  */
 export async function createRecord(browser: Browser, title: string): Promise<string> {
   const context = await browser.newContext();
   const response = await context.request.post("/api/records", {
     data: {
       type: "HumanMadeObject",
-      template: { _label: title, identified_by: [{ type: "Name", content: title }] },
+      template: { identified_by: [{ type: "Name", content: title }] },
     },
   });
   expect(response.status()).toBe(201);

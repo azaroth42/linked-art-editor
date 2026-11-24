@@ -71,9 +71,16 @@ describe("slotForDiagnostic", () => {
   });
 
   it("finds nothing for the record itself or a property no slot edits", () => {
-    expect(slotOf("", "LAE-SCHEMA-required", { missing: ["_label"] })).toBeNull();
+    expect(slotOf("", "LAE-SCHEMA-required", { missing: ["type"] })).toBeNull();
+    expect(slotOf("", "LAE-SCHEMA-required", { missing: ["_label", "type"] })).toBeNull();
     expect(slotOf("/a~1b/c~0d")).toBeNull();
     expect(slotForSteps(PROFILE, [])).toBeNull();
+  });
+
+  it("sends a missing root _label to the title: it is taken from the name (Step 1.19a)", () => {
+    expect(slotOf("", "LAE-SCHEMA-required", { missing: ["_label"] })).toBe("title");
+    // Only the root's: a nested object's missing _label is not about the record's names.
+    expect(slotOf("/part_of", "LAE-SCHEMA-required", { missing: ["_label"] })).not.toBe("title");
   });
 });
 

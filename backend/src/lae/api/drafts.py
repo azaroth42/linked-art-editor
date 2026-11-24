@@ -109,11 +109,12 @@ def _label(
     data: dict[str, Any] | None,
     chain: Sequence[str],
     uri: str,
+    label_language: str,
 ) -> str:
     if labels is None or default_label is None:
         if data is None:
             return uri
-        labels, default_label = labels_from_record(data)
+        labels, default_label = labels_from_record(data, label_language)
     return resolve_label(labels, default_label, chain)
 
 
@@ -131,13 +132,15 @@ async def load_drafts(
     *,
     ttl_days: int,
     chain: Sequence[str],
+    label_language: str,
     visible_to: UUID | None = None,
     record_id: UUID | None = None,
 ) -> list[DraftSummary]:
     """Return open drafts as ``DraftSummary``, closest to expiry first.
 
     ``visible_to`` limits them to the drafts that user created or contributed to; ``record_id``
-    to one record's draft.
+    to one record's draft. ``label_language`` (``Settings.label_language``) chooses the default
+    label of a record that has no ``entity_labels`` row yet.
     """
     statement = DRAFTS_QUERY
     if visible_to is not None:
@@ -159,7 +162,9 @@ async def load_drafts(
                 record_id=row.record_id,
                 uri=row.uri,
                 type=row.type,
-                label=_label(row.labels, row.default_label, row.data, chain, row.uri),
+                label=_label(
+                    row.labels, row.default_label, row.data, chain, row.uri, label_language
+                ),
                 version=row.version,
                 draft_epoch=row.draft_epoch,
                 base_version=row.base_version,
@@ -192,6 +197,7 @@ async def list_drafts(
         session,
         ttl_days=settings.draft_ttl_days,
         chain=chain,
+        label_language=settings.label_language,
         visible_to=None if user.has("publish") else user.id,
     )
 
@@ -220,7 +226,11 @@ async def extend_draft(
         await get_record_or_404(session, record_id)
         raise ApiError(status.HTTP_404_NOT_FOUND, crdt_errors.DRAFT_NOT_FOUND)
     found = await load_drafts(
-        session, ttl_days=settings.draft_ttl_days, chain=chain, record_id=record_id
+        session,
+        ttl_days=settings.draft_ttl_days,
+        chain=chain,
+        label_language=settings.label_language,
+        record_id=record_id,
     )
     if not found:  # published or discarded in between
         raise ApiError(status.HTTP_404_NOT_FOUND, crdt_errors.DRAFT_NOT_FOUND)

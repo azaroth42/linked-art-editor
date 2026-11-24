@@ -178,7 +178,8 @@
     "go_to": "Go to {field}",
     "whole_record": "This applies to the record as a whole.",
     "location": "Location in the record: {path}",
-    "other_record": "In the new record {id}, which this record refers to."
+    "other_record": "In the new record {id}, which this record refers to.",
+    "missing_label": "Give the record a name; its label is taken from the name."
   },
   "publish": {
     "open": "Publish…",
@@ -222,7 +223,8 @@
     "reorder": "changed the order",
     "ref": "{label} ({class})",
     "node": "{class} “{summary}”",
-    "unknown_class": "an entry"
+    "unknown_class": "an entry",
+    "derived_label": "Label (taken from the name)"
   },
   "revert": {
     "title": "Revert to version {version}?",

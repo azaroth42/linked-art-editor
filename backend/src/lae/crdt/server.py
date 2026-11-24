@@ -519,7 +519,11 @@ def create_crdt_app(
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
         engine = create_engine(settings.database_url)
         sessionmaker = create_sessionmaker(engine)
-        manager = manager_class(sessionmaker, idle_seconds=float(settings.crdt_room_idle_seconds))
+        manager = manager_class(
+            sessionmaker,
+            idle_seconds=float(settings.crdt_room_idle_seconds),
+            label_language=settings.label_language,
+        )
 
         async def lock_lost() -> None:
             await manager.abandon()

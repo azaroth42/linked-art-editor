@@ -23,7 +23,7 @@ async def fetch(session: AsyncSession, uri: str) -> EntityLabel:
 
 async def test_insert_writes_every_column(db_session: AsyncSession) -> None:
     data = corpus(MONA_LISA)
-    await upsert_entity_labels_for_record(db_session, as_record(data))
+    await upsert_entity_labels_for_record(db_session, as_record(data), "en")
     row = await fetch(db_session, data["id"])
     assert row.type == "HumanMadeObject"
     assert row.labels == {"en": "Mona Lisa", "fr": "La Joconde", "it": "La Gioconda"}
@@ -37,7 +37,7 @@ async def test_insert_writes_every_column(db_session: AsyncSession) -> None:
 async def test_update_replaces_labels_and_keeps_phase_2_columns(db_session: AsyncSession) -> None:
     data = corpus(NIGHT_WATCH)
     uri = data["id"]
-    await upsert_entity_labels_for_record(db_session, as_record(data))
+    await upsert_entity_labels_for_record(db_session, as_record(data), "en")
     old = datetime(2020, 1, 1, tzinfo=UTC)
     await db_session.execute(
         update(EntityLabel)
@@ -52,7 +52,7 @@ async def test_update_replaces_labels_and_keeps_phase_2_columns(db_session: Asyn
     renamed = corpus(NIGHT_WATCH)
     renamed["identified_by"][0]["content"] = "The Militia Company of Captain Frans Banninck Cocq"
     del renamed["identified_by"][1]
-    await upsert_entity_labels_for_record(db_session, as_record(renamed))
+    await upsert_entity_labels_for_record(db_session, as_record(renamed), "en")
     row = await fetch(db_session, uri)
     assert row.labels == {"en": "The Militia Company of Captain Frans Banninck Cocq"}
     assert row.default_label == "The Militia Company of Captain Frans Banninck Cocq"
@@ -64,7 +64,7 @@ async def test_update_replaces_labels_and_keeps_phase_2_columns(db_session: Asyn
 
 async def test_record_without_names(db_session: AsyncSession) -> None:
     data = {"id": "https://example.org/id/0190f5a2", "type": "Person"}
-    await upsert_entity_labels_for_record(db_session, as_record(data))
+    await upsert_entity_labels_for_record(db_session, as_record(data), "en")
     row = await fetch(db_session, data["id"])
     assert (row.labels, row.default_label, row.primary_classification) == ({}, data["id"], None)
 

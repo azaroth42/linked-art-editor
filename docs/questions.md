@@ -634,6 +634,9 @@ Points from the rework for a human:
    such a path with `PathSyntaxError` (the grammar has no `_`-prefixed keys); the mirror checks
    `id`, `type` and `_label` before parsing, as asked in review. Both reject without writing;
    only the error class differs, and no fixture covers it.
+   **Resolved (Step 1.19a, ADR-0036):** Python's `_write_path` now makes the same check before
+   parsing (`lae.projection.rules.WRITE_FORBIDDEN_KEYS`), so both answer `LAE-PROJ-007`; the
+   shared fixture `backend/tests/projection/fixtures/write-forbidden-keys.json` covers it.
 3. **Old-epoch IndexedDB stores are never deleted.** Each draft epoch of a record has its own
    store (`lae-draft:<record id>:<epoch>`), so a stale document is never merged into a new
    hydration and its unsent edits survive a `4409`. Nothing reads them until the Phase 4 rebase

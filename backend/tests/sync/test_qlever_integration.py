@@ -373,7 +373,9 @@ async def test_drift_fallback_removes_triples_the_stored_revision_does_not_list(
     v2 = await revision_lines(conn, record_id, 2)
     assert await server.count(f"<{node}> <{TEST_P}from-an-older-expander> ?o") == 0
     assert await server.record_triples(uri) == len(v2)
-    assert await server.count('?s ?p "Drifted, edited"') == 1
+    # The name's content and the root _label derived from it (Step 1.19a), once each.
+    assert await server.count('?s ?p "Drifted, edited"') == 2
+    assert await server.count(f'<{uri}> ?p "Drifted, edited"') == 1
 
 
 class LostAnswer(QLeverClient):
@@ -474,5 +476,7 @@ async def test_delta_triples_grow_by_the_gross_change(
         await client.update(update)  # the same update again, as a replay would send it
         replayed = await server.delta_triples()
     assert before == 0
-    assert after - before == 2
+    # Two triples changed, each deleted and inserted: the name's content and the root _label
+    # derived from it (Step 1.19a).
+    assert after - before == 4
     assert replayed >= after

@@ -5,8 +5,9 @@ Phase 1, Step 1.6 (spec §3.1, §3.4, §4.1). Routes, all under ``/api/records``
 - ``POST /api/records`` (``edit_draft``): create a never-published record (``version = 0``) and
   open its draft in ``crdt-ws``; return ``{id, uri, draft_epoch}``.
 - ``GET /api/records/{id}`` (signed in): the published JSON-LD **with** internal node IRIs (the
-  editor needs them), ``_label`` transcluded for the caller's locale chain, and the record's
-  current draft epoch in the ``X-Draft-Epoch`` header (Step 1.17).
+  editor needs them), ``_label`` transcluded for the caller's locale chain, the record's
+  current draft epoch in the ``X-Draft-Epoch`` header (Step 1.17), and the installation's label
+  language in ``X-Label-Language`` (Step 1.19a).
 - ``GET /api/records/{id}/revisions`` and ``GET /api/records/{id}/revisions/{n}`` (signed in):
   the revision list and one revision's stored JSON-LD, in the shapes Step 1.14 specifies; Step
   1.14 adds the semantic diff and revert beside them.
@@ -46,6 +47,7 @@ from lae.crdt.client import CrdtWsClient, crdt_client
 from lae.db.models import CrdtDraft, Record, RecordRevision, RecordStatus
 from lae.db.session import get_session
 from lae.ids import new_uuid7, record_uri
+from lae.labels.derive import with_derived_label
 from lae.labels.transclude import hydrate_labels
 from lae.logging import bind_log_context, get_logger
 from lae.projection import (
@@ -121,6 +123,13 @@ accepts the same name as a request header. It is a header, not a key of the body
 body is the record's JSON-LD and must stay exactly that.
 """
 
+LABEL_LANGUAGE_HEADER: Final = "X-Label-Language"
+"""Response header of ``GET /api/records/{id}``: ``Settings.label_language`` (Step 1.19a).
+
+The editor derives the root ``_label`` of the draft it shows with this language
+(``frontend/src/crdt/derivedLabel.ts``), the one ``crdt-ws`` derives snapshots with.
+"""
+
 RECORD_KEY_ORDER: Final = ("@context", "id", "type", "_label")
 """Keys put first in served JSON-LD (``jsonb`` does not keep key order)."""
 
@@ -188,13 +197,19 @@ def context_url(context_version: int) -> str:
 
 
 def new_record_data(
-    record_type: str, uri: str, context_version: int, template: dict[str, Any] | None = None
+    record_type: str,
+    uri: str,
+    context_version: int,
+    template: dict[str, Any] | None = None,
+    *,
+    label_language: str,
 ) -> dict[str, Any]:
     """Return the JSON-LD of a new record: the skeleton plus the template's other keys.
 
     The skeleton is ``{"@context", "id", "type"}``. Internal node IRIs of the record the template
     was copied from (if it has an ``id``) are dropped, then every embedded node gets one of the
-    new record, so no node of another record's namespace is carried over.
+    new record, so no node of another record's namespace is carried over. The root ``_label`` is
+    derived from the names in ``label_language`` (``with_derived_label``, Step 1.19a).
     """
     content: dict[str, Any] = {}
     if template:
@@ -203,7 +218,7 @@ def new_record_data(
             template = strip_internal_iris(template, source)
         content = {k: v for k, v in template.items() if k not in ("@context", "id", "type")}
     data = {"@context": context_url(context_version), "id": uri, "type": record_type, **content}
-    return assign_node_iris(data, uri)
+    return with_derived_label(assign_node_iris(data, uri), label_language)
 
 
 def ordered_record(data: dict[str, Any]) -> dict[str, Any]:
@@ -330,7 +345,13 @@ async def create_record(
     record_id = new_uuid7()
     bind_log_context(user_id=user.id, record_id=record_id)
     uri = record_uri(record_id, base_uri=settings.base_uri)
-    data = new_record_data(body.type, uri, settings.context_version, body.template)
+    data = new_record_data(
+        body.type,
+        uri,
+        settings.context_version,
+        body.template,
+        label_language=settings.label_language,
+    )
     if body.template:
         try:
             # The room must be able to hydrate it (Step 1.8); refuse it now rather than then.
@@ -381,7 +402,14 @@ async def create_record(
                 DRAFT_EPOCH_HEADER: {
                     "description": "The record's current draft epoch (records.draft_epoch).",
                     "schema": {"type": "integer"},
-                }
+                },
+                LABEL_LANGUAGE_HEADER: {
+                    "description": (
+                        "The installation's label language (LAE_LABEL_LANGUAGE): the editor "
+                        "derives the draft's root _label with it."
+                    ),
+                    "schema": {"type": "string"},
+                },
             },
         },
         status.HTTP_301_MOVED_PERMANENTLY: {"description": "LAE-REC-003"},
@@ -394,14 +422,16 @@ async def get_record(
     user: Annotated[CurrentUser, Depends(current_user)],
     session: Annotated[AsyncSession, Depends(get_session)],
     chain: Annotated[list[str], Depends(locale_chain)],
+    settings: Annotated[Settings, Depends(get_app_settings)],
 ) -> Response:
     """Return the published JSON-LD with internal node IRIs and transcluded labels.
 
     The header ``X-Draft-Epoch`` is the record's current draft epoch: the editor connects to
     ``/ws/rooms/{id}?epoch=<it>``. It changes on publish, discard and revert (ADR-0027), so the
-    editor reads it again before every fresh connection. A never-published record
-    (``version = 0``) is found only while it has a draft. Deleted → 410; merged → 301 to
-    ``/api/records/{merged_into}``.
+    editor reads it again before every fresh connection. The header ``X-Label-Language`` is
+    ``Settings.label_language``, with which the editor derives the draft's root ``_label``. A
+    never-published record (``version = 0``) is found only while it has a draft. Deleted → 410;
+    merged → 301 to ``/api/records/{merged_into}``.
     """
     bind_log_context(user_id=user.id, record_id=record_id)
     record = await get_record_or_404(session, record_id)
@@ -410,7 +440,10 @@ async def get_record(
         raise not_found()
     return jsonld_response(
         await hydrate_labels(record.data, chain, session),
-        headers={DRAFT_EPOCH_HEADER: str(record.draft_epoch)},
+        headers={
+            DRAFT_EPOCH_HEADER: str(record.draft_epoch),
+            LABEL_LANGUAGE_HEADER: settings.label_language,
+        },
     )
 
 

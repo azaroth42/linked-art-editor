@@ -11,6 +11,7 @@ import { RawInspector, REFRESH_INTERVAL } from "./RawInspector.tsx";
 import { useYPath } from "./useYPath.ts";
 
 const INSPECTOR_ID = "inspector";
+const LABEL_LANGUAGE = "en";
 const URI = "https://example.org/id/0192f0c1-7b1e-7c3a-9d2e-5a1b2c3d4e5f";
 
 function record() {
@@ -76,13 +77,15 @@ describe("RawInspector", () => {
     render(
       <I18nextProvider i18n={i18n}>
         <Suspense fallback={null}>
-          <RawInspector doc={doc} id={INSPECTOR_ID} />
+          <RawInspector doc={doc} id={INSPECTOR_ID} labelLanguage={LABEL_LANGUAGE} />
         </Suspense>
       </I18nextProvider>,
     );
     const pre = await screen.findByTestId("raw-jsonld");
     vi.useFakeTimers();
     expect(pre.textContent).toContain('"content": "a"');
+    // The root _label is derived from the first name (Step 1.19a), not stored in the Doc.
+    expect(pre.textContent).toContain('"_label": "a"');
 
     act(() => {
       vi.advanceTimersByTime(REFRESH_INTERVAL);

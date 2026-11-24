@@ -21,6 +21,8 @@ class Worker:
     conn: asyncpg.Connection
     base_uri: str
     context_version: int
+    label_language: str
+    """``Settings.label_language``: the language of the ``entity_labels`` default labels."""
     draft_epoch: bool
     """Whether ``records.draft_epoch`` exists (Step 1.8)."""
     run_id: UUID
@@ -40,6 +42,7 @@ def init_worker(
     dsn: str,
     base_uri: str,
     context_version: int,
+    label_language: str,
     draft_epoch: bool,
     run_id: UUID,
     write_slots: Semaphore,
@@ -51,6 +54,7 @@ def init_worker(
     worker.conn = worker.loop.run_until_complete(asyncpg.connect(dsn))
     worker.base_uri = base_uri
     worker.context_version = context_version
+    worker.label_language = label_language
     worker.draft_epoch = draft_epoch
     worker.run_id = run_id
     worker.write_slots = write_slots

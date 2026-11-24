@@ -50,7 +50,7 @@ def item(doc: Any, source: str = "test.json") -> SourceItem:
 
 
 def prepared(doc: dict[str, Any]) -> PreparedRecord:
-    record, failure = prepare(item(doc), BASE_URI, 1)
+    record, failure = prepare(item(doc), BASE_URI, 1, "en")
     assert failure is None, failure
     assert record is not None
     return record
@@ -123,7 +123,7 @@ def test_a_root_id_that_is_a_node_iri_of_a_local_record_is_rejected() -> None:
     """``lae.ids`` resolves such an IRI to the record that owns the node, so as an alias it would
     name two records, and the second pass could replace the owner's own node id by it."""
     node = f"{BASE_URI}{new_uuid7()}/node/{new_uuid7()}"
-    record, failure = prepare(item({**corpus(BROWN_TEA_POT), "id": node}), BASE_URI, 1)
+    record, failure = prepare(item({**corpus(BROWN_TEA_POT), "id": node}), BASE_URI, 1, "en")
     assert record is None and failure is not None
     assert (failure.code, failure.uri) == (NO_RECORD_URI, node)
     # Anything else under the base URI is an ordinary source URI.
@@ -165,14 +165,14 @@ def test_node_iris_under_the_source_uri_move_with_the_record() -> None:
     ],
 )
 def test_items_that_are_not_records(text: bytes, code: str) -> None:
-    record, failure = prepare(SourceItem("in.jsonl:3", text), BASE_URI, 1)
+    record, failure = prepare(SourceItem("in.jsonl:3", text), BASE_URI, 1, "en")
     assert record is None
     assert failure is not None and failure.code == code and failure.source == "in.jsonl:3"
 
 
 def test_an_unrepairable_id_below_the_root_is_reported() -> None:
     doc = {**corpus(BROWN_TEA_POT), "member_of": [{"id": "https:/no-host", "type": "Set"}]}
-    record, failure = prepare(item(doc), BASE_URI, 1)
+    record, failure = prepare(item(doc), BASE_URI, 1, "en")
     assert record is None
     assert failure is not None
     assert (failure.code, failure.uri, failure.errors) == (
@@ -228,7 +228,7 @@ def test_a_record_that_cannot_be_expanded_is_rejected() -> None:
         "begin_of_the_begin": "c. 1850",
         "end_of_the_end": "1850",
     }
-    record, failure = prepare(item(doc), BASE_URI, 1)
+    record, failure = prepare(item(doc), BASE_URI, 1, "en")
     assert record is None and failure is not None
     assert (failure.code, failure.uri, failure.stage) == (EXPANSION_FAILED, doc["id"], "load")
     assert failure.errors[0].startswith("InvalidLiteralError: ")
@@ -241,7 +241,7 @@ def test_an_unexpected_error_rejects_one_record_not_the_batch(
         raise RuntimeError("boom")
 
     monkeypatch.setattr(records_module, "assign_node_iris", explode)
-    record, failure = prepare(item(corpus(BROWN_TEA_POT)), BASE_URI, 1)
+    record, failure = prepare(item(corpus(BROWN_TEA_POT)), BASE_URI, 1, "en")
     assert record is None and failure is not None
     assert (failure.code, failure.errors) == (PREPARE_FAILED, ["RuntimeError: boom"])
 
@@ -250,7 +250,7 @@ def test_every_corpus_file_loads_and_the_known_schema_failures_are_flagged() -> 
     """Zero records lost: all 276 corpus files expand, so all are loaded (ADR-0030)."""
     parsed, not_records = parse_batch(iter_source(CORPUS_DIR))
     assert not_records == []
-    batch = build_batch(parsed, BASE_URI, 1)
+    batch = build_batch(parsed, BASE_URI, 1, "en")
     assert batch.failures == []
     assert len(batch.records) == 276
     assert {record.source for record in batch.records if record.findings} == KNOWN_FAILURES

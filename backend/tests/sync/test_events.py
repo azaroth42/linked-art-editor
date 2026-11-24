@@ -52,6 +52,8 @@ from tests.sync.conftest import (
     triples_of,
 )
 
+RDFS_LABEL = "<http://www.w3.org/2000/01/rdf-schema#label>"
+
 pytestmark = pytest.mark.usefixtures("queue")
 
 DELETE_WHERE = re.compile(r"DELETE WHERE \{ <([^>]*)> \?p \?o \}")
@@ -122,8 +124,11 @@ async def test_a_changed_title_is_one_delete_and_one_insert(
     delete, insert = operations(update)
     assert delete.startswith("DELETE DATA {") and insert.startswith("INSERT DATA {")
     deleted, inserted = delete.splitlines()[1:-1], insert.splitlines()[1:-1]
-    assert len(deleted) == 1 and '"Night Watch"' in deleted[0]
-    assert len(inserted) == 1 and '"The Night Watch"' in inserted[0]
+    # The name's content and the root _label derived from it (Step 1.19a): nothing else.
+    assert len(deleted) == 2 and all('"Night Watch"' in line for line in deleted)
+    assert len(inserted) == 2 and all('"The Night Watch"' in line for line in inserted)
+    assert sum(RDFS_LABEL in line for line in deleted) == 1
+    assert sum(RDFS_LABEL in line for line in inserted) == 1
 
 
 async def test_the_diff_is_between_the_two_revisions_not_the_current_data(

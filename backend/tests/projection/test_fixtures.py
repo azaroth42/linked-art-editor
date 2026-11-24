@@ -47,7 +47,7 @@ def errors(fixture: dict[str, Any]) -> list[str]:
 
 def test_the_files_are_what_the_builder_defines() -> None:
     assert sorted(p.stem for p in FILES) == sorted(CASES)
-    assert len(FILES) == 11
+    assert len(FILES) == 12
 
 
 @pytest.mark.parametrize("path", FILES, ids=lambda p: p.stem)
@@ -353,3 +353,13 @@ def test_single_value_and_entries() -> None:
     assert "shows" not in state
     assert len(expected["shows"]) == 2
     assert errors(fixture) == ["LAE-PROJ-006"] + ["LAE-PROJ-007"] * 3
+
+
+def test_write_forbidden_keys() -> None:
+    """Step 1.19a: ``_label`` joins ``id`` and ``type`` (``WRITE_FORBIDDEN_KEYS``)."""
+    fixture = load("write-forbidden-keys")
+    assert errors(fixture) == ["LAE-PROJ-007"] * len(fixture["steps"])
+    assert fixture["expected"] == fixture["initial"]
+    assert fixture["expected_state"] == fixture["initial_state"]
+    paths = [step["args"]["path"] for step in fixture["steps"]]
+    assert {"_label", "identified_by[Name]._label", "id", "produced_by.type"} <= set(paths)

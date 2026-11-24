@@ -76,6 +76,14 @@ export const LANGUAGE_URIS: ReadonlyMap<string, string> = new Map(
   TAGS.map(([tag, id]) => [tag, `${AAT}${id}`]),
 );
 
+/**
+ * BCP-47 tag by AAT language concept id (the digits after `aat/`): Python's
+ * `AAT_LANGUAGE_TAGS`. The frontend's one AAT language table; `crdt/langtags.ts` reads it.
+ */
+export const AAT_LANGUAGE_TAGS: ReadonlyMap<string, string> = new Map(
+  TAGS.map(([tag, id]) => [id, tag]),
+);
+
 /** BCP-47 tag by AAT language concept URI. */
 export const LANGUAGE_TAGS: ReadonlyMap<string, string> = new Map(
   TAGS.map(([tag, id]) => [`${AAT}${id}`, tag]),

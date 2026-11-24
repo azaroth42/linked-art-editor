@@ -30,6 +30,7 @@ from tests.auth.conftest import create_token, create_user, set_active
 from tests.crdt.helpers import (
     INTERNAL_TOKEN,
     YClient,
+    bilingual_record,
     change,
     crdt_settings,
     create_record,
@@ -484,10 +485,11 @@ async def test_internal_rpc_through_the_client(db_url: str, db_engine: AsyncEngi
         assert await record_epoch(db_engine, record_id) == 2
 
         # open with content (revert-to-revision), then the conflicts and failures.
-        content = dict(snapshot.jsonld, _label="Reverted")
+        # (x_note as the marker: a snapshot's _label is derived from the names, Step 1.19a.)
+        content = dict(snapshot.jsonld, x_note="Reverted")
         opened = await crdt.open(other_id, content=content)
         reverted = await crdt.snapshot(other_id)
-        assert reverted is not None and reverted.jsonld["_label"] == "Reverted"
+        assert reverted is not None and reverted.jsonld["x_note"] == "Reverted"
         with pytest.raises(CrdtWsError) as conflict:
             await crdt.open(other_id, content=content)
         assert (conflict.value.status_code, conflict.value.code) == (409, errors.DRAFT_EXISTS)
@@ -609,3 +611,26 @@ def test_tokens_are_redacted_from_server_logs() -> None:
     redact_tokens_in_server_logs()
     filters = logging.getLogger("uvicorn.error").filters
     assert sum(isinstance(f, RedactTokens) for f in filters) == 1
+
+
+async def test_the_label_language_setting_reaches_the_snapshot(
+    db_url: str, db_engine: AsyncEngine
+) -> None:
+    """Step 1.19a, test 13b: ``create_crdt_app`` gives ``Settings.label_language`` to its rooms
+    (not the constructors' default), and the internal RPC returns the derived snapshot."""
+    record_id, _ = await create_record(db_engine, data=bilingual_record)
+    async with (
+        running_server(crdt_settings(db_url, label_language="fr")) as server,
+        httpx.AsyncClient() as http,
+    ):
+        assert server.manager.label_language == "fr"
+        crdt = rpc(server, http)
+        await crdt.open(record_id)
+        snapshot = await crdt.snapshot(record_id)
+        assert snapshot is not None
+        assert snapshot.jsonld["_label"] == "La Ronde de nuit"
+        await crdt.close(record_id, discard=False)
+    async with running_server(crdt_settings(db_url)) as server, httpx.AsyncClient() as http:
+        snapshot = await rpc(server, http).snapshot(record_id)
+        assert snapshot is not None
+        assert snapshot.jsonld["_label"] == "The Night Watch"

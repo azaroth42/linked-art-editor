@@ -383,11 +383,14 @@ export function valueToJson(value: unknown): unknown {
 
 /**
  * Parse the path of an operation that writes. Naming `id`, `type` or `_label` in any segment
- * is `LAE-PROJ-007`, checked before anything else (R20); then the grammar applies.
+ * (each `.`-separated part up to its first `[`) is `LAE-PROJ-007`, checked before anything else
+ * (R20); then the grammar applies. `_label` is derived at the root (Step 1.19a). Python's
+ * `lae.projection.ops._write_path` makes the same check.
  */
 function writePath(path: string): PathSegment[] {
   for (const part of path.split(".")) {
-    const key = part.replace(/\[.*$/, "");
+    const bracket = part.indexOf("[");
+    const key = bracket === -1 ? part : part.slice(0, bracket);
     if (WRITE_FORBIDDEN_KEYS.has(key)) {
       throw new ProjectionError(PROJ_BAD_PATH, `a write path cannot name ${key}`);
     }

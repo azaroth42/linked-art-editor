@@ -103,6 +103,7 @@ async def three_versions(engine: AsyncEngine) -> tuple[UUID, dict[str, Any], dic
         name["classified_as"] = [{"id": kind_of(uri), "type": "Type", "_label": "stale label"}]
     v3 = copy.deepcopy(v2)
     v3["identified_by"][0]["content"] = "Third"
+    v3["_label"] = "Third"  # as publish stores it: derived from the English title (Step 1.19a)
     v3["classified_as"].append({"id": f"https://vocab.test/{uuid7()}", "type": "Type"})
     await insert_record(engine, v3, version=3)
     await insert_revision(engine, id_of(uri), 2, v2)
@@ -151,6 +152,19 @@ async def test_diff_of_two_revisions(served: Served, db_engine: AsyncEngine) -> 
     }
     assert body["changes"] == [
         {
+            # Version 3 stores the _label derived from its new English title (Step 1.19a).
+            "kind": "update_literal",
+            "path": "_label",
+            "parent": [],
+            "property": "_label",
+            "op": "change",
+            "key": None,
+            "before": None,
+            "old": "Second",
+            "new": "Third",
+            "text_edit": None,
+        },
+        {
             "kind": "add_ref",
             "path": "classified_as",
             "parent": [],
@@ -187,7 +201,11 @@ async def test_diff_of_two_revisions(served: Served, db_engine: AsyncEngine) -> 
     ]
 
     back = await served.client.get(f"/api/records/{record_id}/revisions/3/diff/2", headers=headers)
-    assert [c["kind"] for c in back.json()["changes"]] == ["remove_ref", "update_literal"]
+    assert [c["kind"] for c in back.json()["changes"]] == [
+        "update_literal",
+        "remove_ref",
+        "update_literal",
+    ]
     same = await served.client.get(f"/api/records/{record_id}/revisions/3/diff/3", headers=headers)
     assert same.json()["changes"] == []
 
@@ -306,15 +324,18 @@ async def test_draft_diff_compares_the_published_version_with_the_live_draft(
     assert edited.status_code == 200, edited.text
     changes = edited.json()["changes"]
     assert [(c["kind"], c["path"]) for c in changes] == [
+        # The root _label follows the English title (Step 1.19a).
+        ("update_literal", "_label"),
         ("add_ref", "classified_as"),
         ("remove_node", "identified_by"),
         # No label row for the classification: its stored _label is all there is.
         ("update_literal", "identified_by[Name:stale label].content"),
     ]
-    assert changes[0]["uri"] == f"{AAT}300033618"
-    assert changes[1]["node_id"] == v3["identified_by"][1]["id"]
-    assert changes[1]["summary_fields"]["content"] == "Deuxième"
-    assert changes[2]["text_edit"] == {"index": 5, "delete": 0, "insert": "!"}
+    assert (changes[0]["old"], changes[0]["new"]) == ("Third", "Third!")
+    assert changes[1]["uri"] == f"{AAT}300033618"
+    assert changes[2]["node_id"] == v3["identified_by"][1]["id"]
+    assert changes[2]["summary_fields"]["content"] == "Deuxième"
+    assert changes[3]["text_edit"] == {"index": 5, "delete": 0, "insert": "!"}
 
     # Read from memory or rebuilt from the rows: the same answer after the room is evicted.
     await network.rooms.close(record_id, discard=False)

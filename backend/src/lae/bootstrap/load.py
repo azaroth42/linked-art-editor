@@ -306,7 +306,7 @@ def load_batch(items: list[SourceItem]) -> LoadedBatch:
     loaded: set[str] = worker.run(_loaded(worker.conn, [p.source_uri for p in parsed]))
     new, known = _split_new(parsed, loaded)
     failures.extend(_duplicate(p.source, p.source_uri) for p in known)
-    prepared = build_batch(new, worker.base_uri, worker.context_version)
+    prepared = build_batch(new, worker.base_uri, worker.context_version, worker.label_language)
     failures.extend(prepared.failures)
     records, repeats = _first_of_each(prepared.records)
     started = time.perf_counter()
@@ -412,6 +412,7 @@ async def load(
                     dsn,
                     settings.base_uri,
                     settings.context_version,
+                    settings.label_language,
                     draft_epoch,
                     run_id,
                     context.Semaphore(streams),

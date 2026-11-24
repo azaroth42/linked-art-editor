@@ -104,7 +104,7 @@ def gallery() -> dict[str, Any]:
 
 async def _load_labels(session: AsyncSession) -> None:
     for name in RECORDS:
-        await upsert_entity_labels_for_record(session, as_record(corpus(name)))
+        await upsert_entity_labels_for_record(session, as_record(corpus(name)), "en")
     session.add(
         EntityLabel(
             uri=PRIMARY_NAME,
@@ -224,7 +224,7 @@ async def test_whole_corpus_round_trip(db_session: AsyncSession) -> None:
     """Publish labels for every corpus record, then normalize and transclude every record."""
     records = dict((data["id"], data) for _, data in iter_corpus())
     for data in records.values():
-        await upsert_entity_labels_for_record(db_session, as_record(data))
+        await upsert_entity_labels_for_record(db_session, as_record(data), "en")
     await db_session.flush()
     resolved = 0
     for path, data in iter_corpus():
@@ -238,7 +238,7 @@ async def test_whole_corpus_round_trip(db_session: AsyncSession) -> None:
             if target is None:
                 assert reference.get("_label") == original.get("_label"), path
             else:
-                labels, default = labels_from_record(target)
+                labels, default = labels_from_record(target, "en")
                 assert reference["_label"] == labels.get("fr", labels.get("en", default)), path
                 resolved += 1
     assert resolved >= 5

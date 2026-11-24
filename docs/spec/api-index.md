@@ -31,7 +31,7 @@ Generated from the phase guides by `scripts/gen_api_index.py` (kept in the scrat
 | `GET /api/records/{id}/revisions/{n}` | Phase 1 Step 1.6, Phase 1 Step 1.14 |
 | `GET /api/records/{id}/revisions` | Phase 1 Step 1.6, Phase 1 Step 1.14 |
 | `GET /api/records/{id}/timeline` | Phase 4 Step 4.5 |
-| `GET /api/records/{id}` | Phase 1 Step 1.6, Phase 1 Step 1.17 |
+| `GET /api/records/{id}` | Phase 1 Step 1.6, Phase 1 Step 1.17, Step 1.19a (`X-Label-Language` header) |
 | `GET /api/search/autocomplete?q=&types=Person,Group&limit=20&locale=` | Phase 1 Step 1.13 |
 | `GET /api/search/autocomplete` | Phase 3 Step 3.2 |
 | `GET /api/search?q=&class=&facet.<name>=&page=` | Phase 2 Step 2.7 |

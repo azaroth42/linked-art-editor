@@ -220,6 +220,12 @@ The unit templates in `systemd/` assume this layout; adjust paths and the user i
    # sync_lag_seconds, ...) on 127.0.0.1:<port>; unset means no listener.
    # LAE_SYNC_METRICS_PORT=9100
    LAE_BASE_URI=https://<your host>/id/
+   # Language of the derived record label (_label) and of entity_labels.default_label: one of the
+   # 57 primary language tags of the AAT language table (en, fr, de, ...; default en). Give every
+   # process the same value (api and crdt-ws above all) and restart api and crdt-ws together
+   # after changing it: nothing is migrated, published records keep their label until they are
+   # next published, and open drafts follow at their next read (ADR-0036).
+   # LAE_LABEL_LANGUAGE=en
    # Required in production: signs the session cookie (shared by api and crdt-ws).
    LAE_SESSION_SECRET=<output of: openssl rand -hex 32>
    # Required in production: shared secret of the internal RPC between api (and scheduler)
