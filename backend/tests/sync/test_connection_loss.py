@@ -674,3 +674,38 @@ async def test_failed_reports_a_database_error_like_run(
     assert reported["command"] == "failed"
     if line == "sync_worker_failed":
         assert (reported["persistent"], reported["exit_code"]) == (True, EXIT_PERSISTENT)
+
+
+async def test_replay_after_prints_no_id_when_the_lock_query_fails(
+    world: World,
+    db_url: str,
+    monkeypatch: pytest.MonkeyPatch,
+    logged: Logged,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Test 69, continued (added in review of #174): the last id is printed once the command
+    holds the lock (item 43). A database error before that is reported the same way, with the
+    stderr line, and nothing on stdout: nothing was applied, so there is no id to restart from."""
+    await five_events(world)
+    before = await snapshot_tables(world.conn)
+
+    class LockFails(asyncpg.Connection):  # type: ignore[misc]
+        async def fetchval(self, query: str, *args: Any, **kwargs: Any) -> Any:
+            if "pg_try_advisory_lock" in query:
+                query, args = "SELECT no_such_column FROM outbox_events", ()
+            return await super().fetchval(query, *args, **kwargs)
+
+    connecting_with(monkeypatch, LockFails)
+    settings = worker_settings(
+        db_url, qlever_url="http://qlever.test:7024", qlever_access_token=SecretStr(TOKEN)
+    )
+    capsys.readouterr()
+
+    assert await worker.main(settings, ["--replay-after", "0"]) == EXIT_PERSISTENT
+
+    out = capsys.readouterr()
+    assert out.out == "" and "replay stopped" in out.err
+    [reported] = named(logged(), "sync_worker_failed")
+    assert (reported["command"], reported["persistent"]) == ("replay", True)
+    monkeypatch.undo()
+    assert await snapshot_tables(world.conn) == before

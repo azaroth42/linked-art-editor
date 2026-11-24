@@ -2046,6 +2046,38 @@ async def test_a_live_event_accepted_on_the_second_send_costs_no_attempt(world: 
     assert triples_of(client.store) == await world.library(*records).expected()
 
 
+async def test_a_lone_live_event_accepted_on_the_second_send_is_recorded_done(
+    world: World,
+) -> None:
+    """Test 58 for a batch of one event (added in review of #174): ``process_batch`` confirms
+    that event itself, not ``_send_one_by_one``. Item 37: recorded ``done``, one update counted."""
+    record = await world.new("Poison alone")
+    (pending,) = await pending_events(world.conn)
+    update = await translate_event(world.conn, pending)
+    client = RecordingClient()
+    rejections = 0
+
+    async def rejected_once(c: RecordingClient, sparql: str) -> None:
+        nonlocal rejections
+        if "Poison" in sparql and rejections < 1:
+            rejections += 1
+            raise QLeverError("QLever refused", status=400, body="not now")
+        c.apply(sparql)
+
+    client.behaviour = rejected_once
+
+    result = await process_batch(world.conn, client)
+
+    assert client.sent == [update, PROBE_UPDATE, update]
+    assert (result.outcome, result.done, result.updates_sent) == ("done", (pending.id,), 1)
+    assert (result.failed_event, result.error, result.refusal) == (None, None, None)
+    (row,) = await all_events(world.conn)
+    assert (row["status"], row["attempts"], row["last_error"]) == ("done", 0, None)
+    assert await watermark(world.conn) == ("number", str(pending.id))
+    assert triples_of(client.store) == await world.library(record).expected()
+    assert (await process_batch(world.conn, client)).outcome == "empty"
+
+
 @pytest.mark.parametrize("where", ["probe", "second"])
 @pytest.mark.parametrize("failure", TRANSIENT)
 async def test_a_transient_failure_while_confirming_a_live_rejection_counts_nothing(
@@ -2366,6 +2398,42 @@ async def test_a_token_that_straddles_the_cut_is_removed_whole(
 
     assert body == ("x" * (2000 - k) + "[redacted]" + "y" * 100)[:2000]
     assert STRADDLING_TOKEN[:8] not in everything
+
+
+async def test_the_token_is_removed_from_an_unavailable_answer_in_catch_up_and_once(
+    world: World, db_url: str, slept: list[float], logged: Logged
+) -> None:
+    """Item 44 for two lines the other token tests do not reach (added in review of #174):
+    ``sync_unavailable`` during catch-up, and ``sync_worker_failed`` when ``--once`` meets an
+    unavailable QLever in catch-up. QLever's 503 echoes the token."""
+    await world.new("Token in a 503")
+    (pending,) = await pending_events(world.conn)
+    assert (await process_batch(world.conn, RecordingClient())).outcome == "done"
+    await set_watermark(world.conn, pending.id - 1)
+    client = RecordingClient()
+    answers = 0
+
+    async def busy(c: RecordingClient, sparql: str) -> None:
+        nonlocal answers
+        answers += 1
+        if answers != 2:  # the second request, catch-up's retry, is acknowledged
+            raise QLeverError("QLever busy", status=503, body=f"busy, said to {TOKEN}")
+        c.apply(sparql)
+
+    client.behaviour = busy
+
+    await worker._catch_up_until_done(world.conn, client, asyncio.Event())
+
+    assert await watermark(world.conn) == ("number", str(pending.id))
+    await set_watermark(world.conn, pending.id - 1)
+    assert await worker.run(worker_settings(db_url), once=True, client=client) == 1
+    events = logged()
+    [unavailable_line] = named(events, "sync_unavailable")
+    assert unavailable_line["during"] == "catch_up" and "[redacted]" in unavailable_line["error"]
+    [failed] = named(events, "sync_worker_failed")
+    assert "[redacted]" in failed["error"] and failed["exit_code"] == 1
+    assert (failed["persistent"], failed["command"]) == (False, "once")
+    assert TOKEN not in json.dumps(events)
 
 
 ESCAPING_TOKEN = 'tok"en-é-5f1c-0123456789'
