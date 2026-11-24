@@ -3,7 +3,8 @@
 ``mutate(record, rng, donor)`` returns an edited deep copy of ``record``. Each edit is something
 an editor, an import or a merge can do to a record: change a string, add, remove, move, repeat
 or reorder array items, turn a single value into an array and back, change a node's type, graft
-a property from another record (``donor``). Every embedded node of the result has an ``id``.
+a property from another record (``donor``), set an ``@context`` of any form on any object. Every
+embedded node of the result has an ``id``.
 """
 
 from __future__ import annotations
@@ -21,6 +22,8 @@ AAT = "http://vocab.getty.edu/aat/"
 URIS = [f"{AAT}300404670", f"{AAT}300404671", f"{AAT}300015045", "https://example.org/thing #2"]
 CHARS = ["a", "é", "é", " ", "\U0001f600", "中", "x #2", ""]
 KEYS = ["classified_as", "identified_by", "referred_to_by", "member_of", "x_new", "note"]
+CONTEXT_SHARE = 0.3
+"""The share of ``set_single`` edits that set an ``@context``."""
 
 Mutation = Callable[[dict[str, Any], random.Random, dict[str, Any]], None]
 
@@ -70,6 +73,26 @@ def _new_ref(rng: random.Random) -> dict[str, Any]:
     if rng.random() < 0.3:
         ref["_label"] = rng.choice(CHARS)
     return ref
+
+
+def _new_context(rng: random.Random) -> Any:
+    """An ``@context`` of any form, often one that looks like a reference or a node by its keys.
+
+    ``@context`` is opaque whatever its form (R3), so the diff must report each of these as one
+    literal (contract 1.14 §3 item 6 and review amendment 2), never as a reference or a node.
+    """
+    return rng.choice(
+        [
+            "https://linked.art/ns/v1/linked-art.json",
+            {"id": "@id", "type": "@type"},
+            {"id": rng.choice(URIS), "type": "Type", "_label": "a term"},
+            {"type": "@type", "content": "https://example.org/content"},
+            _new_ref(rng),
+            {"@vocab": "https://example.org/vocab/", "x_new": {"@id": "https://example.org/x"}},
+            ["https://linked.art/ns/v1/linked-art.json", {"id": "@id", "type": "@type"}],
+            [],
+        ]
+    )
 
 
 def edit_string(record: dict[str, Any], rng: random.Random, donor: dict[str, Any]) -> None:
@@ -203,8 +226,15 @@ def reshape(record: dict[str, Any], rng: random.Random, donor: dict[str, Any]) -
 
 
 def set_single(record: dict[str, Any], rng: random.Random, donor: dict[str, Any]) -> None:
-    """Set a property to a single value of any shape, replacing whatever it held."""
+    """Set a property to a single value of any shape, replacing whatever it held.
+
+    In ``CONTEXT_SHARE`` of the edits the property is ``@context``, on the root (replacing the
+    record's own) or on a nested object (where it appears), with a value of ``_new_context``.
+    """
     obj = rng.choice(objects(record))
+    if rng.random() < CONTEXT_SHARE:
+        obj["@context"] = _new_context(rng)
+        return
     keys = [k for k in obj if k not in ("id", "type")] + KEYS
     key = rng.choice(keys)
     obj[key] = rng.choice(
