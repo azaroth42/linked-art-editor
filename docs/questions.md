@@ -825,6 +825,9 @@ steps. Notes for the steps that meet it, and two choices the owner may want to c
    letter), none on the normal path. Consequence to know: if QLever ever rejects the probe
    itself, a poisoned event holds the queue until that is fixed instead of being skipped after
    15 s (the rule catch-up already has).
+   **Owner, 2026-11-24: confirmed.** The live path holds the queue while QLever refuses the
+   probe: nothing is dead-lettered, it backs off, and it logs `sync_updates_refused`.
+   Implemented in PR for #171 (ADR-0039).
 10. **Decided (issue #171, contract §8.5): exit codes and the systemd unit.** `lae sync-worker`
     exits 0 (stopped, or done), 1 (may pass by itself or unknown: database unreachable,
     connection lost, any other database error, QLever failures of `--once` and
@@ -843,6 +846,13 @@ steps. Notes for the steps that meet it, and two choices the owner may want to c
     `systemctl start`. (b) A worker that meets the schema half-way during a migration or a
     restore into the live database stops with 4 and must be started afterwards
     (`deploy/README.md` will say so).
+    **Owner, 2026-11-24: confirmed, (a) and (b).** Exit 2 (config) and exit 4
+    (`EXIT_PERSISTENT`, SQLSTATE class 42/23/22/0A that is not a lost connection) are not
+    restarted (`RestartPreventExitStatus=2 4`); the operator fixes the cause and runs
+    `systemctl start`. `deploy/README.md` has the section "When the sync worker stops"
+    (ADR-0039). Found while implementing: asyncpg 0.32 raises a wrong query argument type as
+    `asyncpg.exceptions.DataError`, a `PostgresError` with SQLSTATE 22000, so it exits 4 (a bug
+    in our call, which never passes), not 1 as contract test 66 had assumed.
 11. **Known limit (issue #171, not solved): a database error of unknown kind that does not pass
     is still a restart loop.** Everything outside the four classes of item 10 (a cancelled
     statement, a deadlock, a full disk, a read-only server, an internal error of class XX, a
@@ -854,7 +864,8 @@ steps. Notes for the steps that meet it, and two choices the owner may want to c
     A slower loop would need `RestartSteps=`/`RestartMaxDelaySec=` (systemd 254 or later, and it
     also delays the recovery from a long outage) or a delay before exit in the worker. Proposed:
     leave it until one is seen in production; the signal is `sync_worker_failed` with
-    `persistent=false` repeating.
+    `persistent=false` repeating. Left as proposed in the #171 implementation (no in-process
+    delay, no `RestartSteps=`).
 12. **Decided (issue #171, contract §8.6): the access token is removed before an error text is
     cut or encoded.** `rejected()` cut QLever's answer to 2000 characters before the token was
     removed, so a token across the cut left its first part in `last_error`. Found while writing

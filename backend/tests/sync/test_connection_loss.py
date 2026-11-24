@@ -1,24 +1,34 @@
-"""What ``run`` does when a database error ends it (issue #151; contract §3 item 22, §4).
+"""How a database error ends each ``lae sync-worker`` command (issues #151 and #171).
 
-A lost connection (the server shut the session down, the socket is gone, a commit failed that
-way) is logged ``sync_connection_lost`` and the process exits 1 for its supervisor to restart.
-Any other database error (a bug in our SQL, a violated constraint) is not taken for one: it is
-logged ``sync_worker_failed`` with its traceback, and the process exits 1 as well. Either way
-nothing is recorded for the batch in flight, so the restarted worker sends it again.
+Contract §3 item 22, §4, and §8.5 (items 39-43, tests 64-70). A lost connection (the server
+shut the session down, the socket is gone, a commit failed that way) is logged
+``sync_connection_lost`` and the process exits 1 for its supervisor to restart. Any other
+database error is not taken for one: it is logged ``sync_worker_failed`` with its traceback, and
+the process exits 4 (``EXIT_PERSISTENT``) when its SQLSTATE class means it cannot pass by itself
+(42, 23, 22, 0A), else 1. Either way nothing is recorded for the batch in flight, so the
+restarted worker sends it again. ``--replay-after`` and ``--failed`` report the same way. Test
+68 reads the systemd unit's restart rules.
 
 Errors are injected two ways: by raising the error class (every class the worker must recognise,
 whether or not this machine's Postgres produces it here), and for real, by terminating the
-worker's backend from a second connection with ``pg_terminate_backend``.
+worker's backend from a second connection with ``pg_terminate_backend``, by selecting a column
+that does not exist, or by a statement timeout.
 """
 
 from __future__ import annotations
 
 import asyncio
+import configparser
+import json
 from collections.abc import AsyncIterator, Awaitable, Callable
+from pathlib import Path
 from typing import Any
+from urllib.parse import parse_qs
 
 import asyncpg
+import httpx
 import pytest
+from pydantic import SecretStr
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from lae.bootstrap.common import asyncpg_dsn
@@ -26,18 +36,23 @@ from lae.sync import worker
 from lae.sync.worker import (
     BATCH_SIZE,
     EXIT_FAILURE,
+    EXIT_PERSISTENT,
     ConnectionLostError,
     connection_lost,
+    database_failure,
     process_batch,
 )
 from tests.publish.conftest import Caller
 from tests.sync.conftest import (
+    TOKEN,
     Logged,
     Network,
     RecordingClient,
     Served,
     all_events,
+    insert_event,
     named,
+    snapshot_tables,
     triples_of,
     watermark,
 )
@@ -301,6 +316,9 @@ async def test_a_commit_that_fails_after_qlever_applied_leaves_the_batch_to_be_s
     await assert_restart_applies_everything_once(world, db_url, client, records, ids)
 
 
+# -- 64-70: the kind of a database error, the exit code, the unit, the commands (contract §8.5) --
+
+
 async def _select_a_missing_column(conn: asyncpg.Connection, limit: int) -> list[Any]:
     return list(await conn.fetch("SELECT no_such_column FROM outbox_events LIMIT $1", limit))
 
@@ -313,58 +331,346 @@ async def _raise_query_canceled(conn: asyncpg.Connection, limit: int) -> list[An
     raise asyncpg.QueryCanceledError("canceling statement due to statement timeout")
 
 
+async def _raise_interface_error(conn: asyncpg.Connection, limit: int) -> list[Any]:
+    raise asyncpg.InterfaceError("cannot perform operation: another operation is in progress")
+
+
+def _server_error(sqlstate: str, severity: str = "ERROR") -> asyncpg.PostgresError:
+    error: asyncpg.PostgresError = asyncpg.PostgresError.new(
+        {"C": sqlstate, "S": severity, "V": severity, "M": "x"}
+    )
+    return error
+
+
+PERSISTENT_SQLSTATES = ["42703", "42P01", "42601", "42501", "23505", "23503", "22P02", "0A000"]
+OTHER_SQLSTATES = ["57014", "40001", "40P01", "25006", "53100", "53300", "55P03", "58030", "XX000"]
+
+
+@pytest.mark.parametrize("make", SESSION_ENDED, ids=SESSION_ENDED_IDS)
+def test_database_failure_tells_the_three_kinds_apart(make: Callable[[], BaseException]) -> None:
+    """Test 64 (pure): the lost connections of #151, then the persistent and the other kinds."""
+    assert database_failure(make()) == "connection_lost"
+    assert database_failure(make(), closed=True) == "connection_lost"
+    closed = asyncpg.InterfaceError("cannot perform operation: connection is closed")
+    assert database_failure(closed, closed=True) == "connection_lost"
+    for sqlstate in PERSISTENT_SQLSTATES:
+        assert database_failure(_server_error(sqlstate)) == "persistent", sqlstate
+    for sqlstate in OTHER_SQLSTATES:
+        assert database_failure(_server_error(sqlstate)) == "other", sqlstate
+    assert database_failure(asyncpg.PostgresError("no sqlstate")) == "other"
+    open_error = asyncpg.InterfaceError("cannot perform operation: another operation")
+    assert database_failure(open_error, closed=False) == "other"
+    assert database_failure(asyncpg.exceptions._base.DataError("bad argument")) == "other"
+    # A FATAL error ends the session whatever its class: a lost connection, never exit 4.
+    assert database_failure(_server_error("42703", "FATAL")) == "connection_lost"
+    assert database_failure(_server_error("23505", "PANIC")) == "connection_lost"
+    assert {c[:2] for c in PERSISTENT_SQLSTATES} == set(worker.PERSISTENT_SQLSTATE_CLASSES)
+
+
+def _break_the_claim(
+    monkeypatch: pytest.MonkeyPatch,
+    error: Callable[[asyncpg.Connection, int], Awaitable[list[Any]]],
+    calls: list[str],
+) -> None:
+    async def broken_claim(conn: asyncpg.Connection, limit: int) -> list[Any]:
+        calls.append("claim")
+        return await error(conn, limit)
+
+    monkeypatch.setattr(worker, "_pending_events", broken_claim)
+
+
+def _violate_inside_the_recording(monkeypatch: pytest.MonkeyPatch, calls: list[str]) -> None:
+    write_watermark = worker._write_watermark
+
+    async def violate(conn: asyncpg.Connection, expected: str | None, highest: int) -> str:
+        calls.append("commit")
+        written = await write_watermark(conn, expected, highest)
+        # A duplicate primary key, inside the transaction that records the batch.
+        await conn.execute("INSERT INTO outbox_events SELECT * FROM outbox_events LIMIT 1")
+        return written
+
+    monkeypatch.setattr(worker, "_write_watermark", violate)
+
+
 @pytest.mark.parametrize(
-    ("where", "error"),
+    ("where", "error", "sqlstate"),
     [
-        ("claim", _select_a_missing_column),
-        ("claim", _pass_a_wrong_argument_type),
-        ("claim", _raise_query_canceled),
-        ("commit", None),
+        ("claim", _select_a_missing_column, "42703"),
+        ("claim", _pass_a_wrong_argument_type, "22000"),
+        ("commit", None, "23505"),
     ],
-    ids=["undefined_column", "client_data_error", "query_canceled", "unique_violation"],
+    ids=["undefined_column", "client_data_error", "unique_violation"],
 )
-async def test_a_non_retryable_database_error_still_exits_and_is_not_a_lost_connection(
+async def test_a_persistent_database_error_exits_4_and_is_not_retried(
     world: World,
     db_url: str,
     monkeypatch: pytest.MonkeyPatch,
     logged: Logged,
     where: str,
     error: Callable[[asyncpg.Connection, int], Awaitable[list[Any]]] | None,
+    sqlstate: str,
 ) -> None:
+    """Test 65. ``client_data_error`` moved here from test 66: asyncpg 0.32 raises a wrong
+    argument type as ``asyncpg.exceptions.DataError``, a server-side class with SQLSTATE 22000,
+    so ``database_failure`` calls it persistent (a bug in our call; it never passes)."""
     records, ids = await five_events(world)
     calls: list[str] = []
-    if where == "claim":
-        assert error is not None
-
-        async def broken_claim(conn: asyncpg.Connection, limit: int) -> list[Any]:
-            calls.append(where)
-            return await error(conn, limit)
-
-        monkeypatch.setattr(worker, "_pending_events", broken_claim)
+    if error is not None:
+        _break_the_claim(monkeypatch, error, calls)
     else:
-        write_watermark = worker._write_watermark
+        _violate_inside_the_recording(monkeypatch, calls)
+    client = RecordingClient()
 
-        async def violate(conn: asyncpg.Connection, expected: str | None, highest: int) -> str:
-            calls.append(where)
-            written = await write_watermark(conn, expected, highest)
-            # A duplicate primary key, inside the transaction that records the batch.
-            await conn.execute("INSERT INTO outbox_events SELECT * FROM outbox_events LIMIT 1")
-            return written
+    assert await run_until_it_exits(db_url, client) == EXIT_PERSISTENT == 4
 
-        monkeypatch.setattr(worker, "_write_watermark", violate)
+    assert calls == [where]  # the failing call was made once: not retried in-process
+    events = logged()
+    assert named(events, "sync_connection_lost") == []
+    [failed] = named(events, "sync_worker_failed")
+    assert (failed["persistent"], failed["exit_code"], failed["command"]) == (True, 4, "run")
+    assert failed["sqlstate"] == sqlstate and failed["level"] == "error"
+    assert failed["error_type"] and "Traceback" in failed["exception"]
+    assert len(client.sent) == (1 if where == "commit" else 0)
+    await assert_untouched(world.conn, ids)
+
+    calls.clear()
+    once = await worker.run(worker_settings(db_url), once=True, client=client)
+    assert once == EXIT_PERSISTENT and calls == [where]
+    assert named(logged(), "sync_worker_failed")[-1]["command"] == "once"
+    await assert_untouched(world.conn, ids)
+    monkeypatch.undo()
+    await assert_restart_applies_everything_once(world, db_url, client, records, ids)
+
+
+@pytest.mark.parametrize(
+    "error",
+    [_raise_query_canceled, _raise_interface_error],
+    ids=["query_canceled", "interface_error_on_an_open_connection"],
+)
+async def test_a_non_retryable_database_error_still_exits_and_is_not_a_lost_connection(
+    world: World,
+    db_url: str,
+    monkeypatch: pytest.MonkeyPatch,
+    logged: Logged,
+    error: Callable[[asyncpg.Connection, int], Awaitable[list[Any]]],
+) -> None:
+    """Test 66 (amended, contract §8.9): an error of kind ``"other"`` exits 1 and is restarted.
+
+    ``undefined_column`` and ``unique_violation`` moved to test 65, and so did
+    ``client_data_error`` (it is SQLSTATE 22000 under asyncpg 0.32, see test 65); a client-side
+    ``InterfaceError`` on an open connection takes its place here.
+    """
+    records, ids = await five_events(world)
+    calls: list[str] = []
+    _break_the_claim(monkeypatch, error, calls)
     client = RecordingClient()
 
     assert await run_until_it_exits(db_url, client) == EXIT_FAILURE
 
-    assert calls == [where]  # it exits: the error is not retried in-process
+    assert calls == ["claim"]  # it exits: the error is not retried in-process
     events = logged()
     assert named(events, "sync_connection_lost") == []
     [failed] = named(events, "sync_worker_failed")
     assert failed["error_type"] and "Traceback" in failed["exception"]
-    if where == "commit":
-        assert failed["sqlstate"] == "23505" and len(client.sent) == 1
-    else:
-        assert client.sent == []
+    assert (failed["persistent"], failed["exit_code"]) == (False, EXIT_FAILURE)
+    assert client.sent == []
     await assert_untouched(world.conn, ids)
     monkeypatch.undo()
     await assert_restart_applies_everything_once(world, db_url, client, records, ids)
+
+
+@pytest.mark.parametrize(
+    ("where", "make"),
+    [
+        ("claim", None),
+        ("claim", SESSION_ENDED[0]),
+        ("claim", SESSION_ENDED[7]),
+        ("claim", lambda: _server_error("42P01", "FATAL")),
+        ("commit", None),
+        ("commit", SESSION_ENDED[1]),
+        ("commit", SESSION_ENDED[9]),
+    ],
+    ids=[
+        "claim_terminated",
+        "claim_admin_shutdown",
+        "claim_connection_does_not_exist",
+        "claim_fatal_in_class_42",
+        "commit_terminated",
+        "commit_crash_shutdown",
+        "commit_resolution_unknown",
+    ],
+)
+async def test_a_lost_connection_never_exits_4(
+    world: World,
+    db_url: str,
+    other: asyncpg.Connection,
+    monkeypatch: pytest.MonkeyPatch,
+    logged: Logged,
+    where: str,
+    make: Callable[[], BaseException] | None,
+) -> None:
+    """Test 67: every way the #151 tests end the session exits 1, never ``EXIT_PERSISTENT``."""
+    await five_events(world)
+    if where == "claim":
+        claim = worker._pending_events
+
+        async def shut_down(conn: asyncpg.Connection, limit: int) -> list[Any]:
+            if make is not None:
+                raise make()
+            await terminate(other, conn)
+            return await claim(conn, limit)
+
+        monkeypatch.setattr(worker, "_pending_events", shut_down)
+    else:
+        connecting_with(monkeypatch, failing_commit(other, make))
+
+    code = await run_until_it_exits(db_url, RecordingClient())
+
+    assert code == EXIT_FAILURE and code != EXIT_PERSISTENT
+    events = logged()
+    [lost] = named(events, "sync_connection_lost")
+    assert lost["command"] == "run"
+    assert named(events, "sync_worker_failed") == []
+
+
+UNIT = Path(__file__).resolve().parents[3] / "deploy" / "systemd" / "lae-sync-worker.service"
+
+
+def test_the_unit_restarts_after_exit_1_without_limit_and_never_after_2_or_4() -> None:
+    """Test 68: the restart rules of ``deploy/systemd/lae-sync-worker.service`` (item 41)."""
+    from lae.cli import EXIT_CONFIG_ERROR as CLI_CONFIG_ERROR
+    from lae.cli import EXIT_NOT_IMPLEMENTED
+
+    unit = configparser.ConfigParser(strict=True, interpolation=None)
+    unit.optionxform = str  # type: ignore[assignment,method-assign]
+    unit.read_string(UNIT.read_text())
+    assert unit["Unit"]["StartLimitIntervalSec"] == "0"
+    assert all("StartLimitBurst" not in unit[section] for section in unit.sections())
+    service = unit["Service"]
+    assert service["Restart"] == "on-failure"
+    assert service["RestartSec"] == "5"
+    prevented = {int(code) for code in service["RestartPreventExitStatus"].split()}
+    assert prevented == {worker.EXIT_CONFIG_ERROR, worker.EXIT_PERSISTENT}
+    assert worker.EXIT_FAILURE not in prevented
+    assert worker.EXIT_PERSISTENT == 4 and worker.EXIT_PERSISTENT != EXIT_NOT_IMPLEMENTED
+    assert worker.EXIT_CONFIG_ERROR == CLI_CONFIG_ERROR
+
+
+def failing_fetch(marker: str, how: str, other: asyncpg.Connection, *, after: int) -> type[Any]:
+    """A connection class whose ``fetch`` of a query containing ``marker`` fails after ``after``
+    successful ones: the session is ``terminated``, a column is undefined, or the statement is
+    cancelled by a real ``statement_timeout`` (SQLSTATE 57014)."""
+
+    class FetchFails(asyncpg.Connection):  # type: ignore[misc]
+        seen = 0
+
+        async def fetch(self, query: str, *args: Any, **kwargs: Any) -> list[Any]:
+            if marker in query:
+                FetchFails.seen += 1
+                if FetchFails.seen > after:
+                    if how == "terminated":
+                        await terminate(other, self)
+                    elif how == "undefined_column":
+                        query, args = "SELECT no_such_column FROM outbox_events", ()
+                    else:
+                        await super().execute("SET statement_timeout = 1")
+                        query, args = "SELECT pg_sleep(1)", ()
+            rows: list[Any] = await super().fetch(query, *args, **kwargs)
+            return rows
+
+    return FetchFails
+
+
+@pytest.mark.parametrize(
+    ("how", "code", "line", "persistent"),
+    [
+        ("terminated", EXIT_FAILURE, "sync_connection_lost", None),
+        ("undefined_column", EXIT_PERSISTENT, "sync_worker_failed", True),
+        ("query_canceled", EXIT_FAILURE, "sync_worker_failed", False),
+    ],
+)
+async def test_replay_after_reports_a_database_error_like_run(
+    world: World,
+    db_url: str,
+    other: asyncpg.Connection,
+    monkeypatch: pytest.MonkeyPatch,
+    logged: Logged,
+    capsys: pytest.CaptureFixture[str],
+    how: str,
+    code: int,
+    line: str,
+    persistent: bool | None,
+) -> None:
+    """Test 69: the error strikes after one batch was acknowledged; nothing is written."""
+    _, ids = await five_events(world)
+    assert (await process_batch(world.conn, RecordingClient())).outcome == "done"
+    before = await snapshot_tables(world.conn)
+    sent: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        sent.append(parse_qs(request.content.decode())["update"][0])
+        return httpx.Response(200, json={"status": "OK"})
+
+    real_client = httpx.AsyncClient
+
+    def with_transport(**kwargs: Any) -> httpx.AsyncClient:
+        return real_client(transport=httpx.MockTransport(handler), **kwargs)
+
+    monkeypatch.setattr(httpx, "AsyncClient", with_transport)
+    connecting_with(monkeypatch, failing_fetch("WHERE id > $1", how, other, after=1))
+    settings = worker_settings(
+        db_url, qlever_url="http://qlever.test:7024", qlever_access_token=SecretStr(TOKEN)
+    )
+    capsys.readouterr()
+
+    exit_code = await worker.main(settings, ["--replay-after", str(ids[0] - 1)])
+
+    out = capsys.readouterr()
+    assert exit_code == code
+    assert len(sent) == 1  # one batch acknowledged before the error
+    assert out.out.splitlines() == [str(ids[-1])]  # the last id acknowledged, exactly once
+    assert "replay stopped" in out.err
+    events = logged()
+    [reported] = named(events, line)
+    assert reported["command"] == "replay"
+    if persistent is None:
+        assert named(events, "sync_worker_failed") == []
+    else:
+        assert reported["persistent"] is persistent
+        assert reported["exit_code"] == code and "Traceback" in reported["exception"]
+    monkeypatch.undo()
+    assert await snapshot_tables(world.conn) == before
+    assert TOKEN not in out.out + out.err + json.dumps(events)
+
+
+@pytest.mark.parametrize(
+    ("how", "code", "line"),
+    [
+        ("undefined_column", EXIT_PERSISTENT, "sync_worker_failed"),
+        ("terminated", EXIT_FAILURE, "sync_connection_lost"),
+    ],
+)
+async def test_failed_reports_a_database_error_like_run(
+    world: World,
+    db_url: str,
+    other: asyncpg.Connection,
+    monkeypatch: pytest.MonkeyPatch,
+    logged: Logged,
+    capsys: pytest.CaptureFixture[str],
+    how: str,
+    code: int,
+    line: str,
+) -> None:
+    """Test 70 (scaffolding): ``--failed`` prints no row when its query fails."""
+    first = await world.new("Failed one")
+    await insert_event(world.conn, first, "publish", 1, 1, status="failed")
+    connecting_with(monkeypatch, failing_fetch("WHERE status = 'failed'", how, other, after=0))
+    capsys.readouterr()
+
+    assert await worker.main(worker_settings(db_url), ["--failed"]) == code
+
+    assert capsys.readouterr().out == ""
+    [reported] = named(logged(), line)
+    assert reported["command"] == "failed"
+    if line == "sync_worker_failed":
+        assert (reported["persistent"], reported["exit_code"]) == (True, EXIT_PERSISTENT)

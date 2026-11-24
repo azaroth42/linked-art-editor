@@ -1,4 +1,4 @@
-"""The sync worker against a real QLever 0.6.0 (contract §5 and §7.7, tests 30-37 and 55).
+"""The sync worker against a real QLever 0.6.0 (contract §5, §7.7 and §8.9, tests 30-37, 55 and 63).
 
 Marked ``integration``; run locally only, never in CI.
 
@@ -40,7 +40,7 @@ from lae.sparql.updates import build_update
 from lae.sync import worker
 from lae.sync.events import translate_event
 from lae.sync.qlever_client import QLeverClient, QLeverError
-from lae.sync.worker import PROBE_UPDATE, catch_up, classify, process_batch
+from lae.sync.worker import MAX_ATTEMPTS, PROBE_UPDATE, catch_up, classify, process_batch
 from tests.api.conftest import AAT, insert_record, titled_record
 from tests.publish.conftest import Caller, publish
 from tests.publish.test_publish import set_bootstrap_versions
@@ -48,6 +48,7 @@ from tests.sync.conftest import (
     Network,
     RecordingClient,
     Served,
+    all_events,
     id_of,
     insert_event,
     new_uri,
@@ -530,3 +531,54 @@ async def test_catch_up_skips_an_update_qlever_rejects_and_heals_the_record(
     assert await server.count(f'?s ?p "{MARKER}"') == 0
     assert await server.count('?s ?p "Alpha two"') == 0
     print(f"QLever rejected E with: {dead['last_error'][:160]}")
+
+
+# -- 63: the live path confirms QLever's own rejection (contract §8.4, issue #171) -------------
+
+
+async def test_the_live_path_confirms_qlevers_own_rejection_and_the_probe_adds_no_delta(
+    served: Served,
+    editor: Caller,
+    db_url: str,
+    conn: asyncpg.Connection,
+    start_qlever: Start,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    server = await start_qlever()
+    before = await server.delta_triples()
+    async with server.client() as client:
+        for _ in range(5):
+            await client.update(PROBE_UPDATE)
+    assert await server.delta_triples() == before  # if it changes, stop and report (§8.9)
+
+    async def pause(seconds: float, stop: asyncio.Event) -> None:
+        await asyncio.sleep(0)
+
+    monkeypatch.setattr(worker, "pause", pause)
+    poison, _ = await publish_new(served, editor, person(MARKER))
+    later, later_uri = await publish_new(served, editor, person("Later than the poison"))
+    stop = asyncio.Event()
+
+    class Watching(RejectsTheMarker):
+        sent: list[str] = []
+
+        async def update(self, sparql: str) -> None:
+            Watching.sent.append(sparql)
+            await super().update(sparql)
+            if "Later than the poison" in sparql and MARKER not in sparql:
+                stop.set()
+
+    settings = Settings(database_url=db_url, sync_metrics_port=None)
+    async with Watching(server.url, server.url, server.token) as client:
+        code = await asyncio.wait_for(worker.run(settings, client=client, stop=stop), 60)
+
+    assert code == 0
+    rows = {row["record_id"]: row for row in await all_events(conn)}
+    dead = rows[poison]
+    assert (dead["status"], dead["attempts"]) == ("failed", MAX_ATTEMPTS)
+    params = json.loads(dead["last_error"].split(" ", 1)[1])
+    assert params["status"] == 400  # QLever's own answer to NOT SPARQL
+    assert Watching.sent.count(PROBE_UPDATE) == MAX_ATTEMPTS
+    assert rows[later]["status"] == "done"
+    assert await server.record_triples(later_uri) == len(await revision_lines(conn, later, 1))
+    print(f"live dead letter after {MAX_ATTEMPTS} confirmed rejections: {dead['last_error'][:120]}")

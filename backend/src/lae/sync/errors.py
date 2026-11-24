@@ -8,6 +8,12 @@ entry because no user sees them.
 QLever being unavailable (no answer, a timeout, 401, 403, 408, 429, 5xx) is not an
 ``EventError``: it is never written to an event and costs no attempt
 (``lae.sync.worker.classify``).
+
+``LAE-SYNC-004`` keeps the first ``REJECTED_BODY_CHARS`` characters of QLever's answer **after**
+the access token was removed from it (contract §8.6): the worker passes ``rejected()`` the
+result of ``lae.sync.worker.redacted_body`` (redact, then truncate), and ``__str__`` encodes it
+as JSON only then, so neither a token across the cut nor a token that JSON escapes survives.
+``REJECTED_BODY_CHARS`` is the one limit the worker uses for every body it stores or logs.
 """
 
 from __future__ import annotations
@@ -32,7 +38,7 @@ REJECTED: Final = "LAE-SYNC-004"
 SYNC_CODES: Final = (REVISION_MISSING, UNREADABLE, UNTRANSLATABLE, REJECTED)
 
 REJECTED_BODY_CHARS: Final = 2000
-"""How much of QLever's answer a ``LAE-SYNC-004`` keeps."""
+"""How much of QLever's answer a ``LAE-SYNC-004``, a ``Refusal`` or a log line keeps."""
 
 
 class EventError(Exception):

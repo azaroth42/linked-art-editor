@@ -283,11 +283,14 @@ The unit templates in `systemd/` assume this layout; adjust paths and the user i
 `sync-worker` applies the outbox to QLever. An event it cannot apply becomes a **dead letter**:
 its row in `outbox_events` gets `status = 'failed'` and the cause in `last_error`, and the worker
 goes on with the next event. This happens on the live path (an event QLever rejects five times,
-or one that cannot be translated) and in catch-up (a `done` event above a lowered watermark,
+each rejection confirmed by a probe update that QLever accepts and a second send it rejects
+again, or an event that cannot be translated five times) and in catch-up (a `done` event above a lowered watermark,
 after an index rebuild or restore, that QLever now rejects or whose stored revision cannot be
 read; `last_error` then has `"catch_up": true`). Only the record of that event falls behind in
-QLever; every other record stays current. Contract: `docs/contracts/1.11-sync-worker.md` §7
-(ADR-0037).
+QLever; every other record stays current. If QLever rejects the probe too, the endpoint refuses
+every update (a wrong `LAE_QLEVER_UPDATE_URL` answering 404 or 405, a proxy): no event is
+blamed, nothing is written, and the worker retries with backoff until it is fixed. Contract:
+`docs/contracts/1.11-sync-worker.md` §7 and §8 (ADR-0037, ADR-0039).
 
 What to watch (`GET /metrics` needs `LAE_SYNC_METRICS_PORT`; the listener is up before the first
 catch-up starts):
@@ -299,7 +302,8 @@ catch-up starts):
 | `sync_catch_up_events_total` increases | same | a catch-up is replaying (an index was rebuilt or restored) |
 | `sync_unavailable_total` grows, `sync_watermark` does not move | same | QLever is down, or refuses every update |
 | log `sync_dead_letter`, level error, with `event_id`, `record_id`, `error` and `during` (`catch_up` or `live`) | worker log | one per dead letter |
-| log `sync_updates_refused`, level error, with `status`, `body` (first 2000 characters, token removed), `consecutive` | worker log | the probe update was rejected; retried with backoff; no event is touched |
+| log `sync_updates_refused`, level error, with `status`, `body` (token removed, then the first 2000 characters), `consecutive` and `during` (`live` or `catch_up`) | worker log | the probe update was rejected; retried with backoff; no event is touched |
+| log `sync_updates_refused` with `during="live"`; `sync_unavailable_total` and `sync_lag_seconds` grow, `outbox_failed` does not | worker log, `GET /metrics` | the endpoint rejects every update; no event is touched; the worker retries by itself |
 | log `sync_caught_up`, level info (warning with a dead letter), with `events` and `dead_letters` | worker log | catch-up finished |
 | `outbox_events` rows with `status = 'failed'` | Postgres; `lae sync-worker --failed` | the durable list of dead letters and their causes |
 
@@ -320,7 +324,52 @@ What to do:
    current version in the meantime.
 4. `LAE-SYNC-003`: the worker is older than the code that wrote the event. Deploy the matching
    version, then treat as 2.
-5. `sync_updates_refused` in the log: fix `LAE_QLEVER_URL` / `LAE_QLEVER_UPDATE_URL` or the
-   server. The worker recovers by itself and no event is lost.
+5. `sync_updates_refused` in the log (live or in catch-up): fix `LAE_QLEVER_URL` /
+   `LAE_QLEVER_UPDATE_URL` or the server. The worker recovers by itself and no event is lost.
 6. Never set a `failed` row back to `pending` or `done` by hand: an old event sent on its own can
    undo a later one.
+
+## When the sync worker stops
+
+`lae sync-worker` exits with one of these codes, and `deploy/systemd/lae-sync-worker.service`
+restarts it only after 1 (contract `docs/contracts/1.11-sync-worker.md` §8.5, ADR-0039):
+
+| Code | When | The unit |
+| :-- | :-- | :-- |
+| 0 | stopped by `SIGTERM`/`SIGINT` | not restarted |
+| 1 | may pass by itself, or unknown: Postgres unreachable, the connection lost, a database error of unknown kind | restarted every 5 s, without limit (`StartLimitIntervalSec=0`) |
+| 2 | refuses to start: `LAE_QLEVER_URL` or `LAE_QLEVER_ACCESS_TOKEN` missing, or the watermark is not an integer | **not restarted** |
+| 4 | a database error that will not pass by itself: SQLSTATE class 42 (our SQL against the wrong schema, a missing privilege), 23 (a violated constraint), 22 (bad data), 0A | **not restarted** |
+
+QLever being down or refusing updates never stops the worker: it retries with backoff.
+
+What to watch:
+
+| Signal | Where | Meaning |
+| :-- | :-- | :-- |
+| unit `lae-sync-worker` is `failed` with exit status 4; the log has `sync_worker_failed` with `persistent=true`, a `sqlstate` and a traceback; `/metrics` no longer answers | `systemctl status`, `journalctl -u lae-sync-worker` | a database error that will not pass by itself; **the worker stays down until someone starts it** |
+| unit `failed` with exit status 2; `refusing to start: …` on stderr | same | a setting is missing or the watermark is not an integer; not restarted |
+| unit restarting every 5 s with exit status 1 and `sync_connection_lost` or `sync_database_unreachable` | same | Postgres is away; the worker comes back by itself |
+| unit restarting every 5 s with exit status 1 and `sync_worker_failed` with `persistent=false` | same | a database error of unknown kind keeps coming back: read the traceback |
+
+**The alarm for a stopped worker** is the unit state (`systemctl is-failed lae-sync-worker`) or
+a failed scrape of `/metrics`; alert on either. Nothing is lost while it is down: events stay
+`pending` and are sent after the start.
+
+What to do:
+
+1. Exit status 4: read the `sync_worker_failed` line. SQLSTATE class 42 with an undefined table
+   or column means the schema and the code do not match: run the migrations or deploy the
+   matching version. `42501`: grant the `lae` role the privilege. Class 22 or 23: a row the
+   worker reads or writes is wrong; report it as a bug with the traceback. Then
+   `sudo systemctl start lae-sync-worker`.
+2. Exit status 2: fix `/etc/lae/lae.env` or the `qlever_index_watermark` row of `sync_state`,
+   then `sudo systemctl start lae-sync-worker`.
+3. After a migration, or a restore into the live database, check the unit and start it if it is
+   `failed`: a worker that met the schema half-way has stopped with 4.
+4. Installing the changed unit: `sudo cp /opt/lae/deploy/systemd/lae-sync-worker.service
+   /etc/systemd/system/`, `sudo systemctl daemon-reload`,
+   `sudo systemctl restart lae-sync-worker`.
+
+`lae sync-worker --replay-after` and `--failed` report a database error the same way and exit
+with the same codes; `--replay-after` still prints the last event id it applied.

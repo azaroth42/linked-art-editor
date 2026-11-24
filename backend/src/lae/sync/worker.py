@@ -27,10 +27,17 @@ batch again is harmless because applying events in order is idempotent (contract
 nothing (no write; ``run`` retries after ``backoff_seconds`` of the consecutive outages, capped at
 30 s, for as long as it takes). Any other status is ``rejected``: a rejected batch of several
 events is sent again one event at a time, each recorded on its own, stopping at the first
-failure; the one event rejected alone (or whose translation raises at the head of a batch) gets
-``attempts + 1`` and ``last_error``, and after ``MAX_ATTEMPTS`` becomes ``failed`` (a dead letter)
-and the queue moves on. The record's next event then replaces the record's triples over the
-versions the dead letter left uncertain (``lae.sync.events``).
+failure. An event rejected alone is confirmed before it is blamed (``confirm_rejection``,
+contract §8, issue #171): ``PROBE_UPDATE`` (a ``DELETE WHERE`` on a subject nobody owns) must be
+acknowledged and the event's update, sent alone again, rejected again. Only then does the event
+get ``attempts + 1`` and ``last_error`` (the second rejection's); after ``MAX_ATTEMPTS`` it becomes
+``failed`` (a dead letter) and the queue moves on. An event whose translation raises at the head
+of a batch is counted the same way, without asking QLever. An event accepted on the second send
+is recorded ``done`` like any other. A rejected probe means the endpoint refuses every update (a
+wrong update URL answering 404 or 405): the outcome is ``unavailable`` with a ``Refusal``, nothing
+is written, and ``run`` logs ``sync_updates_refused`` and backs off as for an outage. The
+record's next event after a dead letter replaces the record's triples over the versions the dead
+letter left uncertain (``lae.sync.events``).
 
 **Catch-up** (``catch_up``; contract §7, issue #150). When the watermark exists and a ``done``
 event has a higher id (an index rebuilt from an older export, a restored index directory), those
@@ -42,8 +49,9 @@ permanent failure counts: the event's translation raises at the head of a batch
 (``LAE-SYNC-001`` to ``-003``), or its update, sent alone, is rejected, then ``PROBE_UPDATE`` (a
 ``DELETE WHERE`` on a subject nobody owns) is acknowledged, then the update is rejected again. A
 rejected combined update is narrowed by sending its events alone, each recorded on its own. The
-dead letter is one transaction that compares the watermark and sets ``done`` to ``failed`` with
-``last_error`` (``"catch_up": true``); it does not move the watermark or change ``attempts``, and
+confirmation is the live path's ``confirm_rejection``. The dead letter is one transaction that
+compares the watermark and sets ``done`` to ``failed`` with ``last_error`` (``"catch_up":
+true``); it does not move the watermark or change ``attempts``, and
 catch-up then plans again from the watermark, so a later event of the record is translated as a
 replace. An unavailable QLever, at any send, writes nothing and leaves ``catch_up``; a rejected
 probe means the endpoint refuses every update and raises ``UpdatesRefusedError``, which
@@ -61,15 +69,29 @@ waits until ``BATCH_WINDOW_S`` after waking. If the connection is lost the proce
 never reconnects in-process (a supervisor restarts it), so a lost lock is never used. A lost
 connection (``connection_lost``) includes the server ending the session (shutdown, terminated
 backend, a ``FATAL`` error) and a commit that fails that way; it is logged
-``sync_connection_lost``. Any other database error (a bug in our SQL, a violated constraint) is
-not taken for one: it is logged ``sync_worker_failed`` with its traceback, and the process also
-exits 1. Either way the batch in flight stays pending and is sent again after the restart.
+``sync_connection_lost``. Any other database error is not taken for one: it is logged
+``sync_worker_failed`` with its traceback. ``database_failure`` tells the kinds apart, and
+``report_database_error`` logs them and picks the exit code for every command (``run``,
+``--once``, ``--replay-after``, ``--failed``; contract §8.5):
+
+- 0: stopped by ``SIGTERM``/``SIGINT``; ``--once`` with ``empty`` or ``done``; a finished
+  ``--replay-after``; ``--failed``.
+- 1 (``EXIT_FAILURE``): may pass by itself, or unknown: the database unreachable, the connection
+  lost, a database error of kind ``"other"`` (a cancelled statement, a deadlock, a full disk, an
+  internal error, a client-side ``InterfaceError``), ``RecordingError``, an ``EventError`` or
+  ``QLeverError`` that reaches ``run``; ``--once`` or ``--replay-after`` that did not finish.
+- 2 (``EXIT_CONFIG_ERROR``): refuses to start (a setting missing, the watermark not an integer).
+- 4 (``EXIT_PERSISTENT``): a database error that cannot pass by itself, SQLSTATE class 0A, 22,
+  23 or 42 (our SQL against the wrong schema, a violated constraint, a missing privilege).
+
+The systemd unit restarts after 1 for ever and never after 2 or 4. Nothing is retried
+in-process: the batch in flight stays pending and is sent again after the restart.
 ``SIGTERM`` and ``SIGINT`` let the batch in progress finish and exit 0. ``/metrics``
 (``lae.sync.metrics``) is served from a snapshot the loop refreshes, so the listener needs no
 connection of its own; it is started before the first catch-up.
 
 The access token goes with every update and is removed from every error text the worker logs or
-stores.
+stores, before the text is cut or encoded as JSON (``redacted_body``; contract §8.6).
 """
 
 from __future__ import annotations
@@ -92,7 +114,7 @@ from lae.logging import get_logger
 from lae.settings import Settings
 from lae.sparql.updates import build_delete_where_subjects
 from lae.sync import metrics as sync_metrics
-from lae.sync.errors import EventError, rejected
+from lae.sync.errors import REJECTED_BODY_CHARS, EventError, rejected
 from lae.sync.events import (
     EVENT_COLUMNS,
     UPDATE_SEPARATOR,
@@ -114,33 +136,61 @@ LOCK_RETRY_S: Final = 5.0
 
 MAX_BACKOFF_S: Final = 30.0
 
-EXIT_CONFIG_ERROR: Final = 2
-"""Exit code of a worker that refuses to start (the same value as ``lae.cli.EXIT_CONFIG_ERROR``)."""
-
 EXIT_FAILURE: Final = 1
-"""Exit code when the lock is held (``--once``), the connection is lost, or recording failed.
+"""Exit code of a failure that may pass by itself, or of unknown kind (contract §8.5 item 40).
 
-Also for any other database error (``run`` logs it ``sync_worker_failed``).
+The database is unreachable, the connection is lost, a database error of kind ``"other"``,
+``RecordingError``, an ``EventError`` or ``QLeverError`` that reaches ``run``; ``--once``: the
+lock is held or the outcome is not ``empty`` or ``done``; ``--replay-after``: the lock is held or
+the replay stopped. The unit restarts the worker after it, for ever.
 """
+
+EXIT_CONFIG_ERROR: Final = 2
+"""Exit code of a worker that refuses to start (the same value as ``lae.cli.EXIT_CONFIG_ERROR``).
+
+A setting is missing, the watermark is not a JSON integer, or the arguments are wrong. The unit
+does not restart the worker after it (``RestartPreventExitStatus=``).
+"""
+
+EXIT_PERSISTENT: Final = 4
+"""Exit code of a database error that cannot pass by itself (``database_failure`` says
+``"persistent"``). The unit does not restart the worker after it; 3 is
+``lae.cli.EXIT_NOT_IMPLEMENTED``."""
+
+PERSISTENT_SQLSTATE_CLASSES: Final = frozenset({"0A", "22", "23", "42"})
+"""SQLSTATE classes that mean "this statement is wrong for this schema or this data".
+
+0A feature not supported; 22 data exception; 23 integrity constraint violation; 42 syntax error
+or access rule violation (undefined table or column, insufficient privilege). Every other class
+is of unknown persistence and exits 1 (contract §8.1 item 2)."""
 
 OUTBOX_CHANNEL: Final = "outbox"
 STOP_SIGNALS: Final = (signal.SIGTERM, signal.SIGINT)
 
 _UNAVAILABLE_STATUSES: Final = frozenset({401, 403, 408, 429})
 _REDACTED: Final = "[redacted]"
-_BODY_CHARS: Final = 2000
-"""How much of QLever's answer a ``sync_updates_refused`` log line keeps."""
 
 PROBE_SUBJECT: Final = "urn:lae:sync-probe"
 PROBE_UPDATE: Final = build_delete_where_subjects((PROBE_SUBJECT,))
 """``DELETE WHERE { <urn:lae:sync-probe> ?p ?o }``: matches nothing, changes nothing.
 
-Catch-up sends it after an event was rejected alone: if QLever accepts it, the endpoint takes
-updates and the event is at fault; if not, the endpoint refuses every update (contract §7)."""
+``confirm_rejection`` sends it after an event was rejected alone, on the live path and in
+catch-up: if QLever accepts it, the endpoint takes updates and the event is at fault; if not, the
+endpoint refuses every update (contract §7 and §8)."""
 
 logger = get_logger(__name__)
 
 Outcome = Literal["empty", "done", "rejected", "unavailable", "stale_watermark"]
+DatabaseFailure = Literal["connection_lost", "persistent", "other"]
+Command = Literal["run", "once", "replay", "failed"]
+
+
+@dataclass(frozen=True, slots=True)
+class Refusal:
+    """The probe's answer, when QLever rejected the probe (contract §8.3)."""
+
+    status: int
+    body: str  # token removed, then the first 2000 characters (item 44)
 
 
 @dataclass(frozen=True, slots=True)
@@ -153,6 +203,7 @@ class BatchResult:
     dead_lettered: bool  # that event is now `failed`
     updates_sent: int  # HTTP updates QLever acknowledged
     error: str | None
+    refusal: Refusal | None = None  # set only with outcome "unavailable": the probe was rejected
 
 
 class WatermarkError(ValueError):
@@ -225,7 +276,7 @@ def connection_lost(error: BaseException, *, closed: bool = False) -> bool:
     the connection is ``closed`` ("connection is closed"). Everything else is not: a bug in our
     SQL, a constraint violation, a cancelled statement, a serialization failure, or a client-side
     ``InterfaceError`` on an open connection (wrong argument type, overlapping operations).
-    ``run`` exits 1 for both kinds; only a lost connection is logged ``sync_connection_lost``.
+    ``database_failure`` tells the rest apart.
     """
     if isinstance(error, _SESSION_ENDED):
         return True
@@ -234,9 +285,45 @@ def connection_lost(error: BaseException, *, closed: bool = False) -> bool:
     return isinstance(error, asyncpg.InterfaceError) and closed
 
 
-def _redact(text: str, client: QLeverClient) -> str:
-    token = client.access_token
+def database_failure(error: BaseException, *, closed: bool = False) -> DatabaseFailure:
+    """The kind of a database error the worker exits on (contract §8.3, §8.5 item 39).
+
+    ``"connection_lost"`` when ``connection_lost`` says so (checked first: a ``FATAL`` error is a
+    lost connection whatever its class); ``"persistent"`` for an ``asyncpg.PostgresError`` whose
+    SQLSTATE is in ``PERSISTENT_SQLSTATE_CLASSES``; ``"other"`` for everything else (another
+    SQLSTATE, a ``PostgresError`` without one, a client-side ``InterfaceError`` on an open
+    connection).
+    """
+    if connection_lost(error, closed=closed):
+        return "connection_lost"
+    if isinstance(error, asyncpg.PostgresError):
+        sqlstate = getattr(error, "sqlstate", None)
+        if isinstance(sqlstate, str) and sqlstate[:2] in PERSISTENT_SQLSTATE_CLASSES:
+            return "persistent"
+    return "other"
+
+
+def _redact_token(text: str, token: str | None) -> str:
     return text.replace(token, _REDACTED) if token else text
+
+
+def _redact(text: str, client: QLeverClient) -> str:
+    return _redact_token(text, client.access_token)
+
+
+def redacted_body(body: str, client: QLeverClient) -> str:
+    """QLever's answer with the access token removed, then cut to ``REJECTED_BODY_CHARS``.
+
+    In that order (contract §8.6 items 44 and 45): a token across the cut is removed whole, and
+    the text is redacted before ``EventError`` encodes it as JSON. Every body the worker stores or
+    logs goes through here.
+    """
+    return _redact(body, client)[:REJECTED_BODY_CHARS]
+
+
+def _rejection(event_id: int, error: QLeverError, client: QLeverClient) -> EventError:
+    """``LAE-SYNC-004`` for ``event_id`` with QLever's answer redacted, then cut."""
+    return rejected(event_id, error.status, redacted_body(error.body, client))
 
 
 # -- the watermark ------------------------------------------------------------------------------
@@ -409,6 +496,38 @@ def _ensure_open(conn: asyncpg.Connection) -> None:
         raise ConnectionLostError("the database connection is closed")
 
 
+async def confirm_rejection(
+    conn: asyncpg.Connection, client: QLeverClient, update: str
+) -> QLeverError | None:
+    """``update``, the update of one event sent alone, was just rejected: confirm it (items 26, 34).
+
+    Sends ``PROBE_UPDATE``, then ``update`` again, with nothing else between, and checks that the
+    connection is open before each (``ConnectionLostError`` otherwise). Returns ``None`` when the
+    second send is acknowledged, and its ``QLeverError`` when it is rejected again. Raises
+    ``UpdatesRefusedError`` (the probe's status and body) when the probe is rejected, and a
+    ``QLeverError`` that ``classify`` calls ``unavailable`` unchanged, from either request. Writes
+    nothing to Postgres and counts nothing: the live path and catch-up both call it, and differ
+    only in what follows a confirmed rejection (contract §8.4 item 35).
+    """
+    _ensure_open(conn)
+    try:
+        await client.update(PROBE_UPDATE)
+    except QLeverError as error:
+        if classify(error) == "unavailable":
+            raise
+        raise UpdatesRefusedError(
+            "QLever refused the probe update", status=error.status, body=error.body
+        ) from error
+    _ensure_open(conn)
+    try:
+        await client.update(update)
+    except QLeverError as again:
+        if classify(again) == "unavailable":
+            raise
+        return again
+    return None
+
+
 async def _attempt_failed(
     conn: asyncpg.Connection,
     event: Event,
@@ -430,10 +549,52 @@ async def _attempt_failed(
     return BatchResult("rejected", done, event.id, dead, updates_sent, error)
 
 
+def _unavailable(
+    error: QLeverError, client: QLeverClient, done: tuple[int, ...], updates_sent: int
+) -> BatchResult:
+    """The outcome of an ``unavailable`` error, with a ``Refusal`` when the probe was rejected."""
+    refusal = None
+    if isinstance(error, UpdatesRefusedError):
+        assert error.status is not None  # the probe got an answer: rejected, not unreachable
+        refusal = Refusal(error.status, redacted_body(error.body, client))
+    text = _redact(str(error), client)
+    return BatchResult("unavailable", done, None, False, updates_sent, text, refusal)
+
+
+async def _rejected_alone(
+    conn: asyncpg.Connection,
+    client: QLeverClient,
+    event: Event,
+    update: str,
+    *,
+    done: tuple[int, ...] = (),
+    updates_sent: int = 0,
+) -> BatchResult | None:
+    """``update`` of ``event``, sent alone, was rejected: confirm it, then count (items 34-37).
+
+    Returns ``None`` when the second send was acknowledged: the caller records the event ``done``
+    like any acknowledged event. Otherwise the result: ``unavailable`` (with a ``Refusal`` when
+    the probe was rejected) writes nothing; a confirmed rejection counts one attempt with the
+    ``LAE-SYNC-004`` of the second send.
+    """
+    try:
+        again = await confirm_rejection(conn, client, update)
+    except QLeverError as error:  # unavailable at the probe or the second send, or refused
+        return _unavailable(error, client, done, updates_sent)
+    if again is None:
+        return None
+    failure = _redact(str(_rejection(event.id, again, client)), client)
+    return await _attempt_failed(conn, event, failure, done=done, updates_sent=updates_sent)
+
+
 async def _send_one_by_one(
     conn: asyncpg.Connection, client: QLeverClient, plan: _Plan, expected: str | None
 ) -> BatchResult:
-    """After a rejected batch: send its events alone, in order, recording each (item 21)."""
+    """After a rejected batch: send its events alone, in order, recording each (item 21).
+
+    The first event rejected alone is confirmed (``_rejected_alone``); if its second send is
+    acknowledged, it is recorded like the others and the loop goes on.
+    """
     done: list[int] = []
     sent = 0
     for event, update in zip(plan.events, plan.updates, strict=True):
@@ -442,13 +603,13 @@ async def _send_one_by_one(
             try:
                 await client.update(update)
             except QLeverError as error:
-                text = _redact(str(error), client)
                 if classify(error) == "unavailable":
-                    return BatchResult("unavailable", tuple(done), None, False, sent, text)
-                failure = _redact(str(rejected(event.id, error.status, error.body)), client)
-                return await _attempt_failed(
-                    conn, event, failure, done=tuple(done), updates_sent=sent
+                    return _unavailable(error, client, tuple(done), sent)
+                failed = await _rejected_alone(
+                    conn, client, event, update, done=tuple(done), updates_sent=sent
                 )
+                if failed is not None:
+                    return failed
             sent += 1
         try:
             expected = await _record_done(conn, (event.id,), expected)
@@ -466,6 +627,9 @@ async def process_batch(
     When a ``done`` event has an id above the watermark (it was lowered while no batch was in
     flight), nothing is sent or written and the outcome is ``stale_watermark``: the caller must
     ``catch_up`` first, or the batch would move the watermark past events the index never got.
+
+    An event rejected alone is confirmed by ``confirm_rejection`` before an attempt is counted;
+    a rejected probe is ``unavailable`` with ``refusal`` set (contract §8.4).
 
     Raises ``WatermarkError`` (before anything is sent) if the watermark is not an integer,
     ``RecordingError`` if recording found an event no longer pending, ``ConnectionLostError`` if
@@ -490,12 +654,12 @@ async def process_batch(
             await client.update(text)
         except QLeverError as error:
             if classify(error) == "unavailable":
-                return BatchResult("unavailable", (), None, False, 0, _redact(str(error), client))
+                return _unavailable(error, client, (), 0)
             if len(plan.events) > 1:
                 return await _send_one_by_one(conn, client, plan, expected)
-            event = plan.events[0]
-            failure = _redact(str(rejected(event.id, error.status, error.body)), client)
-            return await _attempt_failed(conn, event, failure)
+            failed = await _rejected_alone(conn, client, plan.events[0], plan.updates[0])
+            if failed is not None:
+                return failed
         sent = 1
     try:
         await _record_done(conn, plan.ids, expected)
@@ -651,26 +815,16 @@ class _CatchUp:
             raise _Rejected(error) from error
 
     async def judge(self, event: Event, update: str) -> None:
-        """``update`` of ``event``, sent alone, was rejected: confirm it (item 26).
+        """``update`` of ``event``, sent alone, was rejected: confirm it (items 26 and 35).
 
-        Sends ``PROBE_UPDATE``, then ``update`` alone again, with nothing else between. Returns
-        when the second send is acknowledged (the event is then replayed like any other);
-        dead-letters the event when it is rejected again. Raises ``UpdatesRefusedError`` when the
-        probe is rejected, and an ``unavailable`` ``QLeverError`` unchanged.
+        ``confirm_rejection`` sends ``PROBE_UPDATE``, then ``update`` alone again. Returns when the
+        second send is acknowledged (the event is then replayed like any other); dead-letters the
+        event when it is rejected again. Raises ``UpdatesRefusedError`` when the probe is
+        rejected, and an ``unavailable`` ``QLeverError`` unchanged.
         """
-        _ensure_open(self.conn)
-        try:
-            await self.client.update(PROBE_UPDATE)
-        except QLeverError as error:
-            if classify(error) == "unavailable":
-                raise
-            raise UpdatesRefusedError(
-                "QLever refused the probe update", status=error.status, body=error.body
-            ) from error
-        try:
-            await self.send(update)
-        except _Rejected as again:
-            await self.dead_letter(event, rejected(event.id, again.error.status, again.error.body))
+        again = await confirm_rejection(self.conn, self.client, update)
+        if again is not None:
+            await self.dead_letter(event, _rejection(event.id, again, self.client))
 
     async def one_by_one(self, plan: _Plan) -> None:
         """After a rejected combined update: each event alone, in order (item 27)."""
@@ -809,6 +963,50 @@ async def _wait_for_work(wake: asyncio.Event, stop: asyncio.Event, seconds: floa
             waiter.cancel()
 
 
+DATABASE_ERRORS: Final = (
+    asyncpg.PostgresError,
+    asyncpg.InterfaceError,
+    ConnectionLostError,
+    OSError,
+)
+"""The errors every ``lae sync-worker`` command reports with ``report_database_error``."""
+
+
+def report_database_error(
+    error: BaseException, *, closed: bool, command: Command, token: str | None
+) -> int:
+    """Log a database error that ends ``command`` and return its exit code (items 39, 40, 43).
+
+    One reporter for ``run``, ``--once``, ``--replay-after`` and ``--failed``. A lost connection
+    is ``sync_connection_lost`` and 1; any other error is ``sync_worker_failed`` with its
+    traceback, and 4 when ``database_failure`` calls it ``"persistent"``, else 1. Nothing is
+    retried: the caller closes its connection and exits (item 42). ``token`` is removed from the
+    text.
+    """
+    kind = database_failure(error, closed=closed)
+    if kind == "connection_lost":
+        logger.error(
+            "sync_connection_lost",
+            error=_redact_token(str(error), token),
+            error_type=type(error).__name__,
+            command=command,
+        )
+        return EXIT_FAILURE
+    persistent = kind == "persistent"
+    code = EXIT_PERSISTENT if persistent else EXIT_FAILURE
+    logger.error(
+        "sync_worker_failed",
+        error=_redact_token(str(error), token),
+        error_type=type(error).__name__,
+        sqlstate=getattr(error, "sqlstate", None),
+        persistent=persistent,
+        exit_code=code,
+        command=command,
+        exc_info=error,
+    )
+    return code
+
+
 def _config_problem(settings: Settings) -> str | None:
     if not settings.qlever_url:
         return "LAE_QLEVER_URL is not set"
@@ -866,8 +1064,9 @@ async def _catch_up_until_done(
                 logger.error(
                     "sync_updates_refused",
                     status=error.status,
-                    body=_redact(error.body, client)[:_BODY_CHARS],
+                    body=redacted_body(error.body, client),
                     consecutive=outages,
+                    during="catch_up",
                 )
             else:
                 logger.warning(
@@ -921,9 +1120,18 @@ async def _loop(
             outages = 0
             if result.done:
                 logger.info("sync_batch_done", events=len(result.done), last_id=result.done[-1])
-        elif result.outcome == "unavailable":
+        elif result.outcome == "unavailable":  # an outage, or the probe rejected (item 36)
             outages += 1
-            logger.warning("sync_unavailable", error=result.error, consecutive=outages)
+            if result.refusal is not None:
+                logger.error(
+                    "sync_updates_refused",
+                    status=result.refusal.status,
+                    body=result.refusal.body,
+                    consecutive=outages,
+                    during="live",
+                )
+            else:
+                logger.warning("sync_unavailable", error=result.error, consecutive=outages)
             await pause(backoff_seconds(outages), stop)
         elif result.outcome == "stale_watermark":
             outages = 0
@@ -1020,22 +1228,25 @@ async def run(
         print(f"lae sync-worker: refusing to start: {error}", file=sys.stderr)
         return EXIT_CONFIG_ERROR
     except (RecordingError, EventError, QLeverError) as error:
-        logger.error("sync_worker_failed", error=_redact(str(error), client))
+        logger.error(
+            "sync_worker_failed",
+            error=_redact(str(error), client),
+            error_type=type(error).__name__,
+            persistent=False,
+            exit_code=EXIT_FAILURE,
+            command="once" if once else "run",
+        )
         return EXIT_FAILURE
-    except (asyncpg.PostgresError, asyncpg.InterfaceError, ConnectionLostError, OSError) as error:
+    except DATABASE_ERRORS as error:
         # A commit that fails leaves its batch pending (rolled back, or never committed once the
-        # connection closes); the restarted worker sends it again (contract §4).
-        if connection_lost(error, closed=conn.is_closed()):
-            logger.error("sync_connection_lost", error=str(error), error_type=type(error).__name__)
-        else:  # not transient: a bug or a violated constraint; the traceback is logged
-            logger.error(
-                "sync_worker_failed",
-                error=_redact(str(error), client),
-                error_type=type(error).__name__,
-                sqlstate=getattr(error, "sqlstate", None),
-                exc_info=True,
-            )
-        return EXIT_FAILURE
+        # connection closes); the restarted worker sends it again (contract §4). Exit 4 only for
+        # an error that cannot pass by itself; the unit does not restart after it (item 41).
+        return report_database_error(
+            error,
+            closed=conn.is_closed(),
+            command="once" if once else "run",
+            token=client.access_token,
+        )
     finally:
         if handle_signals:
             for signum in STOP_SIGNALS:
@@ -1115,10 +1326,12 @@ async def _replay_command(settings: Settings, args: argparse.Namespace) -> int:
         print(f"lae sync-worker: database unreachable: {error}", file=sys.stderr)
         await client.aclose()
         return EXIT_FAILURE
+    holding = False  # the connection, and the lock when one is taken: the last id is printed
     try:
         if not args.target_url and not await _try_lock(conn):
             print("lae sync-worker: another worker holds the lock", file=sys.stderr)
             return EXIT_FAILURE
+        holding = True
         batches = replay_batches(conn, client, after_id=args.replay_after, through_id=args.through)
         async with contextlib.aclosing(batches):
             async for ids in batches:
@@ -1127,6 +1340,14 @@ async def _replay_command(settings: Settings, args: argparse.Namespace) -> int:
         print(last)
         print(f"lae sync-worker: replay stopped: {_redact(str(error), client)}", file=sys.stderr)
         return EXIT_FAILURE
+    except DATABASE_ERRORS as error:  # reported like run's (contract §8.5 item 43)
+        code = report_database_error(
+            error, closed=conn.is_closed(), command="replay", token=client.access_token
+        )
+        if holding:
+            print(last)
+        print(f"lae sync-worker: replay stopped: {_redact(str(error), client)}", file=sys.stderr)
+        return code
     finally:
         with contextlib.suppress(Exception):
             await conn.close(timeout=5)
@@ -1161,6 +1382,14 @@ async def _failed_command(settings: Settings) -> int:
             "SELECT id, kind::text AS kind, record_id, from_version, to_version, attempts, "
             "created_at, processed_at, last_error FROM outbox_events "
             "WHERE status = 'failed' ORDER BY id"
+        )
+    except DATABASE_ERRORS as error:  # reported like run's; no row is printed (item 43)
+        token = settings.qlever_access_token
+        return report_database_error(
+            error,
+            closed=conn.is_closed(),
+            command="failed",
+            token=token.get_secret_value() if token is not None else None,
         )
     finally:
         with contextlib.suppress(Exception):
