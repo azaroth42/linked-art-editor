@@ -14,10 +14,7 @@ worker's backend from a second connection with ``pg_terminate_backend``.
 from __future__ import annotations
 
 import asyncio
-import io
-import json
-import logging
-from collections.abc import AsyncIterator, Awaitable, Callable, Iterator
+from collections.abc import AsyncIterator, Awaitable, Callable
 from typing import Any
 
 import asyncpg
@@ -25,7 +22,6 @@ import pytest
 from sqlalchemy.ext.asyncio import AsyncEngine
 
 from lae.bootstrap.common import asyncpg_dsn
-from lae.logging import configure_logging
 from lae.sync import worker
 from lae.sync.worker import (
     BATCH_SIZE,
@@ -36,18 +32,18 @@ from lae.sync.worker import (
 )
 from tests.publish.conftest import Caller
 from tests.sync.conftest import (
+    Logged,
     Network,
     RecordingClient,
     Served,
     all_events,
+    named,
     triples_of,
     watermark,
 )
 from tests.sync.test_batch import World, five_events, worker_settings
 
 pytestmark = pytest.mark.usefixtures("queue")
-
-Logged = Callable[[], list[dict[str, Any]]]
 
 # -- the classification -------------------------------------------------------------------------
 
@@ -162,23 +158,6 @@ async def other(db_url: str) -> AsyncIterator[asyncpg.Connection]:
         yield connection
     finally:
         await connection.close()
-
-
-@pytest.fixture
-def logged() -> Iterator[Logged]:
-    """Capture the JSON log lines; call the result for the events logged so far."""
-    root = logging.getLogger()
-    saved = root.handlers[:], root.level
-    stream = io.StringIO()
-    configure_logging("info", stream=stream)
-    try:
-        yield lambda: [json.loads(line) for line in stream.getvalue().splitlines() if line]
-    finally:
-        root.handlers, root.level = saved
-
-
-def named(events: list[dict[str, Any]], name: str) -> list[dict[str, Any]]:
-    return [event for event in events if event.get("event") == name]
 
 
 async def run_until_it_exits(db_url: str, client: RecordingClient) -> int:

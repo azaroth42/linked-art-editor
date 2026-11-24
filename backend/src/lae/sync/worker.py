@@ -32,14 +32,27 @@ failure; the one event rejected alone (or whose translation raises at the head o
 and the queue moves on. The record's next event then replaces the record's triples over the
 versions the dead letter left uncertain (``lae.sync.events``).
 
-**Catch-up** (``catch_up``). When the watermark exists and a ``done`` event has a higher id (an
-index rebuilt from an older export, a restored index directory), those events are replayed
-through ``replay`` before any pending event, and the watermark is written after each
-acknowledged batch.
+**Catch-up** (``catch_up``; contract §7, issue #150). When the watermark exists and a ``done``
+event has a higher id (an index rebuilt from an older export, a restored index directory), those
+events are replayed before any pending event, in batches planned like ``process_batch``'s, and
+the watermark is written (compared on write) after each acknowledged batch. Catch-up never stops
+on one event: a ``done`` event that cannot be replayed becomes ``failed``, a dead letter like a
+poisoned pending event, and its record's next event heals it with a replace. Only a confirmed
+permanent failure counts: the event's translation raises at the head of a batch
+(``LAE-SYNC-001`` to ``-003``), or its update, sent alone, is rejected, then ``PROBE_UPDATE`` (a
+``DELETE WHERE`` on a subject nobody owns) is acknowledged, then the update is rejected again. A
+rejected combined update is narrowed by sending its events alone, each recorded on its own. The
+dead letter is one transaction that compares the watermark and sets ``done`` to ``failed`` with
+``last_error`` (``"catch_up": true``); it does not move the watermark or change ``attempts``, and
+catch-up then plans again from the watermark, so a later event of the record is translated as a
+replace. An unavailable QLever, at any send, writes nothing and leaves ``catch_up``; a rejected
+probe means the endpoint refuses every update and raises ``UpdatesRefusedError``, which
+``classify`` calls ``unavailable``. ``run`` retries both with backoff (``--once`` exits 1).
 
 **Replay** (``replay``, ``apply_event``). Both take any ``QLeverClient`` as the target and write
-nothing to Postgres, so Step 2.18 can replay into a second index. ``process_batch`` and
-``catch_up`` are the only writers of ``outbox_events`` and ``sync_state``.
+nothing to Postgres, so Step 2.18 can replay into a second index; ``replay`` still raises on the
+first failure. ``process_batch`` and ``catch_up`` are the only writers of ``outbox_events`` and
+``sync_state``. ``lae sync-worker --failed`` lists the dead letters and only reads.
 
 **Process** (``run``). One ``asyncpg`` connection holds ``pg_try_advisory_lock(SYNC_WORKER_LOCK)``,
 listens on ``outbox`` and makes every read and write. A notification or the 1 s poll wakes the
@@ -53,7 +66,7 @@ not taken for one: it is logged ``sync_worker_failed`` with its traceback, and t
 exits 1. Either way the batch in flight stays pending and is sent again after the restart.
 ``SIGTERM`` and ``SIGINT`` let the batch in progress finish and exit 0. ``/metrics``
 (``lae.sync.metrics``) is served from a snapshot the loop refreshes, so the listener needs no
-connection of its own.
+connection of its own; it is started before the first catch-up.
 
 The access token goes with every update and is removed from every error text the worker logs or
 stores.
@@ -77,6 +90,7 @@ from lae.bootstrap.common import QLEVER_INDEX_WATERMARK, asyncpg_dsn
 from lae.db.models import OutboxEventStatus
 from lae.logging import get_logger
 from lae.settings import Settings
+from lae.sparql.updates import build_delete_where_subjects
 from lae.sync import metrics as sync_metrics
 from lae.sync.errors import EventError, rejected
 from lae.sync.events import (
@@ -114,6 +128,15 @@ STOP_SIGNALS: Final = (signal.SIGTERM, signal.SIGINT)
 
 _UNAVAILABLE_STATUSES: Final = frozenset({401, 403, 408, 429})
 _REDACTED: Final = "[redacted]"
+_BODY_CHARS: Final = 2000
+"""How much of QLever's answer a ``sync_updates_refused`` log line keeps."""
+
+PROBE_SUBJECT: Final = "urn:lae:sync-probe"
+PROBE_UPDATE: Final = build_delete_where_subjects((PROBE_SUBJECT,))
+"""``DELETE WHERE { <urn:lae:sync-probe> ?p ?o }``: matches nothing, changes nothing.
+
+Catch-up sends it after an event was rejected alone: if QLever accepts it, the endpoint takes
+updates and the event is at fault; if not, the endpoint refuses every update (contract §7)."""
 
 logger = get_logger(__name__)
 
@@ -144,6 +167,14 @@ class ConnectionLostError(RuntimeError):
     """The worker's one Postgres connection is closed; nothing more may be sent."""
 
 
+class UpdatesRefusedError(QLeverError):
+    """QLever rejected the probe: it refuses every update; no event is at fault.
+
+    ``status`` and ``body`` are the probe's answer. ``classify`` calls it ``unavailable``
+    whatever its status (contract §3 item 19 as amended, §7.3).
+    """
+
+
 class _StaleWatermark(Exception):
     """The watermark differs from the value read before the batch (rolls the transaction back)."""
 
@@ -152,7 +183,12 @@ class _StaleWatermark(Exception):
 
 
 def classify(error: QLeverError) -> Literal["unavailable", "rejected"]:
-    """``unavailable`` without a status and for 401, 403, 408, 429 and 5xx; else ``rejected``."""
+    """``unavailable`` without a status and for 401, 403, 408, 429 and 5xx; else ``rejected``.
+
+    An ``UpdatesRefusedError`` (the probe was rejected) is ``unavailable`` whatever its status.
+    """
+    if isinstance(error, UpdatesRefusedError):
+        return "unavailable"
     status = error.status
     if status is None or status in _UNAVAILABLE_STATUSES or 500 <= status <= 599:
         return "unavailable"
@@ -389,6 +425,7 @@ async def _attempt_failed(
         record_id=str(event.record_id),
         attempts=attempts,
         error=error,
+        during="live",
     )
     return BatchResult("rejected", done, event.id, dead, updates_sent, error)
 
@@ -553,35 +590,202 @@ async def replay(
     return last
 
 
-async def catch_up(conn: asyncpg.Connection, client: QLeverClient) -> int:
+# -- catch-up -----------------------------------------------------------------------------------
+
+
+class _DeadLettered(Exception):
+    """A ``done`` event became ``failed``: catch-up plans again from the watermark (item 30)."""
+
+
+@dataclass
+class _CatchUp:
+    """The state of one ``catch_up`` call: the watermark it last read or wrote, and its counts."""
+
+    conn: asyncpg.Connection
+    client: QLeverClient
+    metrics: sync_metrics.Metrics | None
+    expected: str | None = None
+    replayed: int = 0
+    dead_letters: int = 0
+
+    async def acknowledged(self, ids: Sequence[int], updates_sent: int) -> None:
+        """One transaction: the watermark to ``max(ids)``, compared on write (item 28).
+
+        Raises ``_StaleWatermark`` (rolled back) if someone changed it.
+        """
+        async with self.conn.transaction():
+            self.expected = await _write_watermark(self.conn, self.expected, max(ids))
+        self.replayed += len(ids)
+        if self.metrics is not None:
+            self.metrics.observe_catch_up(replayed=len(ids), updates_sent=updates_sent)
+
+    async def dead_letter(self, event: Event, error: EventError) -> None:
+        """Record ``event`` as a catch-up dead letter (item 29), log it, raise ``_DeadLettered``.
+
+        Raises ``_StaleWatermark`` (nothing written) if the watermark changed, ``RecordingError``
+        if the event was no longer ``done``.
+        """
+        stored = EventError(error.code, **error.params, catch_up=True)
+        text = _redact(str(stored), self.client)
+        await _dead_letter_done(self.conn, event.id, text, self.expected)
+        self.dead_letters += 1
+        if self.metrics is not None:
+            self.metrics.observe_catch_up(dead_lettered=True)
+        logger.error(
+            "sync_dead_letter",
+            event_id=event.id,
+            record_id=str(event.record_id),
+            error=text,
+            during="catch_up",
+        )
+        raise _DeadLettered
+
+    async def send(self, update: str) -> None:
+        """Send ``update``; an error ``classify`` calls ``unavailable`` leaves ``catch_up``."""
+        _ensure_open(self.conn)
+        try:
+            await self.client.update(update)
+        except QLeverError as error:
+            if classify(error) == "unavailable":
+                raise
+            raise _Rejected(error) from error
+
+    async def judge(self, event: Event, update: str) -> None:
+        """``update`` of ``event``, sent alone, was rejected: confirm it (item 26).
+
+        Sends ``PROBE_UPDATE``, then ``update`` alone again, with nothing else between. Returns
+        when the second send is acknowledged (the event is then replayed like any other);
+        dead-letters the event when it is rejected again. Raises ``UpdatesRefusedError`` when the
+        probe is rejected, and an ``unavailable`` ``QLeverError`` unchanged.
+        """
+        _ensure_open(self.conn)
+        try:
+            await self.client.update(PROBE_UPDATE)
+        except QLeverError as error:
+            if classify(error) == "unavailable":
+                raise
+            raise UpdatesRefusedError(
+                "QLever refused the probe update", status=error.status, body=error.body
+            ) from error
+        try:
+            await self.send(update)
+        except _Rejected as again:
+            await self.dead_letter(event, rejected(event.id, again.error.status, again.error.body))
+
+    async def one_by_one(self, plan: _Plan) -> None:
+        """After a rejected combined update: each event alone, in order (item 27)."""
+        for event, update in zip(plan.events, plan.updates, strict=True):
+            sent = 0
+            if update:
+                try:
+                    await self.send(update)
+                except _Rejected:
+                    await self.judge(event, update)
+                sent = 1
+            await self.acknowledged((event.id,), sent)
+
+    async def batch(self, plan: _Plan) -> None:
+        """Send one planned batch and record it; the head's translation error is a dead letter."""
+        if plan.head_error is not None:
+            await self.dead_letter(plan.events[0], plan.head_error)
+        text = plan.text
+        if text:
+            try:
+                await self.send(text)
+            except _Rejected:
+                if len(plan.events) > 1:
+                    await self.one_by_one(plan)
+                    return
+                await self.judge(plan.events[0], plan.updates[0])
+        await self.acknowledged(plan.ids, 1 if text else 0)
+
+    async def round(self, watermark: int, highest: int) -> None:
+        """Replay the ``done`` events with ``watermark < id <= highest``, in batches, in order."""
+        after = watermark
+        while True:
+            rows = await self.conn.fetch(
+                f"SELECT {EVENT_COLUMNS} FROM outbox_events "
+                "WHERE status = 'done' AND id > $1 AND id <= $2 ORDER BY id LIMIT $3",
+                after,
+                highest,
+                BATCH_SIZE,
+            )
+            if not rows:
+                return
+            plan = await _plan(self.conn, [event_from_row(row) for row in rows])
+            await self.batch(plan)
+            after = plan.events[-1].id
+
+
+class _Rejected(Exception):
+    """An update got a status ``classify`` calls ``rejected`` (inside ``catch_up`` only)."""
+
+    def __init__(self, error: QLeverError) -> None:
+        super().__init__(str(error))
+        self.error = error
+
+
+async def _dead_letter_done(
+    conn: asyncpg.Connection, event_id: int, error: str, expected: str | None
+) -> None:
+    """One transaction: compare the watermark, then set the ``done`` event ``failed`` (item 29).
+
+    ``attempts`` is not changed and nothing else is written. Raises ``_StaleWatermark`` or
+    ``RecordingError`` (both rolled back).
+    """
+    async with conn.transaction():
+        if await _read_watermark(conn, for_update=True) != expected:
+            raise _StaleWatermark
+        status = await conn.execute(
+            "UPDATE outbox_events SET status = 'failed', processed_at = now(), last_error = $2 "
+            "WHERE id = $1 AND status = 'done'",
+            event_id,
+            error,
+        )
+        if status != "UPDATE 1":
+            raise RecordingError(f"outbox event {event_id} is no longer done: {status}")
+
+
+async def catch_up(
+    conn: asyncpg.Connection,
+    client: QLeverClient,
+    *,
+    metrics: sync_metrics.Metrics | None = None,
+) -> int:
     """Replay the ``done`` events above the watermark into the live index; return how many.
 
-    Does nothing without a watermark key. Writes the watermark after each acknowledged batch
-    (compared on write; if someone changed it, starts again from the new value). Raises
-    ``WatermarkError`` if it is not an integer, and the first ``EventError`` or ``QLeverError``.
+    Does nothing without a watermark key. Batches are planned as ``process_batch`` plans them;
+    the watermark is written after each acknowledged batch, or event sent alone (compared on
+    write; if someone changed it, catch-up starts again from the new value). An event that cannot
+    be replayed (its translation fails, or QLever rejects it alone, accepts the probe, and
+    rejects it again) becomes ``failed`` without moving the watermark, and catch-up plans again
+    from the watermark (contract §7). ``metrics`` is told of each thing as it is committed.
+
+    Raises ``WatermarkError`` if the watermark is not an integer, ``RecordingError``, a
+    ``QLeverError`` that ``classify`` calls ``unavailable`` (``UpdatesRefusedError`` when the
+    probe is rejected), and whatever ``asyncpg`` raises. Never an ``EventError``, and never a
+    rejection.
     """
-    replayed = 0
+    state = _CatchUp(conn, client, metrics)
     while True:
-        expected = await _read_watermark(conn)
-        watermark = watermark_value(expected)
+        state.expected = await _read_watermark(conn)
+        watermark = watermark_value(state.expected)
         if watermark is None:
-            return replayed
+            break
         highest: int | None = await conn.fetchval(
             "SELECT max(id) FROM outbox_events WHERE status = 'done'"
         )
         if highest is None or highest <= watermark:
-            return replayed
+            break
         logger.info("sync_catch_up", watermark=watermark, through=highest)
-        batches = replay_batches(conn, client, after_id=watermark, through_id=highest)
         try:
-            async with contextlib.aclosing(batches):
-                async for ids in batches:
-                    async with conn.transaction():
-                        expected = await _write_watermark(conn, expected, ids[-1])
-                    replayed += len(ids)
-        except _StaleWatermark:
+            await state.round(watermark, highest)
+        except (_StaleWatermark, _DeadLettered):
             continue
-        return replayed
+    if state.replayed or state.dead_letters:
+        log = logger.warning if state.dead_letters else logger.info
+        log("sync_caught_up", events=state.replayed, dead_letters=state.dead_letters)
+    return state.replayed
 
 
 # -- the process --------------------------------------------------------------------------------
@@ -642,22 +846,38 @@ async def _take_lock(conn: asyncpg.Connection, stop: asyncio.Event) -> bool:
 
 
 async def _catch_up_until_done(
-    conn: asyncpg.Connection, client: QLeverClient, stop: asyncio.Event
+    conn: asyncpg.Connection,
+    client: QLeverClient,
+    stop: asyncio.Event,
+    metrics: sync_metrics.Metrics | None = None,
 ) -> None:
-    """``catch_up``, retried with backoff while QLever is unavailable."""
+    """``catch_up``, retried with backoff while QLever is unavailable or refuses every update."""
     outages = 0
     while not stop.is_set():
         try:
-            replayed = await catch_up(conn, client)
+            await catch_up(conn, client, metrics=metrics)
         except QLeverError as error:
             if classify(error) != "unavailable":
                 raise
             outages += 1
-            logger.warning("sync_unavailable", error=_redact(str(error), client), during="catch_up")
+            if metrics is not None:
+                metrics.sync_unavailable_total += 1
+            if isinstance(error, UpdatesRefusedError):
+                logger.error(
+                    "sync_updates_refused",
+                    status=error.status,
+                    body=_redact(error.body, client)[:_BODY_CHARS],
+                    consecutive=outages,
+                )
+            else:
+                logger.warning(
+                    "sync_unavailable",
+                    error=_redact(str(error), client),
+                    during="catch_up",
+                    consecutive=outages,
+                )
             await pause(backoff_seconds(outages), stop)
             continue
-        if replayed:
-            logger.info("sync_caught_up", events=replayed)
         return
 
 
@@ -689,7 +909,7 @@ async def _loop(
             if metrics.pending == 0:
                 if await _behind(conn):  # the watermark was lowered while the queue was empty
                     logger.warning("sync_stale_watermark", done=0)
-                    await _catch_up_until_done(conn, client, stop)
+                    await _catch_up_until_done(conn, client, stop, metrics)
                 continue
             if metrics.pending < BATCH_SIZE:
                 await pause(woke + BATCH_WINDOW_S - asyncio.get_running_loop().time(), stop)
@@ -708,7 +928,7 @@ async def _loop(
         elif result.outcome == "stale_watermark":
             outages = 0
             logger.warning("sync_stale_watermark", done=len(result.done))
-            await _catch_up_until_done(conn, client, stop)
+            await _catch_up_until_done(conn, client, stop, metrics)
         else:  # rejected
             outages = 0
             if not result.dead_lettered and result.failed_event is not None:
@@ -743,14 +963,15 @@ async def _serve(
             error=result.error,
         )
         return 0 if result.outcome in ("empty", "done") else EXIT_FAILURE
-    await _catch_up_until_done(conn, client, stop)
     metrics = sync_metrics.Metrics()
     server = None
-    if settings.sync_metrics_port is not None:
+    if settings.sync_metrics_port is not None:  # serving before the first catch-up (§7.5)
         server = await sync_metrics.serve(
             metrics, settings.sync_metrics_host, settings.sync_metrics_port
         )
     try:
+        await metrics.refresh(conn)
+        await _catch_up_until_done(conn, client, stop, metrics)
         await _loop(conn, client, stop, metrics)
     finally:
         if server is not None:
@@ -837,6 +1058,11 @@ def add_arguments(parser: argparse.ArgumentParser) -> None:
         help="process one batch (after catching up) and exit: 0 if empty or done, 1 otherwise",
     )
     parser.add_argument(
+        "--failed",
+        action="store_true",
+        help="print the dead letters (failed events) as JSON lines and exit; needs no QLever",
+    )
+    parser.add_argument(
         "--replay-after",
         type=int,
         metavar="ID",
@@ -861,6 +1087,8 @@ def parse_arguments(argv: Sequence[str]) -> argparse.Namespace:
         parser.error("--through, --target-url and --target-update-url need --replay-after")
     if args.replay_after is not None and args.once:
         parser.error("--once and --replay-after cannot be combined")
+    if args.failed and (args.once or args.replay_after is not None):
+        parser.error("--failed cannot be combined with --once or --replay-after")
     if args.target_update_url is not None and args.target_url is None:
         parser.error("--target-update-url needs --target-url")
     return args
@@ -907,9 +1135,51 @@ async def _replay_command(settings: Settings, args: argparse.Namespace) -> int:
     return 0
 
 
+FAILED_FIELDS: Final = (
+    "id",
+    "kind",
+    "record_id",
+    "from_version",
+    "to_version",
+    "attempts",
+    "created_at",
+    "processed_at",
+    "last_error",
+)
+"""The fields of each line ``--failed`` prints (contract §7.3)."""
+
+
+async def _failed_command(settings: Settings) -> int:
+    """``--failed``: one JSON object per ``failed`` event, ascending by id; only reads."""
+    try:
+        conn = await asyncpg.connect(asyncpg_dsn(settings.database_url))
+    except (OSError, asyncpg.PostgresError) as error:
+        print(f"lae sync-worker: database unreachable: {error}", file=sys.stderr)
+        return EXIT_FAILURE
+    try:
+        rows = await conn.fetch(
+            "SELECT id, kind::text AS kind, record_id, from_version, to_version, attempts, "
+            "created_at, processed_at, last_error FROM outbox_events "
+            "WHERE status = 'failed' ORDER BY id"
+        )
+    finally:
+        with contextlib.suppress(Exception):
+            await conn.close(timeout=5)
+    for row in rows:
+        line = {field: row[field] for field in FAILED_FIELDS}
+        line["record_id"] = str(line["record_id"])
+        for field in ("created_at", "processed_at"):
+            if line[field] is not None:
+                line[field] = line[field].isoformat()
+        print(json.dumps(line, ensure_ascii=False))
+    return 0
+
+
 def main(settings: Settings, argv: Sequence[str] = ()) -> Coroutine[Any, Any, int]:
-    """``lae sync-worker [--once | --replay-after ID ...]``; the coroutine returns the exit code."""
+    """``lae sync-worker [--once | --replay-after ID ... | --failed]``; returns the exit code."""
     args = parse_arguments(argv)
+    if args.failed:
+        return _failed_command(settings)
     if args.replay_after is not None:
         return _replay_command(settings, args)
     return run(settings, once=args.once)

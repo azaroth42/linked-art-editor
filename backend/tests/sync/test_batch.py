@@ -1,8 +1,10 @@
 """Batching, acknowledgement, watermark, failures and the process (contract §3 items 10-24).
 
-Tests 11-27 of the contract. The recording client applies each update to a ``pyoxigraph.Store``
-standing in for QLever; ``store_matches`` checks it holds exactly the stored triples of the
-records' last versions. Crashes are injected by the client; time by patching ``worker.pause``.
+Tests 11-27 of the contract, and tests 38-53 of its §7 (issue #150: catch-up meets a ``done``
+event it cannot replay; items 25-33). The recording client applies each update to a
+``pyoxigraph.Store`` standing in for QLever; the tests check it holds exactly the stored triples
+of the records' last versions. Crashes are injected by the client or a connection class; time
+by patching ``worker.pause``.
 """
 
 from __future__ import annotations
@@ -15,6 +17,7 @@ import socket
 from collections.abc import AsyncIterator, Callable
 from dataclasses import dataclass
 from typing import Any
+from urllib.parse import parse_qs
 from uuid import UUID
 
 import asyncpg
@@ -26,17 +29,20 @@ from sqlalchemy.ext.asyncio import AsyncEngine
 
 from lae.bootstrap.common import asyncpg_dsn
 from lae.logging import configure_logging
-from lae.rdf import expand_to_ntriples
+from lae.rdf import compress, expand_to_ntriples
 from lae.settings import Settings
 from lae.sync import worker
-from lae.sync.errors import REJECTED, UNTRANSLATABLE
+from lae.sync.errors import REJECTED, REVISION_MISSING, UNREADABLE, UNTRANSLATABLE
 from lae.sync.events import translate_event
+from lae.sync.metrics import Metrics
 from lae.sync.qlever_client import QLeverClient, QLeverError
 from lae.sync.worker import (
     BATCH_SIZE,
     EXIT_CONFIG_ERROR,
     MAX_ATTEMPTS,
+    PROBE_UPDATE,
     SYNC_WORKER_LOCK,
+    UpdatesRefusedError,
     apply_event,
     catch_up,
     classify,
@@ -48,14 +54,17 @@ from tests.publish.conftest import Caller
 from tests.publish.test_publish import set_bootstrap_versions
 from tests.sync.conftest import (
     TOKEN,
+    Logged,
     Network,
     RecordingClient,
     Served,
     all_events,
     copy_store,
+    event,
     expected_store,
     id_of,
     insert_event,
+    named,
     new_uri,
     operations,
     pending_events,
@@ -63,6 +72,7 @@ from tests.sync.conftest import (
     publish_content,
     publish_edit,
     publish_new,
+    reject_containing,
     rename,
     revision_lines,
     set_watermark,
@@ -375,15 +385,6 @@ async def test_a_crash_part_way_through_an_update_is_repaired(
 # -- 17-21: rejection, dead letters, restart ----------------------------------------------------
 
 
-def reject_containing(marker: str, body: str = "Invalid SPARQL") -> Any:
-    async def behaviour(c: RecordingClient, sparql: str) -> None:
-        if marker in sparql:
-            raise QLeverError("QLever refused", status=400, body=body)
-        c.apply(sparql)
-
-    return behaviour
-
-
 async def test_a_rejected_batch_is_sent_event_by_event_and_only_the_bad_event_is_counted(
     world: World,
 ) -> None:
@@ -612,10 +613,14 @@ async def test_a_watermark_lowered_between_batches_is_caught_up_before_any_pendi
     started = worker.catch_up
     calls = 0
 
-    async def catch_up_once_running(conn: asyncpg.Connection, c: QLeverClient) -> int:
+    async def catch_up_once_running(
+        conn: asyncpg.Connection, c: QLeverClient, *, metrics: Any = None
+    ) -> int:
         nonlocal calls
         calls += 1
-        return 0 if calls == 1 else await started(conn, c)  # nothing caught up at the start
+        if calls == 1:
+            return 0  # nothing caught up at the start
+        return await started(conn, c, metrics=metrics)
 
     async def until_applied(c: RecordingClient, sparql: str) -> None:
         c.apply(sparql)
@@ -703,8 +708,6 @@ async def test_a_notification_during_the_pending_count_still_wakes_the_loop(
     still 0 in its answer). The poll interval is a minute here, so only the notification can
     wake the loop in time.
     """
-    from lae.sync.metrics import Metrics
-
     refresh = Metrics.refresh
     calls = 0
 
@@ -924,7 +927,9 @@ async def test_the_token_is_in_no_log_line_or_error(
     """QLever's answers echo the token here; the worker must not repeat it anywhere.
 
     The worker builds its client from the settings (``LAE_QLEVER_URL``,
-    ``LAE_QLEVER_ACCESS_TOKEN``); only the HTTP transport is replaced.
+    ``LAE_QLEVER_ACCESS_TOKEN``); only the HTTP transport is replaced. A second run catches up
+    after the watermark is lowered (contract §7, test 53): the probe is refused once, then the
+    first event becomes a catch-up dead letter.
     """
 
     async def pause(seconds: float, stop: asyncio.Event) -> None:
@@ -936,14 +941,24 @@ async def test_the_token_is_in_no_log_line_or_error(
     answers = [503, 401, 400, 400]  # unavailable twice, then the batch and its first event
     stop = asyncio.Event()
     seen: list[str] = []
+    catching_up = False
 
     def handler(request: httpx.Request) -> httpx.Response:
         seen.append(request.headers["authorization"])
+        echo = f"bad request with {request.headers['authorization']} and {TOKEN}"
+        if catching_up:
+            update = parse_qs(request.content.decode())["update"][0]
+            if answers:  # the batch, its first event alone, the probe: refused
+                return httpx.Response(answers.pop(0), text=echo)
+            if "Token one" in update:
+                return httpx.Response(400, text=echo)
+            if "Token two" in update:
+                stop.set()
+            return httpx.Response(200, json={"status": "OK"})
         status = answers.pop(0) if answers else 200
         if status == 200:
             stop.set()
             return httpx.Response(200, json={"status": "OK"})
-        echo = f"bad request with {request.headers['authorization']} and {TOKEN}"
         return httpx.Response(status, text=echo)
 
     real_client = httpx.AsyncClient
@@ -959,15 +974,730 @@ async def test_the_token_is_in_no_log_line_or_error(
     configure_logging("debug", stream=stream)
     try:
         code = await asyncio.wait_for(worker.run(settings, stop=stop), timeout=30)
+        first, second = [row["id"] for row in await all_events(world.conn)]
+        await set_watermark(world.conn, first - 1)
+        catching_up, answers, stop = True, [404, 404, 404], asyncio.Event()
+        caught_up = await asyncio.wait_for(worker.run(settings, stop=stop), timeout=30)
     finally:
         root.handlers, root.level = saved
-    assert code == 0
+    assert code == caught_up == 0
     assert set(seen) == {f"Bearer {TOKEN}"}
     logged = stream.getvalue()
     assert "sync_unavailable" in logged and "sync_event_failed" in logged
-    errors = [row["last_error"] for row in await all_events(world.conn) if row["last_error"]]
+    assert "sync_updates_refused" in logged and "sync_dead_letter" in logged
+    rows = await all_events(world.conn)
+    assert [(row["id"], row["status"]) for row in rows] == [(first, "failed"), (second, "done")]
+    assert '"catch_up": true' in rows[0]["last_error"]
+    errors = [row["last_error"] for row in rows if row["last_error"]]
     assert errors and all("[redacted]" in error for error in errors)
     assert TOKEN not in logged and all(TOKEN not in error for error in errors)
-    from lae.sync.metrics import Metrics
-
     assert TOKEN not in Metrics().render()
+
+
+# -- 38-53: catch-up meets a done event it cannot replay (contract §7, issue #150) --------------
+
+MARKER = "Poison marker 5e1d"
+"""A literal that version 2 of record R adds and version 3 removes; the client rejects it."""
+
+
+def add_name(content: str) -> Callable[[dict[str, Any]], object]:
+    def edit(data: dict[str, Any]) -> None:
+        data["identified_by"].append({"type": "Name", "content": content})
+
+    return edit
+
+
+def drop_name(content: str) -> Callable[[dict[str, Any]], object]:
+    def edit(data: dict[str, Any]) -> None:
+        data["identified_by"] = [n for n in data["identified_by"] if n.get("content") != content]
+
+    return edit
+
+
+@dataclass
+class Poisoned:
+    """The poisoned world of contract §7.7, every event ``done``, the watermark lowered to ``k``.
+
+    Events, in id order: ``k`` = A v1, B v1, R v1, A v2, ``E`` = R v1→v2 (adds the marker), and
+    with a tail: B v2, ``E2`` = R v2→v3 (removes it), A v3. ``states[i]`` is the store after
+    ``ids[i]``. The marker is in ``E``'s update and in ``E2``'s as a ``DIFF``, not as a
+    ``REPLACE``, and never in the probe.
+    """
+
+    world: World
+    records: tuple[UUID, ...]
+    r: UUID
+    ids: list[int]
+    states: list[pyoxigraph.Store]
+    e: int
+    e2: int | None
+
+    @property
+    def k(self) -> int:
+        return self.ids[0]
+
+    @property
+    def above_k(self) -> list[int]:
+        return self.ids[1:]
+
+    @property
+    def before_e(self) -> list[int]:
+        """The events between ``k`` and ``E``: in ``E``'s batch, before it."""
+        return [i for i in self.ids if self.k < i < self.e]
+
+    def client(self, at: int = 0) -> RecordingClient:
+        """A client whose store is the state at ``ids[at]``; it rejects the marker with 400."""
+        client = RecordingClient(copy_store(self.states[at]))
+        client.behaviour = reject_containing(MARKER)
+        return client
+
+    async def expected(self, *more: UUID) -> set[pyoxigraph.Triple]:
+        return await self.world.library(*self.records, *more).expected()
+
+    async def rows(self) -> dict[int, asyncpg.Record]:
+        return {row["id"]: row for row in await all_events(self.world.conn)}
+
+
+async def process_live(world: World) -> tuple[list[int], list[pyoxigraph.Store]]:
+    """Process the pending events one by one; return their ids and the store after each."""
+    ids = [e.id for e in await pending_events(world.conn)]
+    live = RecordingClient()  # accepts everything: the marker was accepted when published
+    states = []
+    for _ in ids:
+        assert len((await process_batch(world.conn, live, limit=1)).done) == 1
+        states.append(copy_store(live.store))
+    return ids, states
+
+
+async def poisoned_world(world: World, *, tail: bool = True) -> Poisoned:
+    a = await world.new("Alpha")
+    b = await world.new("Beta")
+    r = await world.new("Rembrandt")
+    await world.edit(a, rename("Alpha two"))
+    await world.edit(r, add_name(MARKER))
+    if tail:
+        await world.edit(b, rename("Beta two"))
+        await world.edit(r, drop_name(MARKER))
+        await world.edit(a, rename("Alpha three"))
+    ids, states = await process_live(world)
+    poisoned = Poisoned(world, (a, b, r), r, ids, states, ids[4], ids[6] if tail else None)
+    await set_watermark(world.conn, poisoned.k)
+    return poisoned
+
+
+async def assert_ends_as_in_38(
+    p: Poisoned, client: RecordingClient, before: dict[int, asyncpg.Record]
+) -> None:
+    """Test 38's end state: ``E`` a catch-up dead letter, the rest replayed, the store exact."""
+    conn = p.world.conn
+    rows = await p.rows()
+    dead = rows[p.e]
+    assert dead["status"] == "failed"
+    error = dead["last_error"]
+    assert error.startswith(f"{REJECTED} ")
+    params = json.loads(error.split(" ", 1)[1])
+    assert (params["event"], params["status"], params["catch_up"]) == (p.e, 400, True)
+    assert dead["processed_at"] is not None
+    assert dead["processed_at"] != before[p.e]["processed_at"]
+    assert dead["attempts"] == before[p.e]["attempts"]
+    for event_id, row in rows.items():
+        if event_id != p.e:
+            assert tuple(row) == tuple(before[event_id]), event_id
+    assert p.e2 is not None
+    # E2 went as a replace: DELETE WHERE, then INSERT DATA, and no DELETE DATA.
+    replace = await translate_event(conn, await event(conn, p.e2))
+    assert replace.startswith("DELETE WHERE") and "DELETE DATA" not in replace
+    assert replace.index("DELETE WHERE") < replace.index("INSERT DATA")
+    assert any(replace in sent for sent in client.acknowledged)
+    assert triples_of(client.store) == await p.expected()
+    highest = max(i for i, row in rows.items() if row["status"] == "done")
+    assert await watermark(conn) == ("number", str(highest))
+
+
+async def test_catch_up_dead_letters_a_rejected_done_event_and_replays_the_rest(
+    world: World,
+) -> None:
+    """Issue #150: the worker used to exit 1 here, and again at every start."""
+    p = await poisoned_world(world)
+    before = await p.rows()
+    client = p.client()
+
+    replayed = await catch_up(world.conn, client)
+
+    await assert_ends_as_in_38(p, client, before)
+    assert replayed == len(p.above_k) - 1
+
+
+async def test_a_rejection_is_confirmed_by_a_probe_and_a_second_send(world: World) -> None:
+    p = await poisoned_world(world)
+    alone = [await translate_event(world.conn, await event(world.conn, i)) for i in p.before_e]
+    e_update = await translate_event(world.conn, await event(world.conn, p.e))
+    client = p.client()
+
+    await catch_up(world.conn, client)
+
+    assert MARKER in client.sent[0] and len(operations(client.sent[0])) > len(operations(e_update))
+    assert client.sent[1 : 4 + len(alone)] == [*alone, e_update, PROBE_UPDATE, e_update]
+    assert client.sent.count(PROBE_UPDATE) == 1
+    rows = await p.rows()
+    assert all(rows[i]["status"] == "done" and rows[i]["last_error"] is None for i in p.before_e)
+
+
+async def test_an_event_accepted_on_the_second_send_is_not_a_dead_letter(world: World) -> None:
+    p = await poisoned_world(world)
+    client = p.client()
+    rejections = 0
+
+    async def flaky(c: RecordingClient, sparql: str) -> None:
+        nonlocal rejections
+        if MARKER in sparql and rejections < 2:  # the combined update, then E sent alone
+            rejections += 1
+            raise QLeverError("QLever refused", status=400, body="once")
+        c.apply(sparql)
+
+    client.behaviour = flaky
+    assert p.e2 is not None
+    diff = await translate_event(world.conn, await event(world.conn, p.e2))
+    assert diff.startswith("DELETE DATA") and MARKER in diff
+
+    replayed = await catch_up(world.conn, client)
+
+    assert replayed == len(p.above_k)
+    assert {row["status"] for row in (await p.rows()).values()} == {"done"}
+    assert client.sent.count(PROBE_UPDATE) == 1
+    assert diff in client.acknowledged
+    assert triples_of(client.store) == await p.expected()
+    assert await watermark(world.conn) == ("number", str(p.ids[-1]))
+
+
+async def corrupt(conn: asyncpg.Connection, record_id: UUID, version: int, how: str) -> None:
+    """Make a stored revision unreadable (``-002``) or remove it (``-001``)."""
+    if how == "deleted revision":
+        await conn.execute(
+            "DELETE FROM record_revisions WHERE record_id = $1 AND version = $2",
+            record_id,
+            version,
+        )
+        return
+    blob = (
+        b"not zstd at all"
+        if how == "corrupt zstd"
+        else compress(b"<https://x.test/a> <https://x.test/b> <https://x.test/c>.\n")
+    )
+    await conn.execute(
+        "UPDATE record_revisions SET ntriples_zstd = $3 WHERE record_id = $1 AND version = $2",
+        record_id,
+        version,
+        blob,
+    )
+
+
+async def lines_at(conn: asyncpg.Connection, versions: dict[UUID, int]) -> set[pyoxigraph.Triple]:
+    """The triples of the given version of each record."""
+    lines: set[str] = set()
+    for record_id, version in versions.items():
+        lines |= await revision_lines(conn, record_id, version)
+    return expected_store(lines)
+
+
+@pytest.mark.parametrize("how", ["corrupt zstd", "non-canonical line", "deleted revision"])
+async def test_catch_up_dead_letters_a_done_event_whose_revision_is_unreadable(
+    world: World, how: str
+) -> None:
+    c = await world.new("Corrupt")
+    a = await world.new("Alpha")  # k
+    b = await world.new("Beta")
+    await world.edit(c, rename("Corrupt two"))  # C's only event above k
+    await world.edit(a, rename("Alpha two"))
+    await world.edit(b, rename("Beta two"))
+    ids, states = await process_live(world)
+    bad = ids[3]
+    await set_watermark(world.conn, ids[1])
+    await corrupt(world.conn, c, 2, how)
+    c_uri = await world.conn.fetchval("SELECT uri FROM records WHERE id = $1", c)
+    client = RecordingClient(copy_store(states[1]))
+
+    replayed = await catch_up(world.conn, client)
+
+    rows = {row["id"]: row for row in await all_events(world.conn)}
+    assert rows[bad]["status"] == "failed" and rows[bad]["attempts"] == 0
+    code = REVISION_MISSING if how == "deleted revision" else UNREADABLE
+    assert rows[bad]["last_error"].startswith(f"{code} ")
+    assert json.loads(rows[bad]["last_error"].split(" ", 1)[1])["catch_up"] is True
+    assert [i for i, row in rows.items() if row["status"] != "done"] == [bad]
+    assert all(c_uri not in sent for sent in client.sent)
+    assert PROBE_UPDATE not in client.sent
+    assert triples_of(client.store) == await lines_at(world.conn, {a: 2, b: 2, c: 1})
+    assert await watermark(world.conn) == ("number", str(ids[-1]))
+    assert replayed == 3
+
+
+async def test_later_events_of_a_record_with_an_unreadable_revision_are_dead_letters_too(
+    world: World,
+) -> None:
+    c = await world.new("Corrupt")
+    a = await world.new("Alpha")  # k
+    await world.edit(c, rename("Corrupt two"))
+    b = await world.new("Beta")
+    await world.edit(c, rename("Corrupt three"))
+    await world.edit(a, rename("Alpha two"))
+    ids, states = await process_live(world)
+    await set_watermark(world.conn, ids[1])
+    await corrupt(world.conn, c, 2, "corrupt zstd")
+    client = RecordingClient(copy_store(states[1]))
+
+    await catch_up(world.conn, client)
+
+    rows = {row["id"]: row for row in await all_events(world.conn)}
+    assert [i for i, row in rows.items() if row["status"] == "failed"] == [ids[2], ids[4]]
+    assert all(rows[i]["last_error"].startswith(f"{UNREADABLE} ") for i in (ids[2], ids[4]))
+    assert triples_of(client.store) == await lines_at(world.conn, {a: 2, b: 1, c: 1})
+    assert PROBE_UPDATE not in client.sent
+    assert await watermark(world.conn) == ("number", str(ids[-1]))
+
+
+async def test_an_untranslatable_done_event_inside_a_batch_is_judged_at_the_head(
+    world: World, other: asyncpg.Connection, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    a = await world.new("Alpha")  # k
+    b = await world.new("Beta")
+    (k, before_merge), states = await process_live(world)
+    merge = await insert_event(world.conn, b, "merge", 1, 2, status="done")
+    await set_watermark(world.conn, merge)  # as if it had been applied (a later step's kind)
+    c = await world.new("Gamma")
+    (last,), _ = await process_live(world)
+    await set_watermark(world.conn, k)
+    client = RecordingClient(copy_store(states[0]))
+    judged: list[Any] = []
+    dead_letter = worker._dead_letter_done
+
+    async def record_watermark(conn: asyncpg.Connection, *args: Any) -> None:
+        judged.append((len(client.sent), await watermark(other)))
+        await dead_letter(conn, *args)
+
+    monkeypatch.setattr(worker, "_dead_letter_done", record_watermark)
+
+    replayed = await catch_up(world.conn, client)
+
+    assert judged == [(1, ("number", str(before_merge)))]  # B v1 sent and recorded first
+    assert len(client.sent) == 2 and replayed == 2
+    row = next(r for r in await all_events(world.conn) if r["id"] == merge)
+    assert row["status"] == "failed" and row["last_error"].startswith(f"{UNTRANSLATABLE} ")
+    assert triples_of(client.store) == await world.library(a, b, c).expected()
+    assert await watermark(world.conn) == ("number", str(last))
+
+
+TRANSIENT: list[str | int] = ["connect", "timeout", 500, 503, 401, 403, 429]
+STRIKES = ["combined", "alone", "probe", "second"]
+
+
+def transient(failure: str | int) -> QLeverError:
+    if failure == "connect":
+        return QLeverError("QLever at x failed", body="ConnectError('connection refused')")
+    if failure == "timeout":
+        return QLeverError("QLever at x failed", body="ReadTimeout('timed out')")
+    assert isinstance(failure, int)
+    return unavailable(failure)
+
+
+def strike(where: str, failure: str | int) -> Any:
+    """Reject the marker; raise ``failure`` once, at the request ``where`` names."""
+    struck = False
+
+    async def behaviour(c: RecordingClient, sparql: str) -> None:
+        nonlocal struck
+        n = len(c.sent) - 1
+        hit = {
+            "combined": n == 0,
+            "alone": n == 2,  # the second event sent alone after the rejected batch
+            "probe": sparql == PROBE_UPDATE,
+            "second": MARKER in sparql and PROBE_UPDATE in c.sent[:-1],
+        }[where]
+        if hit and not struck:
+            struck = True
+            raise transient(failure)
+        if MARKER in sparql:
+            raise QLeverError("QLever refused", status=400, body="Invalid SPARQL")
+        c.apply(sparql)
+
+    return behaviour
+
+
+@pytest.mark.parametrize("where", STRIKES)
+@pytest.mark.parametrize("failure", TRANSIENT)
+async def test_a_transient_failure_during_catch_up_dead_letters_nothing(
+    world: World, failure: str | int, where: str
+) -> None:
+    p = await poisoned_world(world)
+    before = await p.rows()
+    client = p.client()
+    client.behaviour = strike(where, failure)
+
+    with pytest.raises(QLeverError) as raised:
+        await catch_up(world.conn, client)
+
+    assert classify(raised.value) == "unavailable"
+    assert await p.rows() == before
+    acknowledged = {"combined": p.k, "alone": p.before_e[0]}.get(where, p.before_e[-1])
+    assert await watermark(world.conn) == ("number", str(acknowledged))
+    client.behaviour = reject_containing(MARKER)
+    await catch_up(world.conn, client)
+    await assert_ends_as_in_38(p, client, before)
+
+
+async def test_a_long_outage_during_catch_up_dead_letters_nothing(
+    world: World, other: asyncpg.Connection, slept: list[float]
+) -> None:
+    """Test 44, continued: 20 consecutive outages through the retrying catch-up."""
+    p = await poisoned_world(world)
+    before = await p.rows()
+    client = p.client()
+    failed_after_outages: list[int] = []
+    reject = reject_containing(MARKER)
+
+    async def down_twenty_times(c: RecordingClient, sparql: str) -> None:
+        if len(c.sent) <= 20:
+            raise unavailable(503)
+        if len(c.sent) == 21:
+            failed_after_outages.append(
+                await other.fetchval("SELECT count(*) FROM outbox_events WHERE status = 'failed'")
+            )
+        await reject(c, sparql)
+
+    client.behaviour = down_twenty_times
+    metrics = Metrics()
+
+    await worker._catch_up_until_done(world.conn, client, asyncio.Event(), metrics)
+
+    assert failed_after_outages == [0]
+    assert slept == [worker.backoff_seconds(n) for n in range(1, 21)]
+    assert slept[:8] == [1, 2, 4, 8, 16, 30, 30, 30]
+    assert metrics.sync_unavailable_total == 20
+    await assert_ends_as_in_38(p, client, before)
+
+
+@pytest.mark.parametrize("status", [404, 405, 400])
+async def test_a_rejected_probe_blames_the_endpoint_not_the_event(
+    world: World, status: int, slept: list[float], logged: Logged
+) -> None:
+    _, ids = await five_events(world)
+    assert (await process_batch(world.conn, RecordingClient())).outcome == "done"
+    await set_watermark(world.conn, ids[1])
+    requests: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        requests.append(parse_qs(request.content.decode())["update"][0])
+        if len(requests) <= 6:  # catch_up alone, then the first round of the retrying one
+            return httpx.Response(status, text=f"no updates here ({status})")
+        return httpx.Response(200, json={"status": "OK"})
+
+    before = await snapshot_tables(world.conn)
+    metrics = Metrics()
+    async with http_client(handler) as client:
+        with pytest.raises(UpdatesRefusedError) as raised:
+            await catch_up(world.conn, client)
+        assert classify(raised.value) == "unavailable"
+        assert raised.value.status == status and "no updates here" in raised.value.body
+        assert len(requests) == 3 and requests[2] == PROBE_UPDATE
+        assert await snapshot_tables(world.conn) == before
+
+        await worker._catch_up_until_done(world.conn, client, asyncio.Event(), metrics)
+
+    assert slept == [1]
+    refused = named(logged(), "sync_updates_refused")
+    assert [(e["level"], e["status"], e["consecutive"]) for e in refused] == [("error", status, 1)]
+    assert "no updates here" in refused[0]["body"]
+    assert metrics.sync_unavailable_total == 1
+    assert {row["status"] for row in await all_events(world.conn)} == {"done"}
+    assert await watermark(world.conn) == ("number", str(ids[-1]))
+
+
+@pytest.mark.parametrize("batch_of_one", [False, True])
+async def test_a_dead_letter_at_the_top_of_the_range_ends_catch_up(
+    world: World, batch_of_one: bool
+) -> None:
+    p = await poisoned_world(world, tail=False)
+    assert p.ids[-1] == p.e
+    if batch_of_one:  # E is the only done event above the watermark
+        await set_watermark(world.conn, p.before_e[-1])
+        client = p.client(at=len(p.ids) - 2)
+    else:
+        client = p.client()
+    e_update = await translate_event(world.conn, await event(world.conn, p.e))
+
+    await catch_up(world.conn, client)
+
+    if batch_of_one:
+        assert client.sent == [e_update, PROBE_UPDATE, e_update]
+    assert (await p.rows())[p.e]["status"] == "failed"
+    assert await watermark(world.conn) == ("number", str(p.before_e[-1]))
+    assert (await process_batch(world.conn, client)).outcome == "empty"
+    await world.edit(p.r, drop_name(MARKER))
+    (heal,) = await pending_events(world.conn)
+    update = await translate_event(world.conn, heal)
+    assert update.startswith("DELETE WHERE") and "DELETE DATA" not in update
+
+    result = await process_batch(world.conn, client)
+
+    assert (result.outcome, result.done) == ("done", (heal.id,))
+    assert heal.id > p.e and await watermark(world.conn) == ("number", str(heal.id))
+    assert triples_of(client.store) == await p.expected()
+
+
+async def test_a_restart_after_a_catch_up_dead_letter_does_not_meet_the_event_again(
+    world: World, db_url: str
+) -> None:
+    p = await poisoned_world(world)
+    client = p.client()
+    await catch_up(world.conn, client)
+    after = await p.rows()
+    sent = len(client.sent)
+    restarted = await asyncpg.connect(asyncpg_dsn(db_url))
+    try:
+        assert await catch_up(restarted, client) == 0
+    finally:
+        await restarted.close()
+    assert len(client.sent) == sent
+
+    assert await worker.run(worker_settings(db_url), once=True, client=client) == 0
+    assert await worker.run(worker_settings(db_url), once=True, client=client) == 0
+
+    assert len(client.sent) == sent  # neither the event nor a probe
+    rows = await p.rows()
+    assert rows == after
+    assert rows[p.e]["status"] == "failed"
+    # The dead-letter transaction sets only a done event, exactly one row.
+    current = await world.conn.fetchval(
+        "SELECT value::text FROM sync_state WHERE key = 'qlever_index_watermark'"
+    )
+    await world.new("Pending")
+    (pending,) = await pending_events(world.conn)
+    for event_id in (p.e, pending.id, max(p.ids) + 1000):
+        with pytest.raises(worker.RecordingError):
+            await worker._dead_letter_done(world.conn, event_id, "LAE-SYNC-004 {}", current)
+    rows = await p.rows()
+    assert {i: row for i, row in rows.items() if i != pending.id} == after
+    assert (rows[pending.id]["status"], rows[pending.id]["last_error"]) == ("pending", None)
+
+
+async def test_a_crash_before_the_dead_letter_is_recorded_changes_nothing(
+    world: World, db_url: str
+) -> None:
+    p = await poisoned_world(world)
+    before = await p.rows()
+    client = p.client()
+
+    class KilledBeforeCommit(asyncpg.Connection):  # type: ignore[misc]
+        async def execute(self, query: str, *args: Any, **kwargs: Any) -> str:
+            status: str = await super().execute(query, *args, **kwargs)
+            if "SET status = 'failed'" in query:
+                raise RuntimeError("the process was killed before the commit")
+            return status
+
+    dying = await asyncpg.connect(asyncpg_dsn(db_url), connection_class=KilledBeforeCommit)
+    try:
+        with pytest.raises(RuntimeError, match="killed"):
+            await catch_up(dying, client)
+    finally:
+        await dying.close()
+
+    assert await p.rows() == before
+    assert await watermark(world.conn) == ("number", str(p.before_e[-1]))
+    probes = client.sent.count(PROBE_UPDATE)
+    await catch_up(world.conn, client)
+    assert client.sent.count(PROBE_UPDATE) == probes + 1  # judged again, dead-lettered once
+    await assert_ends_as_in_38(p, client, before)
+
+
+async def test_a_watermark_changed_while_an_event_is_judged_is_not_overwritten(
+    world: World, other: asyncpg.Connection, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    p = await poisoned_world(world)
+    before = await p.rows()
+    client = p.client()
+    lowered = p.before_e[0]
+    lowering = True
+    reject = reject_containing(MARKER)
+
+    async def lower_during_the_second_send(c: RecordingClient, sparql: str) -> None:
+        nonlocal lowering
+        if lowering and MARKER in sparql and PROBE_UPDATE in c.sent[:-1]:
+            lowering = False
+            await set_watermark(other, lowered)
+        await reject(c, sparql)
+
+    client.behaviour = lower_during_the_second_send
+    outcomes: list[Any] = []
+    dead_letter = worker._dead_letter_done
+
+    async def watched(conn: asyncpg.Connection, event_id: int, *args: Any) -> None:
+        try:
+            await dead_letter(conn, event_id, *args)
+        except worker._StaleWatermark:
+            status = await other.fetchval(
+                "SELECT status::text FROM outbox_events WHERE id = $1", event_id
+            )
+            outcomes.append(("stale", status, await watermark(other)))
+            raise
+        outcomes.append(("recorded", None, None))
+
+    monkeypatch.setattr(worker, "_dead_letter_done", watched)
+    replayed_again = await translate_event(world.conn, await event(world.conn, p.before_e[1]))
+
+    await catch_up(world.conn, client)
+
+    assert outcomes == [("stale", "done", ("number", str(lowered))), ("recorded", None, None)]
+    assert client.sent.count(PROBE_UPDATE) == 2
+    assert client.sent.count(replayed_again) == 2  # sent alone again, from the lowered value
+    await assert_ends_as_in_38(p, client, before)
+
+
+@pytest.mark.parametrize("met_by", ["start", "idle loop"])
+async def test_the_worker_keeps_running_past_a_poisoned_done_event(
+    world: World,
+    db_url: str,
+    slept: list[float],
+    logged: Logged,
+    monkeypatch: pytest.MonkeyPatch,
+    met_by: str,
+) -> None:
+    p = await poisoned_world(world)
+    client = p.client()
+    fetched = asyncio.Event()
+    reject = reject_containing(MARKER)
+
+    async def blocked_until_fetched(c: RecordingClient, sparql: str) -> None:
+        await fetched.wait()
+        await reject(c, sparql)
+
+    if met_by == "start":
+        client.behaviour = blocked_until_fetched
+        await world.new("Delta")  # pending, behind the catch-up
+    else:  # the index is current when the worker starts; it is restored while the loop idles
+        await set_watermark(world.conn, p.ids[-1])
+        client.store = copy_store(p.states[-1])
+        monkeypatch.setattr(worker, "POLL_INTERVAL_S", 0.05)
+    port = free_port()
+    stop = asyncio.Event()
+    task = asyncio.create_task(
+        worker.run(worker_settings(db_url, sync_metrics_port=port), client=client, stop=stop)
+    )
+    try:
+        early = await metrics_when(port, "sync_catch_up_events_total", 0)
+        assert early["sync_catch_up_events_total"] == 0
+        if met_by == "start":
+            assert len(client.sent) == 1  # catch-up has begun and waits for this scrape
+            assert early["outbox_pending"] == 1
+        else:
+            client.store = copy_store(p.states[0])
+            await set_watermark(world.conn, p.k)
+            await metrics_when(port, "sync_catch_up_dead_letters_total", 1)
+            await world.new("Delta")
+        fetched.set()
+        await metrics_when(port, "sync_events_done_total", 1)
+        final = await metrics_when(port, "outbox_pending", 0, at_most=True)
+        assert not task.done()
+    finally:
+        stop.set()
+        code = await asyncio.wait_for(task, timeout=10)
+    assert code == 0
+    assert final["outbox_failed"] == 1
+    assert final["sync_dead_letters_total"] == 1
+    assert final["sync_catch_up_dead_letters_total"] == 1
+    assert final["sync_catch_up_events_total"] == len(p.above_k) - 1
+    assert PROBE_UPDATE in client.acknowledged  # acknowledged, but not counted as sent
+    assert final["updates_sent_total"] == sum(s != PROBE_UPDATE for s in client.acknowledged)
+    rows = await p.rows()
+    assert [row["status"] for row in rows.values()].count("failed") == 1
+    delta = rows[max(rows)]
+    assert delta["status"] == "done"
+    dead = named(logged(), "sync_dead_letter")
+    assert [(d["level"], d["during"], d["event_id"], d["record_id"]) for d in dead] == [
+        ("error", "catch_up", p.e, str(p.r))
+    ]
+    assert triples_of(client.store) == await p.expected(delta["record_id"])
+
+
+async def test_once_dead_letters_in_catch_up_without_sleeping(
+    world: World, db_url: str, slept: list[float]
+) -> None:
+    p = await poisoned_world(world)
+    before = await p.rows()
+    client = p.client()
+
+    assert await worker.run(worker_settings(db_url), once=True, client=client) == 0
+
+    assert slept == []
+    await assert_ends_as_in_38(p, client, before)
+
+
+async def test_replay_still_raises_on_the_first_failure_and_writes_nothing(
+    world: World, db_url: str, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    p = await poisoned_world(world)
+    before = await snapshot_tables(world.conn)
+    for batch_size in (BATCH_SIZE, 1):
+        client = p.client()
+        with pytest.raises(QLeverError) as raised:
+            await replay(world.conn, client, after_id=p.k, batch_size=batch_size)
+        assert raised.value.status == 400
+        assert PROBE_UPDATE not in client.sent
+        if batch_size == 1:
+            assert len(client.sent) == len(p.before_e) + 1  # stops at E
+    assert await snapshot_tables(world.conn) == before
+
+    sent: list[str] = []
+
+    def handler(request: httpx.Request) -> httpx.Response:
+        update = parse_qs(request.content.decode())["update"][0]
+        sent.append(update)
+        if MARKER in update:
+            return httpx.Response(400, text="Invalid SPARQL")
+        return httpx.Response(200, json={"status": "OK"})
+
+    real_client = httpx.AsyncClient
+
+    def with_transport(**kwargs: Any) -> httpx.AsyncClient:
+        return real_client(transport=httpx.MockTransport(handler), **kwargs)
+
+    monkeypatch.setattr(httpx, "AsyncClient", with_transport)
+    settings = worker_settings(db_url, qlever_url=QLEVER_URL, qlever_access_token=SecretStr(TOKEN))
+
+    code = await worker.main(settings, ["--replay-after", str(p.k)])
+
+    assert code == 1
+    out = capsys.readouterr()
+    assert out.out.strip() == str(p.k) and "replay stopped" in out.err
+    assert len(sent) == 1 and PROBE_UPDATE not in sent
+    assert await snapshot_tables(world.conn) == before
+
+
+async def test_failed_lists_the_dead_letters_as_json_lines(
+    world: World, db_url: str, other: asyncpg.Connection, capsys: pytest.CaptureFixture[str]
+) -> None:
+    settings = worker_settings(db_url)  # no QLever settings at all
+    assert await worker.main(settings, ["--failed"]) == 0
+    assert capsys.readouterr().out == ""
+
+    p = await poisoned_world(world)
+    await catch_up(world.conn, p.client())
+    assert await other.fetchval("SELECT pg_try_advisory_lock($1)", SYNC_WORKER_LOCK)
+    capsys.readouterr()  # the log lines of the catch-up
+    try:
+        assert await worker.main(settings, ["--failed"]) == 0
+    finally:
+        await other.execute("SELECT pg_advisory_unlock($1)", SYNC_WORKER_LOCK)
+
+    (line,) = capsys.readouterr().out.splitlines()
+    shown = json.loads(line)
+    row = (await p.rows())[p.e]
+    assert list(shown) == list(worker.FAILED_FIELDS)
+    assert shown["id"] == p.e and shown["kind"] == "publish"
+    assert shown["record_id"] == str(p.r)
+    assert (shown["from_version"], shown["to_version"], shown["attempts"]) == (1, 2, 0)
+    assert shown["last_error"] == row["last_error"]
+    assert shown["processed_at"] == row["processed_at"].isoformat()
+    assert shown["created_at"]
+    for combined in (["--failed", "--once"], ["--failed", "--replay-after", "0"]):
+        with pytest.raises(SystemExit):
+            worker.parse_arguments(combined)

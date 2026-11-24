@@ -1,4 +1,6 @@
-"""The sync worker against a real QLever 0.6.0 (contract §5, tests 30-37; marked ``integration``).
+"""The sync worker against a real QLever 0.6.0 (contract §5 and §7.7, tests 30-37 and 55).
+
+Marked ``integration``; run locally only, never in CI.
 
 Every test builds a fresh index with ``lae.bootstrap.index.build_index`` and ``deploy/Qleverfile``
 in a temporary directory (empty, or from the N-Triples the test gives), serves it on
@@ -38,7 +40,7 @@ from lae.sparql.updates import build_update
 from lae.sync import worker
 from lae.sync.events import translate_event
 from lae.sync.qlever_client import QLeverClient, QLeverError
-from lae.sync.worker import classify, process_batch
+from lae.sync.worker import PROBE_UPDATE, catch_up, classify, process_batch
 from tests.api.conftest import AAT, insert_record, titled_record
 from tests.publish.conftest import Caller, publish
 from tests.publish.test_publish import set_bootstrap_versions
@@ -58,6 +60,7 @@ from tests.sync.conftest import (
     rename,
     revision_lines,
 )
+from tests.sync.test_batch import MARKER, World, poisoned_world
 
 pytestmark = [pytest.mark.integration, pytest.mark.usefixtures("queue")]
 
@@ -480,3 +483,50 @@ async def test_delta_triples_grow_by_the_gross_change(
     # derived from it (Step 1.19a).
     assert after - before == 4
     assert replayed >= after
+
+
+# -- 55: a done event QLever itself rejects, in catch-up (contract §7, issue #150) -------------
+
+
+class RejectsTheMarker(QLeverClient):
+    """Sends ``NOT SPARQL`` in place of any update that contains the marker: QLever's own 400."""
+
+    async def update(self, sparql: str) -> None:
+        await super().update("NOT SPARQL" if MARKER in sparql else sparql)
+
+
+async def test_catch_up_skips_an_update_qlever_rejects_and_heals_the_record(
+    served: Served,
+    network: Network,
+    editor: Caller,
+    db_engine: AsyncEngine,
+    conn: asyncpg.Connection,
+    start_qlever: Start,
+) -> None:
+    p = await poisoned_world(World(served, network, editor, db_engine, conn))
+    a, b, r = p.records
+    server = await start_qlever(await revision_lines(conn, a, 1), watermark=p.k)  # state at k
+    triples = await server.count("?s ?p ?o")
+    async with server.client() as client:
+        await client.update(PROBE_UPDATE)  # if QLever refuses it, stop and report (§7.7)
+    assert await server.count("?s ?p ?o") == triples
+
+    async with RejectsTheMarker(server.url, server.url, server.token) as client:
+        replayed = await catch_up(conn, client)
+
+    rows = await p.rows()
+    dead = rows[p.e]
+    assert dead["status"] == "failed" and dead["last_error"].startswith("LAE-SYNC-004 ")
+    params = json.loads(dead["last_error"].split(" ", 1)[1])
+    assert params["status"] == 400 and params["catch_up"] is True
+    assert [i for i, row in rows.items() if row["status"] != "done"] == [p.e]
+    assert replayed == len(p.above_k) - 1
+    for record_id, title in ((a, "Alpha three"), (b, "Beta two"), (r, "Rembrandt")):
+        uri = await conn.fetchval("SELECT uri FROM records WHERE id = $1", record_id)
+        version = await conn.fetchval("SELECT version FROM records WHERE id = $1", record_id)
+        lines = await revision_lines(conn, record_id, version)
+        assert await server.record_triples(uri) == len(lines)
+        assert await server.count(f'<{uri}> ?p "{title}"') == 1  # the derived _label
+    assert await server.count(f'?s ?p "{MARKER}"') == 0
+    assert await server.count('?s ?p "Alpha two"') == 0
+    print(f"QLever rejected E with: {dead['last_error'][:160]}")
