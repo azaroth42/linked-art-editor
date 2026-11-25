@@ -22,7 +22,7 @@ Tick a step only when its **Verify** block passes, CI is green, and the commit e
 | Phase | Steps done | Notes |
 | :-- | :-- | :-- |
 | 0 — Foundations & spikes | 12 / 12 | Complete; tracking issue #13 closed. |
-| 1 — Core authoring loop | 22 / 22 | All steps merged; last 1.22 scale gate #164 (autocomplete target relaxed to 250 ms by the owner), derived root `_label` 1.19a #163, 1.19 #155, 1.20 #157. Before closing #36: follow-ups #150, #151, #154, and a cross-cutting Fable review of edit → validate → publish → sync. Label-language follow-up: #162. |
+| 1 — Core authoring loop | 22 / 22 | Complete; tracking issue #36 closed 2026-11-25. Last steps: 1.22 scale gate #164 (autocomplete target relaxed to 250 ms by the owner, #165), 1.19a #163, 1.19b #173. Follow-ups #150, #151, #154, #171, #176 merged; core review of edit → validate → publish → sync #178 (#180, #182, #183). Carried forward: #179 (Phase 3), #181 (Phase 2). |
 | 2 — Curation, vocabularies, scale | 1 / 20 | 2.1 merged (#140); 2.16 started earlier, paused. |
 | 3 — Semantic search & agents | 0 / 13 | |
 | 4 — Explorers, translation, admin | 0 / 19 | |

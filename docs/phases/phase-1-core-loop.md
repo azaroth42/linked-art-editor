@@ -406,17 +406,17 @@ The specification is rules R1–R19 of `docs/spikes/S3-projection.md` (ADR-0018)
 
 ## Exit Checklist
 
-- [ ] `tests/test_roundtrip.py` passes for 100% of the corpus through `hydrate` → `project` → `strip_internal_iris`.
-- [ ] Publish from the UI writes `records`, `record_revisions`, `entity_labels`, `outbox_events` in one transaction and the change is in QLever within 1 s (measured).
-- [ ] Dependent stub created inline publishes atomically with its parent.
-- [ ] A stale-epoch client is rejected with close code 4409 and keeps its local edits in IndexedDB.
-- [ ] Draft reaper removes a 6-day-old draft and an unpublished 6-day-old record.
-- [ ] `/id/{uuid}` serves JSON-LD (with profile), Turtle, HTML, `?version=N`, 410 for deleted, with no internal node IRIs in any body.
-- [ ] Autocomplete returns newly published entities (either natively or via the overlay) and p95 < 100 ms at 1M records.
-- [ ] 1M-record bootstrap completed with timings recorded.
-- [ ] Three-editor collaboration e2e passes with no lost edits.
-- [ ] `errors.json` has an entry for every diagnostic code; `pnpm lint` reports zero literal strings; axe passes on `/`, `/edit/:id`, `/records/:id/history`, `/id/:uuid`.
-- [ ] `docs/spikes/P1-exit-measurements.md` exists.
+- [x] `tests/test_roundtrip.py` passes for 100% of the corpus through `hydrate` → `project` → `strip_internal_iris`.
+- [x] Publish from the UI writes `records`, `record_revisions`, `entity_labels`, `outbox_events` in one transaction and the change is in QLever within 1 s (measured).
+- [x] Dependent stub created inline publishes atomically with its parent.
+- [x] A stale-epoch client is rejected with close code 4409 and keeps its local edits in IndexedDB.
+- [x] Draft reaper removes a 6-day-old draft and an unpublished 6-day-old record.
+- [x] `/id/{uuid}` serves JSON-LD (with profile), Turtle, HTML, `?version=N`, 410 for deleted, with no internal node IRIs in any body.
+- [x] Autocomplete returns newly published entities (either natively or via the overlay) and p95 < 100 ms at 1M records. *(Owner relaxed the target to 250 ms, #165; measured p95 211–246 ms, `docs/spikes/P1-exit-measurements.md` §4.)*
+- [x] 1M-record bootstrap completed with timings recorded.
+- [x] Three-editor collaboration e2e passes with no lost edits.
+- [x] `errors.json` has an entry for every diagnostic code; `pnpm lint` reports zero literal strings; axe passes on `/`, `/edit/:id`, `/records/:id/history`, `/id/:uuid`.
+- [x] `docs/spikes/P1-exit-measurements.md` exists.
 
 ## Common Mistakes
 
