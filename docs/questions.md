@@ -1063,5 +1063,13 @@ Choices made in contract 1.19b, for the owner to overturn if wanted:
    field at about 170 updates per second took 8.4 s to converge after they stopped. Nothing was
    lost, and human typing is far slower. It may matter for Phase 3 agents
    (`docs/spikes/P1-exit-measurements.md` §3).
+   **Explained in the core review (slice A, #178), 2026-11-25: not a defect.** A room persists
+   one update per transaction, one at a time, before it applies and broadcasts it (ADR-0027
+   invariant 2). Measured without a browser: 5 to 6 ms per update, so one room takes about
+   170 to 200 one-character updates per second, and the probe typed at that rate. The backlog
+   waits in the sockets, in order, and drains when the typing stops. Three people typing fast
+   into one field produce about 30 per second. Raising the limit (one transaction for the
+   frames that are waiting) changes the persist-before-apply core and is #179, to be
+   decided before Phase 3 Step 3.6.
 3. **Overlay and QLever disagree on word starts (minor).** The overlay finds a word only after a
    space; QLever's text index also finds it after punctuation (§4.1).

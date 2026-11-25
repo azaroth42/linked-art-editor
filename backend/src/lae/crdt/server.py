@@ -51,7 +51,7 @@ endpoint answers 401 ``LAE-CRDT-001``; a server without ``LAE_INTERNAL_TOKEN`` r
 - ``GET  /internal/rooms`` → ``[RoomInfo]``
 - ``GET  /internal/rooms/{id}/snapshot`` → ``Snapshot``; 404 ``LAE-CRDT-003`` without a draft
 - ``POST /internal/rooms/{id}/open`` body ``{content?, created_by?}`` → ``OpenedRoom``
-- ``POST /internal/rooms/{id}/close`` body ``{discard, draft_epoch?}`` → 204
+- ``POST /internal/rooms/{id}/close`` body ``{discard, draft_epoch?, idle_seconds?}`` → 204
 - ``POST /internal/rooms/{id}/apply`` body ``{update: base64, user_id}`` → 204
 - ``POST /internal/users/{id}/eject`` → ``{closed}``
 """
@@ -67,13 +67,14 @@ import re
 import signal
 import sys
 from collections.abc import AsyncIterator, Callable
+from datetime import timedelta
 from typing import Annotated, Any, Final, cast
 from urllib.parse import urlsplit
 from uuid import UUID
 
 import uvicorn
 from fastapi import APIRouter, Depends, FastAPI, Request, Response, WebSocket, status
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from starlette.middleware.sessions import SessionMiddleware
 
 import lae
@@ -178,6 +179,8 @@ class CloseBody(BaseModel):
     discard: bool
     draft_epoch: int | None = None
     """With ``discard``: only the draft of this epoch (see ``InMemoryRoomManager.close``)."""
+    idle_seconds: float | None = Field(default=None, ge=0)
+    """With ``discard``: only a draft without activity for this long (the draft reaper)."""
 
 
 class ApplyBody(BaseModel):
@@ -458,7 +461,10 @@ async def open_room(record_id: UUID, body: OpenBody, rooms: Rooms) -> OpenedRoom
 @internal_router.post("/rooms/{record_id}/close", status_code=status.HTTP_204_NO_CONTENT)
 async def close_room(record_id: UUID, body: CloseBody, rooms: Rooms) -> Response:
     """Drop the room from memory; with ``discard`` delete the draft and end its epoch."""
-    await rooms.close(record_id, discard=body.discard, draft_epoch=body.draft_epoch)
+    idle_for = None if body.idle_seconds is None else timedelta(seconds=body.idle_seconds)
+    await rooms.close(
+        record_id, discard=body.discard, draft_epoch=body.draft_epoch, idle_for=idle_for
+    )
     return Response(status_code=status.HTTP_204_NO_CONTENT)
 
 

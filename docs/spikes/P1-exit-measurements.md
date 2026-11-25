@@ -114,6 +114,30 @@ persists each update before it reads the next frame from that socket, and at thi
 human typing) the queue builds up. This is not a data-loss bug. It would matter for agents that
 write many small updates (Phase 3).
 
+**Follow-up (core review slice A, #178, 2026-11-25).** Reproduced without a browser: two
+`pycrdt` clients over real WebSockets to a real `crdt-ws` and PostgreSQL, each inserting one
+character at a time into the same `Text`, 170 updates per second in total.
+
+| Measurement | Result |
+| :-- | :-- |
+| 170/s for 10 s (1,700 updates) | server and both clients complete and identical 3.6 s after the typing stopped |
+| 170/s for 30 s (5,100 updates) | the same after 4.7 s |
+| 80/s for 15 s, 20/s for 15 s | no lag (complete within the 10 ms poll) |
+| `Room.write`, 1,000 one-character updates in sequence, no sockets | 5.7 to 6.0 ms each: 168 to 177 per second |
+| of which `store.append_update` and its commit | 4.6 to 5.1 ms |
+| the same statements, 50 updates per transaction | 2.9 to 3.9 ms per update |
+
+The clients were complete at the moment the server was, so the broadcast adds nothing; the
+limit is the write path. A room persists one update per transaction (four round trips to
+PostgreSQL and a durable commit), one at a time under the room lock, before it applies and
+broadcasts it (ADR-0027 invariant 2). That gives one room about 170 to 200 updates per second
+on this machine, which is the rate the probe typed at; in a browser, rendering each remote
+update adds to it (in the run above the server held everything after 2 s and the views still
+differed). Updates beyond the limit wait in the sockets, in order, under TCP back-pressure, and
+nothing is dropped. It is a throughput limit, not a defect: three people typing fast into one
+field produce about 30 updates per second. #179 proposes writing the frames that are
+waiting in one transaction, for Phase 3.
+
 ## 4. Autocomplete latency
 
 `scripts/load/autocomplete_latency.py` sends `GET /api/search/autocomplete?q=…&types=…` to the

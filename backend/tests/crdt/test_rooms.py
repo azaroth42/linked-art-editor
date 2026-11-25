@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import asyncio
+from datetime import timedelta
 from typing import Any
 from uuid import UUID
 
 import pytest
 from pycrdt import Doc, Text, create_update_message
-from sqlalchemy import delete, select, update
+from sqlalchemy import delete, select, text, update
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 from uuid_utils.compat import uuid7
 
@@ -419,23 +420,36 @@ async def test_invalid_update_is_rejected_before_anything_is_stored(
         assert names(project(room.ydoc)) == ["First name"]
 
 
+def age(room: Room, seconds: float) -> None:
+    """Make ``room`` look as if nothing had happened in it for ``seconds``."""
+    room.last_activity -= seconds
+
+
 async def test_idle_rooms_are_compacted_and_evicted_but_the_draft_persists(
     db_engine: AsyncEngine,
 ) -> None:
+    # No sleeping against a short ``idle_seconds`` here: with 0.2 s, three database round trips
+    # in a loaded test run were enough for ``busy`` (no socket yet) to be evicted by the first
+    # ``evict_idle`` (core review A, finding 3). The rooms are aged explicitly instead.
+    idle_seconds = 3600.0
     busy_id, _ = await create_record(db_engine)
     idle_id, _ = await create_record(db_engine)
     user_id = await create_user(db_engine, "Editor")
-    async with manager_for(db_engine, idle_seconds=0.2) as manager:
+    async with manager_for(db_engine, idle_seconds=idle_seconds) as manager:
         busy = await manager.open(busy_id)
         idle = await manager.open(idle_id)
         replica = replica_of(idle.ydoc)
+        age(idle, idle_seconds + 1)
         await manager.apply_update(idle_id, change(replica, add_name("Kept")), user_id)
         assert await manager.evict_idle() == []  # the write counts as activity
 
         peer = connection()
         serving = asyncio.create_task(manager.serve(busy, peer))
         await eventually(lambda: peer in busy.connections)
-        await asyncio.sleep(0.3)
+        age(busy, idle_seconds + 1)
+        age(idle, idle_seconds - 60)
+        assert await manager.evict_idle() == []  # not long enough yet
+        age(idle, 61)
         assert await manager.evict_idle() == [idle_id]  # a room with a socket is never evicted
         assert await manager.is_open(busy_id) and not await manager.is_open(idle_id)
 
@@ -448,8 +462,35 @@ async def test_idle_rooms_are_compacted_and_evicted_but_the_draft_persists(
 
         peer.close(CLOSE_ROOM_CLOSED, "test")
         await serving
-        await asyncio.sleep(0.3)  # idle since the socket left
-        assert busy_id in await manager.evict_idle()
+        assert await manager.evict_idle() == []  # the socket leaving counts as activity
+        age(busy, idle_seconds + 1)
+        assert await manager.evict_idle() == [busy_id]
+
+
+async def test_a_write_whose_room_is_evicted_under_it_lands_in_the_next_room(
+    db_engine: AsyncEngine,
+) -> None:
+    # What the test above used to trip over, as the behaviour it is: opening a room is not a
+    # claim on it. A socket is attached to the room it opened before anything else can run
+    # (``serve_room``); ``apply_update`` retries when its room was evicted between its open
+    # and its write. Either way nothing is lost.
+    record_id, _ = await create_record(db_engine)
+    async with manager_for(db_engine, idle_seconds=3600.0) as manager:
+        room = await manager.open(record_id)
+        replica = replica_of(room.ydoc)
+        age(room, 3601)
+        assert await manager.open(record_id) is room  # opening again is not activity
+        writing = asyncio.create_task(
+            manager.apply_update(record_id, change(replica, add_name("Through")), None)
+        )
+        assert await manager.evict_idle() == [record_id]
+        await writing
+        assert room.closed
+        current = await manager.get(record_id)
+        assert current is not None and current is not room
+        assert names(project(current.ydoc)) == ["First name", "Through"]
+        row = await draft_row(db_engine, record_id)
+        assert row is not None and row.last_update_id == current.last_update_id > 0
 
 
 async def test_the_sweeper_evicts_without_being_asked(db_engine: AsyncEngine) -> None:
@@ -511,6 +552,103 @@ async def test_discard_deletes_the_draft_closes_sockets_and_ends_the_epoch(
         await manager.close(record_id, discard=True)  # no draft: the epoch stays
         assert await record_epoch(db_engine, record_id) == 6
         await manager.close(uuid7(), discard=True)  # unknown record: nothing to do
+
+
+async def make_idle(engine: AsyncEngine, record_id: UUID, days: float) -> None:
+    """Move the draft's ``last_activity_at`` ``days`` into the past."""
+    async with AsyncSession(engine) as session, session.begin():
+        await session.execute(
+            text(
+                "UPDATE crdt_drafts SET last_activity_at = now() - make_interval(secs => :s) "
+                "WHERE record_id = :id"
+            ),
+            {"s": days * 86400, "id": record_id},
+        )
+
+
+async def test_a_conditional_discard_leaves_an_active_draft_its_room_and_its_sockets(
+    db_engine: AsyncEngine,
+) -> None:
+    # Core review A, finding 1 (#178): the reaper's discard is conditional on idleness, and
+    # crdt-ws lets the database decide.
+    record_id, _ = await create_record(db_engine, draft_epoch=4)
+    ttl = timedelta(days=5)
+    async with manager_for(db_engine) as manager:
+        room = await manager.open(record_id)
+        replica = replica_of(room.ydoc)
+        await make_idle(db_engine, record_id, days=6)
+        await manager.apply_update(record_id, change(replica, add_name("Recent")), None)
+        peer = connection()
+        serving = asyncio.create_task(manager.serve(room, peer))
+        await eventually(lambda: peer in room.connections)
+
+        await manager.close(record_id, discard=True, draft_epoch=4, idle_for=ttl)
+        assert await manager.get(record_id) is room and not room.closed
+        assert peer.close_code is None and peer in room.connections
+        assert await record_epoch(db_engine, record_id) == 4
+        assert await update_count(db_engine, record_id) == 1
+        # ... and the room still takes writes.
+        await manager.apply_update(record_id, change(replica, add_name("Later")), None)
+        assert names((await manager.snapshot(record_id)).jsonld)[1:] == ["Recent", "Later"]
+
+        await make_idle(db_engine, record_id, days=6)
+        await manager.close(record_id, discard=True, draft_epoch=3, idle_for=ttl)  # another epoch
+        assert await draft_row(db_engine, record_id) is not None and not room.closed
+
+        await manager.close(record_id, discard=True, draft_epoch=4, idle_for=ttl)
+        await serving
+        assert (peer.close_code, peer.close_reason) == (CLOSE_STALE_EPOCH, "stale-epoch")
+        assert await draft_row(db_engine, record_id) is None
+        assert await update_count(db_engine, record_id) == 0
+        assert await record_epoch(db_engine, record_id) == 5
+        assert await manager.get(record_id) is None
+
+        # Without a room in memory the rows decide alone.
+        await manager.open(record_id)
+        await manager.close(record_id, discard=False)
+        await manager.close(record_id, discard=True, idle_for=ttl)
+        assert await draft_row(db_engine, record_id) is not None
+        await make_idle(db_engine, record_id, days=6)
+        await manager.close(record_id, discard=True, idle_for=ttl)
+        assert await draft_row(db_engine, record_id) is None
+        assert await record_epoch(db_engine, record_id) == 6
+        await manager.close(uuid7(), discard=True, idle_for=ttl)  # unknown record
+
+
+async def test_a_conditional_delete_waits_for_a_write_in_flight_and_then_sees_it(
+    db_engine: AsyncEngine,
+) -> None:
+    # The window itself: the update is inserted but not yet committed when the delete looks.
+    record_id, _ = await create_record(db_engine)
+    sessions = sessions_of(db_engine)
+    async with manager_for(db_engine) as manager:
+        room = await manager.open(record_id)
+        payload = change(replica_of(room.ydoc), add_name("In flight"))
+    await make_idle(db_engine, record_id, days=6)
+
+    async def conditional_delete() -> int | None:
+        async with sessions() as session, session.begin():
+            return await store.delete_draft(
+                session, record_id, only_epoch=0, idle_for=timedelta(days=5)
+            )
+
+    async with sessions() as writer:
+        await writer.begin()
+        assert await store.append_update(writer, record_id, 0, payload, None) is not None
+        deleting = asyncio.create_task(conditional_delete())
+        await asyncio.sleep(0.3)
+        assert not deleting.done()  # queued behind the writer's lock on the draft row
+        await writer.commit()
+    assert await deleting == 0  # the epoch did not end
+    assert await draft_row(db_engine, record_id) is not None
+    assert await update_rows(db_engine, record_id) == [payload]
+
+    # The other order: the delete commits first and the write finds its draft gone.
+    await make_idle(db_engine, record_id, days=6)
+    assert await conditional_delete() == 1
+    async with sessions() as session, session.begin():
+        assert await store.append_update(session, record_id, 0, payload, None) is None
+    assert await update_count(db_engine, record_id) == 0
 
 
 async def publish_behind_the_room(engine: AsyncEngine, record_id: UUID) -> None:
