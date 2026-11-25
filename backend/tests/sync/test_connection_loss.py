@@ -1,4 +1,4 @@
-"""How a database error ends each ``lae sync-worker`` command (issues #151 and #171).
+"""How a database error ends each ``lae sync-worker`` command (issues #151, #171 and #176).
 
 Contract §3 item 22, §4, and §8.5 (items 39-43, tests 64-70). A lost connection (the server
 shut the session down, the socket is gone, a commit failed that way) is logged
@@ -7,7 +7,9 @@ database error is not taken for one: it is logged ``sync_worker_failed`` with it
 the process exits 4 (``EXIT_PERSISTENT``) when its SQLSTATE class means it cannot pass by itself
 (42, 23, 22, 0A), else 1. Either way nothing is recorded for the batch in flight, so the
 restarted worker sends it again. ``--replay-after`` and ``--failed`` report the same way. Test
-68 reads the systemd unit's restart rules.
+68 reads the systemd unit's restart rules. Tests 73-76 (contract §9): a ``LAE_DATABASE_URL`` that
+cannot be parsed refuses to start with exit 2 for every command, one that cannot be reached
+exits 1; a metrics port that cannot be bound exits 2, and is bound only after the lock.
 
 Errors are injected two ways: by raising the error class (every class the worker must recognise,
 whether or not this machine's Postgres produces it here), and for real, by terminating the
@@ -20,6 +22,7 @@ from __future__ import annotations
 import asyncio
 import configparser
 import json
+import socket
 from collections.abc import AsyncIterator, Awaitable, Callable
 from pathlib import Path
 from typing import Any
@@ -56,7 +59,7 @@ from tests.sync.conftest import (
     triples_of,
     watermark,
 )
-from tests.sync.test_batch import World, five_events, worker_settings
+from tests.sync.test_batch import World, five_events, free_port, metrics_when, worker_settings
 
 pytestmark = pytest.mark.usefixtures("queue")
 
@@ -709,3 +712,179 @@ async def test_replay_after_prints_no_id_when_the_lock_query_fails(
     assert (reported["command"], reported["persistent"]) == ("replay", True)
     monkeypatch.undo()
     assert await snapshot_tables(world.conn) == before
+
+
+# -- 73-76: a malformed LAE_DATABASE_URL, a metrics port that cannot be bound (contract §9) ------
+
+PASSWORD = "S3cret-pw-9d27"
+"""The password in the URLs of tests 73 and 74: never in stderr, stdout or a log line."""
+
+REFUSED_URL = "lae sync-worker: refusing to start: LAE_DATABASE_URL is not a valid PostgreSQL URL: "
+
+COMMANDS: list[list[str]] = [[], ["--once"], ["--replay-after", "0"], ["--failed"]]
+COMMAND_IDS = ["run", "once", "replay", "failed"]
+
+MALFORMED_URLS = [
+    "nonsense",
+    f"lae:{PASSWORD}@localhost/lae",  # no scheme: SQLAlchemy cannot parse it
+    f"postgresql+asyncpg://lae:{PASSWORD}@localhost:notaport/lae",  # a port that is no number
+    f"postgresql+asyncpg://lae:{PASSWORD}@localhost:5432/lae?sslmode=bogus",  # asyncpg refuses
+]
+MALFORMED_IDS = ["nonsense", "no_scheme", "port_not_a_number", "asyncpg_client_configuration"]
+
+
+def command_settings(database_url: str) -> Any:
+    """Settings every command accepts (QLever set), with ``database_url``."""
+    return worker_settings(
+        database_url, qlever_url="http://qlever.test:7024", qlever_access_token=SecretStr(TOKEN)
+    )
+
+
+def assert_no_secret(out: str, err: str, events: list[dict[str, Any]]) -> None:
+    for text in (out, err, json.dumps(events)):
+        assert PASSWORD not in text and TOKEN not in text
+        assert "Traceback" not in text
+
+
+@pytest.mark.parametrize("argv", COMMANDS, ids=COMMAND_IDS)
+@pytest.mark.parametrize("database_url", MALFORMED_URLS, ids=MALFORMED_IDS)
+async def test_a_malformed_database_url_refuses_to_start_with_exit_2(
+    logged: Logged, capsys: pytest.CaptureFixture[str], argv: list[str], database_url: str
+) -> None:
+    """Test 73 (§9 item 46): every command; one stderr line, no traceback, no password."""
+    capsys.readouterr()
+
+    assert await worker.main(command_settings(database_url), argv) == worker.EXIT_CONFIG_ERROR
+
+    out = capsys.readouterr()
+    [line] = out.err.splitlines()
+    assert line.startswith(REFUSED_URL) and len(line) > len(REFUSED_URL)
+    assert out.out == ""
+    events = logged()
+    assert named(events, "sync_database_unreachable") == []
+    assert named(events, "sync_worker_started") == []
+    assert_no_secret(out.out, out.err, events)
+
+
+@pytest.mark.parametrize("argv", COMMANDS, ids=COMMAND_IDS)
+async def test_a_url_error_that_echoes_the_password_is_redacted(
+    monkeypatch: pytest.MonkeyPatch,
+    logged: Logged,
+    capsys: pytest.CaptureFixture[str],
+    argv: list[str],
+) -> None:
+    """Test 73, continued: should asyncpg's parse error ever quote the password, as written or
+    percent-decoded, the stderr line holds neither."""
+    written = "pw%40" + PASSWORD
+    url = f"postgresql+asyncpg://lae:{written}@localhost:5432/lae"
+
+    def connect(*args: Any, **kwargs: Any) -> Any:
+        raise asyncpg.ClientConfigurationError(f"bad {written} and pw@{PASSWORD}")
+
+    monkeypatch.setattr(asyncpg, "connect", connect)
+    capsys.readouterr()
+
+    assert await worker.main(command_settings(url), argv) == worker.EXIT_CONFIG_ERROR
+
+    out = capsys.readouterr()
+    assert out.err.splitlines() == [f"{REFUSED_URL}bad [redacted] and [redacted]"]
+    assert_no_secret(out.out, out.err, logged())
+
+
+@pytest.mark.parametrize("argv", COMMANDS, ids=COMMAND_IDS)
+async def test_an_unreachable_database_is_still_exit_1(
+    logged: Logged, capsys: pytest.CaptureFixture[str], argv: list[str]
+) -> None:
+    """Test 74 (§9, item 39 as amended): a URL that parses but whose server cannot be reached is
+    ``sync_database_unreachable`` and exit 1 (restarted), never the exit 2 of a malformed URL."""
+    port = free_port()  # nothing listens there: the connection is refused
+    url = f"postgresql+asyncpg://lae:{PASSWORD}@127.0.0.1:{port}/lae"
+    command = COMMAND_IDS[COMMANDS.index(argv)]
+    capsys.readouterr()
+
+    assert await worker.main(command_settings(url), argv) == EXIT_FAILURE
+
+    out = capsys.readouterr()
+    events = logged()
+    [unreachable] = named(events, "sync_database_unreachable")
+    assert unreachable["command"] == command and unreachable["level"] == "error"
+    assert "refusing to start" not in out.err
+    assert ("database unreachable" in out.err) == (command in ("replay", "failed"))
+    assert out.out == ""
+    assert_no_secret(out.out, out.err, events)
+
+
+async def test_a_metrics_port_in_use_refuses_to_start_with_exit_2(
+    world: World,
+    db_url: str,
+    other: asyncpg.Connection,
+    monkeypatch: pytest.MonkeyPatch,
+    logged: Logged,
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """Test 75 (§9 item 47): the port is bound by the test. Exit 2 with the stderr line, not a
+    lost connection; the connection is closed and the lock released; nothing was sent."""
+    _, ids = await five_events(world)
+    opened: list[asyncpg.Connection] = []
+
+    class Recorded(asyncpg.Connection):  # type: ignore[misc]
+        def __init__(self, *args: Any, **kwargs: Any) -> None:
+            super().__init__(*args, **kwargs)
+            opened.append(self)
+
+    connecting_with(monkeypatch, Recorded)
+    client = RecordingClient()
+    with socket.socket() as taken:
+        taken.bind(("127.0.0.1", 0))
+        taken.listen()
+        port = taken.getsockname()[1]
+        settings = worker_settings(db_url, sync_metrics_port=port)
+        capsys.readouterr()
+
+        code = await asyncio.wait_for(worker.run(settings, client=client, stop=asyncio.Event()), 30)
+
+    assert code == worker.EXIT_CONFIG_ERROR == 2
+    [line] = capsys.readouterr().err.splitlines()
+    prefix = f"lae sync-worker: refusing to start: cannot listen for metrics on 127.0.0.1:{port}: "
+    assert line.startswith(prefix) and len(line) > len(prefix)
+    events = logged()
+    assert named(events, "sync_connection_lost") == []
+    assert named(events, "sync_worker_failed") == []
+    [conn] = opened
+    assert conn.is_closed()
+    assert await other.fetchval("SELECT pg_try_advisory_lock($1)", worker.SYNC_WORKER_LOCK)
+    await other.execute("SELECT pg_advisory_unlock($1)", worker.SYNC_WORKER_LOCK)
+    assert client.sent == []  # it refused before the first catch-up
+    await assert_untouched(world.conn, ids)
+
+
+async def test_the_metrics_port_is_bound_only_after_the_lock(
+    world: World,
+    db_url: str,
+    other: asyncpg.Connection,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """Test 76 (§9 item 47): a worker waiting for the lock does not hold the metrics port; it
+    binds it once it has the lock."""
+    waiting = asyncio.Event()
+
+    async def pause(seconds: float, stop: asyncio.Event) -> None:
+        waiting.set()
+        await asyncio.sleep(0.01)
+
+    monkeypatch.setattr(worker, "pause", pause)
+    port = free_port()
+    stop = asyncio.Event()
+    settings = worker_settings(db_url, sync_metrics_port=port)
+    assert await other.fetchval("SELECT pg_try_advisory_lock($1)", worker.SYNC_WORKER_LOCK)
+    task = asyncio.create_task(worker.run(settings, client=RecordingClient(), stop=stop))
+    try:
+        await asyncio.wait_for(waiting.wait(), 10)
+        with socket.socket() as probe:  # free while the worker waits for the lock
+            probe.bind(("127.0.0.1", port))
+        await other.execute("SELECT pg_advisory_unlock($1)", worker.SYNC_WORKER_LOCK)
+        served = await metrics_when(port, "outbox_pending", 0, at_most=True)
+        assert served["outbox_pending"] == 0
+    finally:
+        stop.set()
+        assert await asyncio.wait_for(task, 10) == 0

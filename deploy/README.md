@@ -369,13 +369,13 @@ What to do:
 ## When the sync worker stops
 
 `lae sync-worker` exits with one of these codes, and `deploy/systemd/lae-sync-worker.service`
-restarts it only after 1 (contract `docs/contracts/1.11-sync-worker.md` §8.5, ADR-0039):
+restarts it only after 1 (contract `docs/contracts/1.11-sync-worker.md` §8.5 and §9, ADR-0039):
 
 | Code | When | The unit |
 | :-- | :-- | :-- |
 | 0 | stopped by `SIGTERM`/`SIGINT` | not restarted |
 | 1 | may pass by itself, or unknown: Postgres unreachable, the connection lost, a database error of unknown kind | restarted every 5 s, without limit (`StartLimitIntervalSec=0`) |
-| 2 | refuses to start: `LAE_QLEVER_URL` or `LAE_QLEVER_ACCESS_TOKEN` missing, or the watermark is not an integer | **not restarted** |
+| 2 | refuses to start: `LAE_QLEVER_URL` or `LAE_QLEVER_ACCESS_TOKEN` missing, `LAE_DATABASE_URL` cannot be parsed, the metrics port cannot be bound, or the watermark is not an integer | **not restarted** |
 | 4 | a database error that will not pass by itself: SQLSTATE class 42 (our SQL against the wrong schema, a missing privilege), 23 (a violated constraint), 22 (bad data), 0A | **not restarted** |
 
 QLever being down or refusing updates never stops the worker: it retries with backoff.
@@ -386,7 +386,9 @@ What to watch:
 | :-- | :-- | :-- |
 | unit `lae-sync-worker` is `failed` with exit status 4; the log has `sync_worker_failed` with `persistent=true`, a `sqlstate` and a traceback; `/metrics` no longer answers | `systemctl status`, `journalctl -u lae-sync-worker` | a database error that will not pass by itself; **the worker stays down until someone starts it** |
 | unit `failed` with exit status 2; `refusing to start: …` on stderr | same | a setting is missing or the watermark is not an integer; not restarted |
-| unit restarting every 5 s with exit status 1 and `sync_connection_lost` or `sync_database_unreachable` | same | Postgres is away; the worker comes back by itself |
+| unit `failed` with exit status 2; `refusing to start: LAE_DATABASE_URL is not a valid PostgreSQL URL: …` on stderr | same | `LAE_DATABASE_URL` cannot be parsed (no scheme, a port that is not a number, a parameter asyncpg refuses); not restarted |
+| unit `failed` with exit status 2; `refusing to start: cannot listen for metrics on <host>:<port>: …` on stderr | same | another process holds `LAE_SYNC_METRICS_PORT`, the port needs a privilege, or `LAE_SYNC_METRICS_HOST` is not an address of this host; not restarted |
+| unit restarting every 5 s with exit status 1 and `sync_connection_lost` or `sync_database_unreachable` | same | Postgres is away (or its host name does not resolve); the worker comes back by itself |
 | unit restarting every 5 s with exit status 1 and `sync_worker_failed` with `persistent=false` | same | a database error of unknown kind keeps coming back: read the traceback |
 
 **The alarm for a stopped worker** is the unit state (`systemctl is-failed lae-sync-worker`) or
@@ -400,8 +402,9 @@ What to do:
    matching version. `42501`: grant the `lae` role the privilege. Class 22 or 23: a row the
    worker reads or writes is wrong; report it as a bug with the traceback. Then
    `sudo systemctl start lae-sync-worker`.
-2. Exit status 2: fix `/etc/lae/lae.env` or the `qlever_index_watermark` row of `sync_state`,
-   then `sudo systemctl start lae-sync-worker`.
+2. Exit status 2: fix `/etc/lae/lae.env` (`LAE_DATABASE_URL`, or `LAE_SYNC_METRICS_PORT` and
+   `LAE_SYNC_METRICS_HOST`, or stop the process that holds the port) or the
+   `qlever_index_watermark` row of `sync_state`, then `sudo systemctl start lae-sync-worker`.
 3. After a migration, or a restore into the live database, check the unit and start it if it is
    `failed`: a worker that met the schema half-way has stopped with 4.
 4. Installing the changed unit: `sudo cp /opt/lae/deploy/systemd/lae-sync-worker.service

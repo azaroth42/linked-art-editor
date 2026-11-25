@@ -80,7 +80,8 @@ backend, a ``FATAL`` error) and a commit that fails that way; it is logged
   lost, a database error of kind ``"other"`` (a cancelled statement, a deadlock, a full disk, an
   internal error, a client-side ``InterfaceError``), ``RecordingError``, an ``EventError`` or
   ``QLeverError`` that reaches ``run``; ``--once`` or ``--replay-after`` that did not finish.
-- 2 (``EXIT_CONFIG_ERROR``): refuses to start (a setting missing, the watermark not an integer).
+- 2 (``EXIT_CONFIG_ERROR``): refuses to start (a setting missing, ``LAE_DATABASE_URL`` not a
+  valid PostgreSQL URL, the metrics port cannot be bound, the watermark not an integer).
 - 4 (``EXIT_PERSISTENT``): a database error that cannot pass by itself, SQLSTATE class 0A, 22,
   23 or 42 (our SQL against the wrong schema, a violated constraint, a missing privilege).
 
@@ -88,7 +89,8 @@ The systemd unit restarts after 1 for ever and never after 2 or 4. Nothing is re
 in-process: the batch in flight stays pending and is sent again after the restart.
 ``SIGTERM`` and ``SIGINT`` let the batch in progress finish and exit 0. ``/metrics``
 (``lae.sync.metrics``) is served from a snapshot the loop refreshes, so the listener needs no
-connection of its own; it is started before the first catch-up.
+connection of its own; it is started after the lock is taken and before the first catch-up, and
+a port it cannot listen on refuses the start (exit 2; contract §9).
 
 The access token goes with every update and is removed from every error text the worker logs or
 stores, before the text is cut or encoded as JSON (``redacted_body``; contract §8.6).
@@ -105,8 +107,10 @@ import sys
 from collections.abc import AsyncGenerator, Collection, Coroutine, Sequence
 from dataclasses import dataclass
 from typing import Any, Final, Literal
+from urllib.parse import unquote, urlsplit
 
 import asyncpg
+import sqlalchemy.exc
 
 from lae.bootstrap.common import QLEVER_INDEX_WATERMARK, asyncpg_dsn
 from lae.db.models import OutboxEventStatus
@@ -148,8 +152,9 @@ the replay stopped. The unit restarts the worker after it, for ever.
 EXIT_CONFIG_ERROR: Final = 2
 """Exit code of a worker that refuses to start (the same value as ``lae.cli.EXIT_CONFIG_ERROR``).
 
-A setting is missing, the watermark is not a JSON integer, or the arguments are wrong. The unit
-does not restart the worker after it (``RestartPreventExitStatus=``).
+A setting is missing, ``LAE_DATABASE_URL`` cannot be parsed, the metrics port cannot be bound,
+the watermark is not a JSON integer, or the arguments are wrong. The unit does not restart the
+worker after it (``RestartPreventExitStatus=``).
 """
 
 EXIT_PERSISTENT: Final = 4
@@ -275,8 +280,9 @@ def connection_lost(error: BaseException, *, closed: bool = False) -> bool:
     ``PANIC`` (the server ends the session after sending one), and for an ``InterfaceError`` when
     the connection is ``closed`` ("connection is closed"). Everything else is not: a bug in our
     SQL, a constraint violation, a cancelled statement, a serialization failure, or a client-side
-    ``InterfaceError`` on an open connection (wrong argument type, overlapping operations).
-    ``database_failure`` tells the rest apart.
+    ``InterfaceError`` on an open connection (overlapping operations). A query argument of the
+    wrong type is not an ``InterfaceError``: asyncpg raises it as ``DataError``, SQLSTATE 22000
+    (contract §8.3). ``database_failure`` tells the rest apart.
     """
     if isinstance(error, _SESSION_ENDED):
         return True
@@ -1025,6 +1031,72 @@ def live_client(settings: Settings) -> QLeverClient:
     )
 
 
+class DatabaseUrlError(ValueError):
+    """``LAE_DATABASE_URL`` cannot be parsed as a PostgreSQL URL (exit 2; contract §9).
+
+    The message describes the parse error; it holds neither the URL nor its password.
+    """
+
+
+def _url_passwords(database_url: str) -> list[str]:
+    """The password of ``database_url`` as written and decoded, as far as it can be found."""
+    password = None
+    with contextlib.suppress(ValueError):
+        password = urlsplit(database_url).password
+    found = {text for text in (password, unquote(password or "")) if text}
+    return sorted(found, key=len, reverse=True)  # the longer first: neither leaves a piece
+
+
+def _url_error(error: Exception, database_url: str) -> DatabaseUrlError:
+    text = str(error) or type(error).__name__
+    for password in _url_passwords(database_url):
+        text = text.replace(password, _REDACTED)
+    return DatabaseUrlError(f"LAE_DATABASE_URL is not a valid PostgreSQL URL: {text}")
+
+
+async def connect(database_url: str) -> asyncpg.Connection:
+    """A new ``asyncpg`` connection to ``database_url`` (an SQLAlchemy URL, ``LAE_DATABASE_URL``).
+
+    Raises ``DatabaseUrlError`` when the URL cannot be parsed: by SQLAlchemy in ``asyncpg_dsn``
+    (``ArgumentError``, or ``ValueError`` for a port that is not a number), or by asyncpg before
+    it opens a socket (``ClientConfigurationError``, a ``ValueError``; or a ``ValueError`` of its
+    own). A server that cannot be reached or refuses the login raises what ``asyncpg.connect``
+    raises (``OSError``, ``asyncpg.PostgresError``); a host name that does not resolve is one.
+    """
+    try:
+        dsn = asyncpg_dsn(database_url)
+    except (sqlalchemy.exc.ArgumentError, ValueError) as error:
+        raise _url_error(error, database_url) from None
+    try:
+        return await asyncpg.connect(dsn)
+    except ValueError as error:  # asyncpg parses the DSN before any I/O
+        raise _url_error(error, database_url) from None
+
+
+async def _open_connection(settings: Settings, command: Command) -> asyncpg.Connection | int:
+    """The command's connection, or its exit code after saying why there is none (§9 item 46).
+
+    A URL that cannot be parsed refuses to start: one stderr line, ``EXIT_CONFIG_ERROR``. A
+    server that cannot be reached is ``sync_database_unreachable`` and ``EXIT_FAILURE`` (item
+    39); ``--replay-after`` and ``--failed`` also say so on stderr.
+    """
+    try:
+        return await connect(settings.database_url)
+    except DatabaseUrlError as error:
+        print(f"lae sync-worker: refusing to start: {error}", file=sys.stderr)
+        return EXIT_CONFIG_ERROR
+    except (OSError, asyncpg.PostgresError) as error:
+        logger.error(
+            "sync_database_unreachable",
+            error=str(error),
+            error_type=type(error).__name__,
+            command=command,
+        )
+        if command in ("replay", "failed"):
+            print(f"lae sync-worker: database unreachable: {error}", file=sys.stderr)
+        return EXIT_FAILURE
+
+
 async def _try_lock(conn: asyncpg.Connection) -> bool:
     locked: bool = await conn.fetchval("SELECT pg_try_advisory_lock($1)", SYNC_WORKER_LOCK)
     return locked
@@ -1174,9 +1246,16 @@ async def _serve(
     metrics = sync_metrics.Metrics()
     server = None
     if settings.sync_metrics_port is not None:  # serving before the first catch-up (§7.5)
-        server = await sync_metrics.serve(
-            metrics, settings.sync_metrics_host, settings.sync_metrics_port
-        )
+        host, port = settings.sync_metrics_host, settings.sync_metrics_port
+        try:  # after the lock: a worker waiting for it does not hold the port (§9 item 47)
+            server = await sync_metrics.serve(metrics, host, port)
+        except OSError as error:  # in use, not permitted, not an address of this host
+            print(
+                f"lae sync-worker: refusing to start: cannot listen for metrics on "
+                f"{host}:{port}: {error}",
+                file=sys.stderr,
+            )
+            return EXIT_CONFIG_ERROR
     try:
         await metrics.refresh(conn)
         await _catch_up_until_done(conn, client, stop, metrics)
@@ -1208,19 +1287,18 @@ async def run(
             print(f"lae sync-worker: refusing to start: {problem}", file=sys.stderr)
             return EXIT_CONFIG_ERROR
         client = live_client(settings)
+    connected = await _open_connection(settings, "once" if once else "run")
+    if isinstance(connected, int):
+        if own_client:
+            await client.aclose()
+        return connected
+    conn = connected
     loop = asyncio.get_running_loop()
     handle_signals = stop is None
     stopping = stop if stop is not None else asyncio.Event()
     if handle_signals:
         for signum in STOP_SIGNALS:
             loop.add_signal_handler(signum, stopping.set)
-    try:
-        conn = await asyncpg.connect(asyncpg_dsn(settings.database_url))
-    except (OSError, asyncpg.PostgresError) as error:
-        logger.error("sync_database_unreachable", error=str(error))
-        if own_client:
-            await client.aclose()
-        return EXIT_FAILURE
     logger.info("sync_worker_started", once=once)
     try:
         return await _serve(conn, client, settings, once=once, stop=stopping)
@@ -1320,12 +1398,11 @@ async def _replay_command(settings: Settings, args: argparse.Namespace) -> int:
     else:
         client = live_client(settings)
     last = args.replay_after
-    try:
-        conn = await asyncpg.connect(asyncpg_dsn(settings.database_url))
-    except (OSError, asyncpg.PostgresError) as error:
-        print(f"lae sync-worker: database unreachable: {error}", file=sys.stderr)
+    connected = await _open_connection(settings, "replay")
+    if isinstance(connected, int):
         await client.aclose()
-        return EXIT_FAILURE
+        return connected
+    conn = connected
     holding = False  # the connection, and the lock when one is taken: the last id is printed
     try:
         if not args.target_url and not await _try_lock(conn):
@@ -1372,11 +1449,10 @@ FAILED_FIELDS: Final = (
 
 async def _failed_command(settings: Settings) -> int:
     """``--failed``: one JSON object per ``failed`` event, ascending by id; only reads."""
-    try:
-        conn = await asyncpg.connect(asyncpg_dsn(settings.database_url))
-    except (OSError, asyncpg.PostgresError) as error:
-        print(f"lae sync-worker: database unreachable: {error}", file=sys.stderr)
-        return EXIT_FAILURE
+    connected = await _open_connection(settings, "failed")
+    if isinstance(connected, int):
+        return connected
+    conn = connected
     try:
         rows = await conn.fetch(
             "SELECT id, kind::text AS kind, record_id, from_version, to_version, attempts, "
