@@ -768,8 +768,11 @@ steps. Notes for the steps that meet it, and two choices the owner may want to c
    needs `brew trust qlever-dev/qlever`) ran green once in 7 min 4 s (46 passed). Hosted macOS
    runners then queued for 15+ min, so the owner removed the job: QLever integration tests run
    locally only (docs/conventions.md, backend/tests/sync/README.md).
-5. **Open, for Step 2.18 (found in review of PR #148): an event that commits late can be missing
-   from a rebuilt index.** `lae bootstrap export` takes its watermark as `max(outbox_events.id)`
+5. **Closed 2026-11-25 (issue #178, Slice C; contract `docs/contracts/1.11-sync-worker.md` §10
+   item 49): the export now takes its snapshot while no insert into `outbox_events` is open, so
+   its watermark covers no event it lacks. Step 2.18 needs no margin when it builds from
+   `export-nt`. The original entry:** *Open, for Step 2.18 (found in review of PR #148): an event
+   that commits late can be missing from a rebuilt index.* `lae bootstrap export` takes its watermark as `max(outbox_events.id)`
    in its snapshot. A publish that had inserted its event (a lower id) but not yet committed is
    in neither the export nor the range above the watermark. If the worker marks it `done` on the
    old index before the rebuilt one goes live, `catch_up` and `replay(after_id=watermark)` never

@@ -9,7 +9,9 @@ the process exits 4 (``EXIT_PERSISTENT``) when its SQLSTATE class means it canno
 restarted worker sends it again. ``--replay-after`` and ``--failed`` report the same way. Test
 68 reads the systemd unit's restart rules. Tests 73-76 (contract §9): a ``LAE_DATABASE_URL`` that
 cannot be parsed refuses to start with exit 2 for every command, one that cannot be reached
-exits 1; a metrics port that cannot be bound exits 2, and is bound only after the lock.
+exits 1; a metrics port that cannot be bound exits 2, and is bound only after the lock. Tests
+77-79 (contract §10, issue #178): every failure of ``asyncpg.connect`` on a URL that parsed is
+``sync_database_unreachable`` and exit 1, whatever class it has.
 
 Errors are injected two ways: by raising the error class (every class the worker must recognise,
 whether or not this machine's Postgres produces it here), and for real, by terminating the
@@ -23,6 +25,8 @@ import asyncio
 import configparser
 import json
 import socket
+import ssl
+import struct
 from collections.abc import AsyncIterator, Awaitable, Callable
 from pathlib import Path
 from typing import Any
@@ -888,3 +892,122 @@ async def test_the_metrics_port_is_bound_only_after_the_lock(
     finally:
         stop.set()
         assert await asyncio.wait_for(task, 10) == 0
+
+
+# -- 77-79: asyncpg.connect fails on a URL that parsed (contract §10, issue #178) ----------------
+
+
+def assert_unreachable(
+    code: int, out: Any, events: list[dict[str, Any]], command: str, error_type: str
+) -> None:
+    """Item 48: ``sync_database_unreachable`` and exit 1, as for a refused connection."""
+    assert code == EXIT_FAILURE
+    [unreachable] = named(events, "sync_database_unreachable")
+    assert unreachable["command"] == command and unreachable["level"] == "error"
+    assert unreachable["error_type"] == error_type
+    assert "refusing to start" not in out.err
+    assert ("database unreachable" in out.err) == (command in ("replay", "failed"))
+    assert out.out == ""
+    assert named(events, "sync_worker_started") == []
+    assert_no_secret(out.out, out.err, events)
+
+
+@pytest.mark.parametrize("argv", COMMANDS, ids=COMMAND_IDS)
+async def test_a_failed_tls_handshake_is_an_unreachable_database_not_a_malformed_url(
+    monkeypatch: pytest.MonkeyPatch,
+    logged: Logged,
+    capsys: pytest.CaptureFixture[str],
+    argv: list[str],
+) -> None:
+    """Test 77 (§10 item 48). ``ssl.SSLCertVerificationError`` is an ``OSError`` and a
+    ``ValueError``; §9 took every ``ValueError`` of ``asyncpg.connect`` for a parse error, so an
+    expired server certificate exited 2 and the unit never started the worker again."""
+    assert issubclass(ssl.SSLCertVerificationError, ValueError)
+    assert issubclass(ssl.SSLCertVerificationError, OSError)
+
+    async def connect(*args: Any, **kwargs: Any) -> Any:
+        raise ssl.SSLCertVerificationError(1, "certificate verify failed: certificate has expired")
+
+    monkeypatch.setattr(asyncpg, "connect", connect)
+    url = f"postgresql+asyncpg://lae:{PASSWORD}@db.example:5432/lae?ssl=verify-full"
+    capsys.readouterr()
+
+    code = await worker.main(command_settings(url), argv)
+
+    assert_unreachable(
+        code,
+        capsys.readouterr(),
+        logged(),
+        COMMAND_IDS[COMMANDS.index(argv)],
+        "SSLCertVerificationError",
+    )
+
+
+AUTH_SCM_CREDENTIAL = 6  # an authentication request asyncpg does not implement
+
+
+async def _ask_for_an_unsupported_login(
+    reader: asyncio.StreamReader, writer: asyncio.StreamWriter
+) -> None:
+    """The start of the protocol: no TLS, then ``AuthenticationSCMCredential``."""
+    try:
+        (length,) = struct.unpack("!i", await reader.readexactly(4))
+        body = await reader.readexactly(length - 4)
+        if body == struct.pack("!i", 80877103):  # SSLRequest
+            writer.write(b"N")
+            (length,) = struct.unpack("!i", await reader.readexactly(4))
+            await reader.readexactly(length - 4)  # the startup message
+        writer.write(b"R" + struct.pack("!ii", 8, AUTH_SCM_CREDENTIAL))
+        await writer.drain()
+        await reader.read()  # until the client hangs up
+    except (asyncio.IncompleteReadError, ConnectionError):
+        pass
+    finally:
+        writer.close()
+
+
+@pytest.mark.parametrize("argv", COMMANDS, ids=COMMAND_IDS)
+async def test_an_interface_error_after_the_socket_opened_is_an_unreachable_database(
+    logged: Logged, capsys: pytest.CaptureFixture[str], argv: list[str]
+) -> None:
+    """Test 78 (§10 item 48; the gap §9.7 recorded). A real socket: the server answers the
+    startup message with an authentication request asyncpg does not implement, which asyncpg
+    raises as a plain ``InterfaceError``. It left ``main`` as a traceback."""
+    server = await asyncio.start_server(_ask_for_an_unsupported_login, "127.0.0.1", 0)
+    port = server.sockets[0].getsockname()[1]
+    url = f"postgresql+asyncpg://lae:{PASSWORD}@127.0.0.1:{port}/lae"
+    capsys.readouterr()
+    try:
+        code = await asyncio.wait_for(worker.main(command_settings(url), argv), 30)
+    finally:
+        server.close()
+        await server.wait_closed()
+
+    events = logged()
+    assert_unreachable(
+        code, capsys.readouterr(), events, COMMAND_IDS[COMMANDS.index(argv)], "InterfaceError"
+    )
+    [unreachable] = named(events, "sync_database_unreachable")
+    assert "unsupported authentication method" in unreachable["error"]
+
+
+@pytest.mark.parametrize("argv", COMMANDS, ids=COMMAND_IDS)
+async def test_no_host_with_the_session_attributes_asked_for_is_an_unreachable_database(
+    db_url: str, logged: Logged, capsys: pytest.CaptureFixture[str], argv: list[str]
+) -> None:
+    """Test 79 (§10 item 48). The test database is a primary; a URL that asks for a standby
+    connects, finds none, and asyncpg raises ``TargetServerAttributeNotMatched`` (an
+    ``InternalClientError``, neither ``InterfaceError`` nor ``PostgresError``). After a failover
+    the same URL connects, so it is exit 1, restarted."""
+    url = db_url + ("&" if "?" in db_url else "?") + "target_session_attrs=standby"
+    capsys.readouterr()
+
+    code = await asyncio.wait_for(worker.main(command_settings(url), argv), 30)
+
+    assert_unreachable(
+        code,
+        capsys.readouterr(),
+        logged(),
+        COMMAND_IDS[COMMANDS.index(argv)],
+        "TargetServerAttributeNotMatched",
+    )

@@ -163,6 +163,9 @@ record that fails JSON Schema is loaded and listed in `qa_findings`; one that ca
 to RDF is rejected. Loading the same input again writes nothing. After an interrupted `load`,
 or after loading more labels, run `uv run lae bootstrap rewrite-refs`; after any `load` or
 `rewrite-refs` on a database that already has an index, run `export-nt` and `build-index` again.
+`export-nt` may run while editors publish: it waits (milliseconds) until no publish is half-way,
+so that every outbox event up to its watermark is in the export and the sync worker replays the
+rest. If a transaction keeps `outbox_events` busy for 30 s it stops with an error; run it again.
 Old URIs on the editor's own host are redirected by the `api` process: route requests that match
 nothing else to it. Old URIs on another host must be redirected there
 (`SELECT alias_uri, record_id FROM record_aliases` gives the map).
@@ -388,7 +391,7 @@ What to watch:
 | unit `failed` with exit status 2; `refusing to start: …` on stderr | same | a setting is missing or the watermark is not an integer; not restarted |
 | unit `failed` with exit status 2; `refusing to start: LAE_DATABASE_URL is not a valid PostgreSQL URL: …` on stderr | same | `LAE_DATABASE_URL` cannot be parsed (no scheme, a port that is not a number, a parameter asyncpg refuses); not restarted |
 | unit `failed` with exit status 2; `refusing to start: cannot listen for metrics on <host>:<port>: …` on stderr | same | another process holds `LAE_SYNC_METRICS_PORT`, the port needs a privilege, or `LAE_SYNC_METRICS_HOST` is not an address of this host; not restarted |
-| unit restarting every 5 s with exit status 1 and `sync_connection_lost` or `sync_database_unreachable` | same | Postgres is away (or its host name does not resolve); the worker comes back by itself |
+| unit restarting every 5 s with exit status 1 and `sync_connection_lost` or `sync_database_unreachable` | same | Postgres is away, its host name does not resolve, or it refuses the connection (a failed login, a TLS certificate that does not verify, a login method the client lacks: read `error`); the worker comes back by itself once it can connect |
 | unit restarting every 5 s with exit status 1 and `sync_worker_failed` with `persistent=false` | same | a database error of unknown kind keeps coming back: read the traceback |
 
 **The alarm for a stopped worker** is the unit state (`systemctl is-failed lae-sync-worker`) or
