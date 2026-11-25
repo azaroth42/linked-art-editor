@@ -12,6 +12,8 @@ from uuid_utils.compat import uuid7
 from lae.crdt.client import CrdtWsClient
 from lae.projection import ops
 from tests.publish.conftest import (
+    BeforeClose,
+    Caller,
     Network,
     Served,
     caller,
@@ -28,8 +30,29 @@ def add_name(content: str) -> Any:
     return lambda doc: ops.add_node(doc, "identified_by", {"type": "Name", "content": content})
 
 
-async def discard(app: Served, headers: dict[str, str], record_id: UUID) -> Any:
-    return await app.client.post(f"/api/records/{record_id}/draft/discard", headers=headers)
+async def discard(
+    app: Served, headers: dict[str, str], record_id: UUID, draft_epoch: int | None = None
+) -> Any:
+    """``POST …/draft/discard``, with the epoch of the draft the caller means if given."""
+    body = None if draft_epoch is None else {"draft_epoch": draft_epoch}
+    return await app.client.post(
+        f"/api/records/{record_id}/draft/discard", headers=headers, json=body
+    )
+
+
+async def names_in_draft(network: Network, record_id: UUID) -> list[str]:
+    snapshot = await network.rooms.snapshot(record_id)
+    return [name["content"] for name in snapshot.jsonld["identified_by"]]
+
+
+async def publish_and_edit_again(
+    served: Served, network: Network, editor: Caller, record_id: UUID
+) -> int:
+    """Publish the draft, then open the next one and edit it; return the new draft's epoch."""
+    assert (await publish(served, editor, record_id)).status_code == 200
+    epoch = await open_draft(network, record_id)
+    await edit(network, record_id, editor.id, add_name("Written after the publish"))
+    return epoch
 
 
 async def test_discarding_the_draft_of_a_new_record_deletes_the_record(
@@ -133,3 +156,103 @@ async def test_a_new_record_is_kept_if_a_draft_was_opened_again_meanwhile(
     after = await stored(db_engine, record_id)
     assert after.record is not None and after.draft is not None
     assert (after.record.version, after.draft.draft_epoch) == (0, 1)
+
+
+async def test_a_late_discard_leaves_the_draft_opened_after_a_publish(
+    served: Served, network: Network, db_engine: AsyncEngine
+) -> None:
+    """Issue #178: the user discarded the draft of epoch 0; the request arrives after that draft
+    was published and somebody has started the next one."""
+    editor = await caller(db_engine)
+    record_id, _ = await new_draft(served, editor, "Person", person("Ada"))
+    seen = (await network.rooms.snapshot(record_id)).draft_epoch
+    newer = await publish_and_edit_again(served, network, editor, record_id)
+    assert newer == seen + 1
+    before = await stored(db_engine, record_id)
+
+    path = f"/api/records/{record_id}/draft/discard"
+    response = await discard(served, editor.headers, record_id, draft_epoch=seen)
+
+    assert response.status_code == 409, response.text
+    assert response.json() == {
+        "code": "LAE-CRDT-007",
+        "path": path,
+        "params": {"record_id": str(record_id)},
+    }
+    after = await stored(db_engine, record_id)
+    assert after.record is not None and after.draft is not None
+    assert (after.record.version, after.record.draft_epoch, after.draft.draft_epoch) == (
+        1,
+        newer,
+        newer,
+    )
+    assert after.counts == before.counts
+    assert await names_in_draft(network, record_id) == ["Ada", "Written after the publish"]
+    room = await network.rooms.get(record_id)
+    assert room is not None and room.draft_epoch == newer  # nobody was disconnected
+
+    # Naming the draft there is discards it.
+    response = await discard(served, editor.headers, record_id, draft_epoch=newer)
+    assert response.json() == {"id": str(record_id), "deleted": False, "draft_epoch": newer + 1}
+    assert (await stored(db_engine, record_id)).draft is None
+
+
+@pytest.mark.parametrize("named", [False, True], ids=["no_epoch", "epoch"])
+@pytest.mark.parametrize("reopened", [True, False], ids=["reopened", "not_reopened"])
+async def test_a_publish_during_the_discard_is_not_undone_and_its_next_draft_is_kept(
+    served: Served, network: Network, db_engine: AsyncEngine, named: bool, reopened: bool
+) -> None:
+    """The publish lands after the endpoint has read the record and before ``crdt-ws`` is asked
+    to discard: the discard is limited to the epoch the endpoint read, with or without one in
+    the request, and the caller learns that the draft went another way."""
+    editor = await caller(db_engine)
+    record_id, _ = await new_draft(served, editor, "Person", person("Ada"))
+    seen = (await network.rooms.snapshot(record_id)).draft_epoch
+
+    async def publish_meanwhile() -> None:
+        if reopened:
+            await publish_and_edit_again(served, network, editor, record_id)
+        else:
+            assert (await publish(served, editor, record_id)).status_code == 200
+
+    served.app.state.http_client._transport = BeforeClose(network, publish_meanwhile)
+    response = await discard(served, editor.headers, record_id, seen if named else None)
+
+    assert (response.status_code, response.json()["code"]) == (409, "LAE-CRDT-007")
+    after = await stored(db_engine, record_id)
+    # Published once, and not deleted as a never-published record.
+    assert after.record is not None
+    assert (after.record.version, after.record.draft_epoch) == (1, seen + 1)
+    assert (len(after.revisions), len(after.events)) == (1, 1)
+    if reopened:
+        assert after.draft is not None and after.draft.draft_epoch == seen + 1
+        assert await names_in_draft(network, record_id) == ["Ada", "Written after the publish"]
+    else:
+        assert after.draft is None
+
+
+async def test_a_discard_that_names_an_ended_epoch_is_refused(
+    served: Served, network: Network, db_engine: AsyncEngine
+) -> None:
+    """A second click, or a tab that missed somebody else's discard: 409, nothing touched."""
+    editor = await caller(db_engine)
+    record_id, _ = await new_draft(served, editor, "Person", person("Ada"))
+    assert (await publish(served, editor, record_id)).status_code == 200
+    seen = await open_draft(network, record_id)
+    first = await discard(served, editor.headers, record_id, draft_epoch=seen)
+    assert first.json() == {"id": str(record_id), "deleted": False, "draft_epoch": seen + 1}
+    await open_draft(network, record_id)
+    await edit(network, record_id, editor.id, add_name("Started over"))
+
+    again = await discard(served, editor.headers, record_id, draft_epoch=seen)
+
+    assert (again.status_code, again.json()["code"]) == (409, "LAE-CRDT-007")
+    assert await names_in_draft(network, record_id) == ["Ada", "Started over"]
+    # A wrong type is the request's fault, not a conflict.
+    malformed = await served.client.post(
+        f"/api/records/{record_id}/draft/discard",
+        headers=editor.headers,
+        json={"draft_epoch": "latest"},
+    )
+    assert malformed.status_code == 422
+    assert await names_in_draft(network, record_id) == ["Ada", "Started over"]

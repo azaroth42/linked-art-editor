@@ -11,6 +11,7 @@ from typing import Any
 from uuid import UUID
 
 import httpx
+import orjson
 import pytest
 from pycrdt import Doc
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
@@ -33,7 +34,7 @@ from tests.api.conftest import (
     titled_record,
 )
 from tests.auth.conftest import Served
-from tests.publish.conftest import caller, edit, open_draft, publish, stored
+from tests.publish.conftest import BeforeClose, caller, edit, open_draft, publish, stored
 
 
 def add_name(content: str) -> Any:
@@ -779,3 +780,140 @@ async def test_revert_when_crdt_ws_fails_between_the_discard_and_the_open(
     assert response.json()["draft_epoch"] == between.record.draft_epoch
     snapshot = await network.rooms.snapshot(record_id)
     assert canonical_json(snapshot.jsonld) == canonical_json(v2)
+
+
+# --- revert and the draft the caller meant (issue #178) -------------------------------------------
+
+
+async def draft_names(network: Network, record_id: UUID) -> list[str]:
+    snapshot = await network.rooms.snapshot(record_id)
+    return [name["content"] for name in snapshot.jsonld["identified_by"]]
+
+
+async def test_a_late_revert_leaves_the_draft_opened_after_a_publish(
+    served: Served, network: Network, db_engine: AsyncEngine
+) -> None:
+    """The user reverted while the draft of epoch ``seen`` was live; the request arrives after
+    that draft was published and somebody has started the next one."""
+    record_id, who = await published_versions(served, network, db_engine)
+    seen = await open_draft(network, record_id)
+    await edit(network, record_id, who.id, add_name("Fourth"))
+    assert (await publish(served, who, record_id)).json()["version"] == 4
+    newer = await open_draft(network, record_id)
+    await edit(network, record_id, who.id, add_name("Written after the publish"))
+    assert newer == seen + 1
+    before = await stored(db_engine, record_id)
+
+    path = f"/api/records/{record_id}/revisions/2/revert"
+    response = await served.client.post(path, headers=who.headers, json={"draft_epoch": seen})
+
+    assert response.status_code == 409, response.text
+    assert response.json() == {
+        "code": "LAE-CRDT-007",
+        "path": path,
+        "params": {"record_id": str(record_id)},
+    }
+    after = await stored(db_engine, record_id)
+    assert after.record is not None and after.draft is not None
+    assert (after.record.version, after.record.draft_epoch, after.draft.draft_epoch) == (
+        4,
+        newer,
+        newer,
+    )
+    assert after.counts == before.counts
+    assert (await draft_names(network, record_id))[-1] == "Written after the publish"
+
+    # With the epoch of the draft there is, the revert goes through.
+    response = await served.client.post(path, headers=who.headers, json={"draft_epoch": newer})
+    assert response.status_code == 200, response.text
+    assert response.json()["draft_epoch"] == newer + 1
+    assert "Written after the publish" not in await draft_names(network, record_id)
+
+
+@pytest.mark.parametrize("named", [False, True], ids=["no_epoch", "epoch"])
+async def test_a_publish_during_the_revert_keeps_the_draft_opened_after_it(
+    served: Served, network: Network, db_engine: AsyncEngine, named: bool
+) -> None:
+    """The publish lands after the endpoint has read the record and before its discard reaches
+    ``crdt-ws``. The discard names the epoch the endpoint read, so it finds nothing; the draft
+    that makes ``open`` answer 409 belongs to another version and is not the endpoint's to
+    discard."""
+    record_id, who = await published_versions(served, network, db_engine)
+    seen = await open_draft(network, record_id)
+    await edit(network, record_id, who.id, add_name("Fourth"))
+
+    async def publish_and_edit_again() -> None:
+        assert (await publish(served, who, record_id)).json()["version"] == 4
+        await open_draft(network, record_id)
+        await edit(network, record_id, who.id, add_name("Written after the publish"))
+
+    served.app.state.http_client._transport = BeforeClose(network, publish_and_edit_again)
+    response = await served.client.post(
+        f"/api/records/{record_id}/revisions/2/revert",
+        headers=who.headers,
+        json={"draft_epoch": seen} if named else None,
+    )
+
+    assert (response.status_code, response.json()["code"]) == (409, "LAE-CRDT-007")
+    after = await stored(db_engine, record_id)
+    assert after.record is not None and after.draft is not None
+    assert (after.record.version, after.draft.draft_epoch) == (4, seen + 1)
+    assert (await draft_names(network, record_id))[-2:] == ["Fourth", "Written after the publish"]
+
+
+async def test_a_revert_that_names_an_ended_epoch_discards_nothing(
+    served: Served, network: Network, db_engine: AsyncEngine
+) -> None:
+    """Somebody else discarded the draft the caller saw and started over: 409 before any call to
+    ``crdt-ws``. A wrong type is 422."""
+    record_id, _, _ = await three_versions(db_engine)
+    headers = await editor(db_engine)
+    seen = await open_draft(network, record_id)
+    await network.rooms.close(record_id, discard=True)
+    await edit_draft(network, record_id, lambda doc: ops.set_scalar(doc, "x_note", "keep me"))
+    watched = Reopening(network, times=0)
+    served.app.state.http_client._transport = watched
+    path = f"/api/records/{record_id}/revisions/2/revert"
+
+    response = await served.client.post(path, headers=headers, json={"draft_epoch": seen})
+
+    assert (response.status_code, response.json()["code"]) == (409, "LAE-CRDT-007")
+    malformed = await served.client.post(path, headers=headers, json={"draft_epoch": "latest"})
+    assert malformed.status_code == 422
+    assert watched.discards == 0
+    snapshot = await network.rooms.snapshot(record_id)
+    assert (snapshot.draft_epoch, snapshot.jsonld["x_note"]) == (seen + 1, "keep me")
+
+
+async def test_revert_retries_name_the_epoch_of_the_draft_that_came_back(
+    served: Served, network: Network, db_engine: AsyncEngine
+) -> None:
+    """Contract §3 item 18 with epochs: every discard names one draft, the first the draft the
+    caller saw, each later one the draft a reconnecting client made of the same version."""
+    record_id, v2, _ = await three_versions(db_engine)
+    seen = await open_draft(network, record_id)
+    racing = ClosesSeen(network, times=revisions.REVERT_ATTEMPTS - 1)
+    served.app.state.http_client._transport = racing
+    response = await served.client.post(
+        f"/api/records/{record_id}/revisions/2/revert",
+        headers=await editor(db_engine),
+        json={"draft_epoch": seen},
+    )
+    assert response.status_code == 200, response.text
+    assert racing.epochs == [seen, seen + 1, seen + 2]
+    snapshot = await network.rooms.snapshot(record_id)
+    assert canonical_json(snapshot.jsonld) == canonical_json(v2)
+    assert snapshot.draft_epoch == response.json()["draft_epoch"] == seen + 3
+
+
+class ClosesSeen(Reopening):
+    """``Reopening`` that also records the ``draft_epoch`` of every ``close`` it carries."""
+
+    def __init__(self, inner: Network, times: int) -> None:
+        super().__init__(inner, times)
+        self.epochs: list[int | None] = []
+
+    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/close"):
+            self.epochs.append(orjson.loads(request.content).get("draft_epoch"))
+        return await super().handle_async_request(request)
