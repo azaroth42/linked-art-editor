@@ -5,7 +5,9 @@
   is ``lae.publish.service.publish``: the draft and every never-published record it refers to
   become published versions in one transaction.
 - ``POST /api/records/{id}/draft/discard`` (``publish``): throws the draft away; a record that
-  was never published is deleted with it. Answers ``{id, deleted, draft_epoch}``.
+  was never published is deleted with it. Optional body ``{draft_epoch}``: the epoch of the
+  draft the caller is looking at; 409 ``LAE-CRDT-007`` if the record has moved on from it
+  (issue #178). Answers ``{id, deleted, draft_epoch}``.
 
 Errors are structured (``lae.publish.errors``, ``LAE-PUB-NNN``). The two an editor meets in
 normal use:
@@ -58,6 +60,14 @@ class PublishRequest(BaseModel):
     """The warnings the editor was shown and accepts."""
 
 
+class DiscardRequest(BaseModel):
+    """Optional body of ``POST /api/records/{id}/draft/discard``."""
+
+    draft_epoch: int | None = None
+    """Epoch of the draft the caller means: the one its editor is connected with. The discard
+    is refused (409 ``LAE-CRDT-007``) if the record is at another epoch by now."""
+
+
 async def session_factory(
     request: Request,
     session: Annotated[AsyncSession, Depends(get_session)],
@@ -107,13 +117,27 @@ async def publish_record(
 
 @router.post(
     "/{record_id}/draft/discard",
-    responses={status.HTTP_404_NOT_FOUND: {"description": "LAE-REC-001"}},
+    responses={
+        status.HTTP_404_NOT_FOUND: {"description": "LAE-REC-001"},
+        status.HTTP_409_CONFLICT: {"description": "LAE-CRDT-007"},
+    },
 )
 async def discard_draft(
     record_id: UUID,
     user: Annotated[CurrentUser, Depends(require("publish"))],
     sessions: Annotated[async_sessionmaker[AsyncSession], Depends(session_factory)],
     crdt: Annotated[CrdtWsClient, Depends(crdt_client)],
+    body: DiscardRequest | None = None,
 ) -> DiscardResult:
-    """Discard the record's draft; delete the record if it was never published."""
-    return await discard(record_id, user, sessions=sessions, crdt=crdt)
+    """Discard the record's draft; delete the record if it was never published.
+
+    409 ``LAE-CRDT-007`` if the draft named by ``draft_epoch`` is no longer the record's, or
+    the draft was published while the request was under way.
+    """
+    return await discard(
+        record_id,
+        user,
+        sessions=sessions,
+        crdt=crdt,
+        draft_epoch=None if body is None else body.draft_epoch,
+    )

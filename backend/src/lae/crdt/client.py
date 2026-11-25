@@ -24,12 +24,14 @@ Stable contract (Steps 1.6, 1.9, 1.10, 1.14, 1.15 and Phase 3 call these; signat
 - ``open(record_id, *, content=None, created_by=None) -> OpenedRoom``: make sure the record has
   a draft and return its ``draft_epoch`` (``POST /api/records`` returns that number to the
   editor). ``content`` hydrates a *new* draft from other JSON-LD than ``records.data``
-  (revert-to-revision: ``close(discard=True)`` first, then ``open(content=...)``; 409
-  ``LAE-CRDT-004`` if somebody opened a draft in between).
+  (revert-to-revision: ``close(discard=True, draft_epoch=...)`` first, then
+  ``open(content=...)``; 409 ``LAE-CRDT-004`` if somebody opened a draft in between).
 - ``close(record_id, *, discard, draft_epoch=None, idle_for=None)``: ``discard=True`` deletes
   the draft, closes its sockets with 4409 and makes sure ``records.draft_epoch`` is beyond the
   deleted draft's epoch. With ``idle_for`` only a draft idle for that long (the reaper). Use it
-  *instead of* deleting draft rows anywhere else (ADR-0027).
+  *instead of* deleting draft rows anywhere else (ADR-0027). Every caller that discards names
+  the ``draft_epoch`` it means (publish, discard, revert, the reaper; issue #178): without one
+  the call discards whatever draft the record has by the time it arrives.
 
 **Publish (Step 1.10), in this order:** ``snapshot`` → validate → one transaction that locks
 the ``records`` row ``FOR UPDATE``, then requires

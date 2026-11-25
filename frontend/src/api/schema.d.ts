@@ -385,9 +385,11 @@ export interface paths {
          * Revert To Revision
          * @description Replace the record's draft with revision ``version``; return the new ``draft_epoch``.
          *
-         *     Whatever draft the record had is discarded, with every unpublished edit in it. 409
-         *     ``LAE-CRDT-005`` for a deleted or merged record; 409 ``LAE-CRDT-004`` if other clients kept
-         *     opening a draft between the discard and the open (try again).
+         *     The draft the record has when the request starts is discarded, with every unpublished edit
+         *     in it. 409 ``LAE-CRDT-005`` for a deleted or merged record; 409 ``LAE-CRDT-007`` if the
+         *     record is no longer at the body's ``draft_epoch``, or a publish overtook the request (the
+         *     draft opened since is kept; reload); 409 ``LAE-CRDT-004`` if other clients kept opening a
+         *     draft between the discard and the open (try again).
          */
         post: operations["revert_to_revision_api_records__record_id__revisions__version__revert_post"];
         delete?: never;
@@ -648,6 +650,9 @@ export interface paths {
         /**
          * Discard Draft
          * @description Discard the record's draft; delete the record if it was never published.
+         *
+         *     409 ``LAE-CRDT-007`` if the draft named by ``draft_epoch`` is no longer the record's, or
+         *     the draft was published while the request was under way.
          */
         post: operations["discard_draft_api_records__record_id__draft_discard_post"];
         delete?: never;
@@ -885,6 +890,14 @@ export interface components {
              * @description True when no item has severity ``violation`` (warnings do not count).
              */
             readonly ok: boolean;
+        };
+        /**
+         * DiscardRequest
+         * @description Optional body of ``POST /api/records/{id}/draft/discard``.
+         */
+        DiscardRequest: {
+            /** Draft Epoch */
+            draft_epoch?: number | null;
         };
         /**
          * DiscardResult
@@ -1247,6 +1260,14 @@ export interface components {
          * @enum {string}
          */
         Representation: "html" | "jsonld" | "ttl";
+        /**
+         * RevertRequest
+         * @description Optional body of ``POST /api/records/{id}/revisions/{n}/revert``.
+         */
+        RevertRequest: {
+            /** Draft Epoch */
+            draft_epoch?: number | null;
+        };
         /**
          * Reverted
          * @description Answer of ``POST /api/records/{id}/revisions/{n}/revert``.
@@ -2076,7 +2097,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["RevertRequest"] | null;
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -2094,7 +2119,7 @@ export interface operations {
                 };
                 content?: never;
             };
-            /** @description LAE-CRDT-004, LAE-CRDT-005 */
+            /** @description LAE-CRDT-004, LAE-CRDT-005, LAE-CRDT-007 */
             409: {
                 headers: {
                     [name: string]: unknown;
@@ -2581,7 +2606,11 @@ export interface operations {
             };
             cookie?: never;
         };
-        requestBody?: never;
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["DiscardRequest"] | null;
+            };
+        };
         responses: {
             /** @description Successful Response */
             200: {
@@ -2594,6 +2623,13 @@ export interface operations {
             };
             /** @description LAE-REC-001 */
             404: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description LAE-CRDT-007 */
+            409: {
                 headers: {
                     [name: string]: unknown;
                 };
