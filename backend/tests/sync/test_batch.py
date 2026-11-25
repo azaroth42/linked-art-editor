@@ -716,6 +716,50 @@ async def test_the_watermark_never_decreases(world: World, other: asyncpg.Connec
     assert await watermark(world.conn) == ("number", str(later_id))
 
 
+@pytest.mark.parametrize("late_is", ["pending", "done"])
+async def test_catch_up_tolerates_an_event_that_became_visible_after_a_higher_id_was_done(
+    world: World, other: asyncpg.Connection, late_is: str
+) -> None:
+    """Issue #178, Slice C: ids are assigned before commit, so ``late`` (A v1 to v2) commits
+    after ``later`` (B v1) is ``done`` and the watermark is past it. The index is then restored
+    to its state at A v1 with that event's id as the watermark, as an export taken there gives
+    it (``lae.bootstrap.export`` never puts the watermark above an event it lacks; §10 item 49).
+    Whether ``late`` is still pending or already ``done`` below the old watermark, both events
+    reach the index, each record's in id order, and the watermark ends at the highest id."""
+    a = await world.new("Alpha")
+    client = RecordingClient()
+    first = await process_batch(world.conn, client)
+    (k,) = first.done
+    at_k = copy_store(client.store)
+    await world.edit(a, rename("Alpha renamed"))  # revision 2; its event is re-inserted late
+    await world.conn.execute("DELETE FROM outbox_events WHERE id > $1", k)
+    late = other.transaction()
+    await late.start()
+    late_id = await insert_event(other, a, "publish", 1, 2)  # visible only to `other`
+    b = await world.new("Beta")
+    (later_id,) = [event.id for event in await pending_events(world.conn)]
+    assert k < late_id < later_id
+    assert (await process_batch(world.conn, client)).done == (later_id,)
+    await late.commit()
+    if late_is == "done":
+        assert (await process_batch(world.conn, client)).done == (late_id,)
+        assert await watermark(world.conn) == ("number", str(later_id))
+
+    restored = RecordingClient(copy_store(at_k))
+    await set_watermark(world.conn, k)
+    replayed = await catch_up(world.conn, restored)
+    result = await process_batch(world.conn, restored)
+
+    if late_is == "done":
+        assert (replayed, result.outcome) == (2, "empty")
+        assert len(restored.sent) == 1  # one batch, both events, in id order
+    else:
+        assert (replayed, result.done) == (1, (late_id,))
+    assert triples_of(restored.store) == await world.library(a, b).expected()
+    assert await watermark(world.conn) == ("number", str(later_id))
+    assert [row["status"] for row in await all_events(world.conn)] == ["done"] * 3
+
+
 async def test_a_notification_during_the_pending_count_still_wakes_the_loop(
     world: World, db_url: str, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -894,6 +938,14 @@ async def metrics_when(
             return values
         assert asyncio.get_running_loop().time() < deadline, (name, values)
         await asyncio.sleep(0.05)
+
+
+async def sent_when(client: RecordingClient, count: int, *, seconds: float = 10.0) -> None:
+    """Wait until ``client`` was sent at least ``count`` updates (acknowledged or not)."""
+    deadline = asyncio.get_running_loop().time() + seconds
+    while len(client.sent) < count:
+        assert asyncio.get_running_loop().time() < deadline, client.sent
+        await asyncio.sleep(0.01)
 
 
 async def test_metrics_report_pending_failed_lag_and_updates_sent(
@@ -1619,11 +1671,16 @@ async def test_the_worker_keeps_running_past_a_poisoned_done_event(
         worker.run(worker_settings(db_url, sync_metrics_port=port), client=client, stop=stop)
     )
     try:
+        if met_by == "start":
+            # The listener answers from the moment it is bound, some round trips before catch-up
+            # sends its first update. Scraping at once and then expecting that update made this
+            # test fail about 1 run in 5 at -n 6 (issue #178): wait for the update first.
+            await sent_when(client, 1)
         early = await metrics_when(port, "sync_catch_up_events_total", 0)
         assert early["sync_catch_up_events_total"] == 0
         if met_by == "start":
-            assert len(client.sent) == 1  # catch-up has begun and waits for this scrape
-            assert early["outbox_pending"] == 1
+            assert len(client.sent) == 1  # catch-up has begun and waits for `fetched`
+            assert early["outbox_pending"] == 1  # scraped while it waits (§7.5)
         else:
             client.store = copy_store(p.states[0])
             await set_watermark(world.conn, p.k)
@@ -1634,6 +1691,7 @@ async def test_the_worker_keeps_running_past_a_poisoned_done_event(
         final = await metrics_when(port, "outbox_pending", 0, at_most=True)
         assert not task.done()
     finally:
+        fetched.set()  # or a failure above leaves the worker in the client and hides itself
         stop.set()
         code = await asyncio.wait_for(task, timeout=10)
     assert code == 0

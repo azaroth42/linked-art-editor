@@ -3,7 +3,9 @@
 Contract: `docs/contracts/1.11-sync-worker.md` §5, §7.7 for issue #150 (catch-up meets a
 `done` event it cannot replay), §8.9 for issue #171 (the live path confirms a rejection with
 the probe; exit codes and the systemd unit; `--replay-after` database errors; redaction), and §9.6
-for issue #176 (a malformed `LAE_DATABASE_URL` and a metrics port that cannot be bound exit 2).
+for issue #176 (a malformed `LAE_DATABASE_URL` and a metrics port that cannot be bound exit 2), and
+§10.6 for issue #178 (failures to connect on a URL that parsed; an event that commits late: test 80 is
+in `test_batch.py`, tests 81 and 82 in `tests/bootstrap/test_pipeline.py`).
 
 | File | Tests | Needs |
 | :-- | :-- | :-- |
@@ -11,7 +13,7 @@ for issue #176 (a malformed `LAE_DATABASE_URL` and a metrics port that cannot be
 | `test_batch.py` | 11–27; 38–53 (§7: the poisoned world, the probe, dead letters in catch-up, `--failed`); 56–62, 71, 72 (§8: the live probe, refusals, the token across the cut or JSON-escaped) | PostgreSQL |
 | `test_replay_property.py` | 28–29; 54 (replaying around dead letters) | nothing (hypothesis, pyoxigraph) |
 | `test_qlever_integration.py` | 30–37; 55 (QLever's own rejection in catch-up, and the probe); 63 (the same on the live path; the probe adds no delta) | PostgreSQL and a real QLever 0.6.0 |
-| `test_connection_loss.py` | issue #151: how `run` exits on a database error (§3 item 22, §4); 64–70 (§8.5: the three kinds of database error, exit 4, the unit's restart rules, `--replay-after` and `--failed`); 73–76 (§9: a malformed `LAE_DATABASE_URL` exits 2 for every command, an unreachable one 1; a metrics port that cannot be bound exits 2 and is bound only after the lock) | PostgreSQL |
+| `test_connection_loss.py` | issue #151: how `run` exits on a database error (§3 item 22, §4); 64–70 (§8.5: the three kinds of database error, exit 4, the unit's restart rules, `--replay-after` and `--failed`); 73–76 (§9: a malformed `LAE_DATABASE_URL` exits 2 for every command, an unreachable one 1; a metrics port that cannot be bound exits 2 and is bound only after the lock); 77–79 (§10: a failed TLS handshake, an `InterfaceError` after the socket opened and no host with the session attributes asked for are `sync_database_unreachable`, exit 1) | PostgreSQL |
 
 **The poisoned world** (`test_batch.poisoned_world`, contract §7.7): three records published and
 processed live; record R's version 2 adds a marker literal and version 3 removes it. The

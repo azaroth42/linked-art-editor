@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import gzip
 import json
 import shutil
@@ -625,6 +626,102 @@ async def test_export_writes_every_record_sidecar_labels_and_the_watermark(
         f"<http://www.cidoc-crm.org/cidoc-crm/E55_Type> {graph} .",
         f'<{AAT}300033618> <http://www.w3.org/2000/01/rdf-schema#label> "paintings"@en {graph} .',
     }
+
+
+LOCK_WAITERS = (
+    "SELECT EXISTS (SELECT 1 FROM pg_locks "
+    "WHERE relation = 'outbox_events'::regclass AND NOT granted)"
+)
+
+
+async def _late_publish(late: asyncpg.Connection, uri: str) -> int:
+    """Inside ``late``'s open transaction: a record and its outbox event, as publish writes them."""
+    record_id = new_uuid7()
+    data = {"@context": "https://linked.art/ns/v1/linked-art.json", "id": uri, "type": "Person"}
+    await late.execute(
+        "INSERT INTO records (id, uri, type, version, etag, data, context_version) "
+        "VALUES ($1, $2, 'Person', 1, 'x', $3::jsonb, 1)",
+        record_id,
+        uri,
+        json.dumps(data),
+    )
+    event_id: int = await late.fetchval(
+        "INSERT INTO outbox_events (kind, record_id, to_version) VALUES ('publish', $1, 1) "
+        "RETURNING id",
+        record_id,
+    )
+    return event_id
+
+
+async def test_the_export_watermark_covers_no_event_that_had_not_committed(
+    bootstrap_settings: Settings, tmp_path: Path
+) -> None:
+    """Issue #178, Slice C. ``outbox_events.id`` is assigned at the insert, before the commit.
+
+    A publish holds event ``late_id`` uncommitted while another commits a higher id. A snapshot
+    taken then has the higher id as its watermark and lacks the first publish's record; once the
+    sync worker has marked ``late_id`` done on the old index, neither the export nor catch-up
+    (``id > watermark``) ever gives it to the rebuilt one. The export must wait for the open
+    insert, so every event at or below its watermark is in its snapshot.
+    """
+    dsn = asyncpg_dsn(bootstrap_settings.database_url)
+    uri = f"{BASE_URI}person/late"
+    late = await asyncpg.connect(dsn)
+    watch = await asyncpg.connect(dsn)
+    out = tmp_path / "export.nt"
+    try:
+        publish = late.transaction()
+        await publish.start()
+        late_id = await _late_publish(late, uri)
+        [later] = await fetch(
+            bootstrap_settings,
+            "INSERT INTO outbox_events (kind, record_id) VALUES ('publish', $1) RETURNING id",
+            new_uuid7(),
+        )
+        assert late_id < later["id"]
+
+        export = asyncio.ensure_future(export_nt(out, settings=bootstrap_settings, workers=1))
+        while True:  # until the export has finished or waits for the open transaction
+            if export.done() or await watch.fetchval(LOCK_WAITERS):
+                break
+            await asyncio.sleep(0.01)
+        waited = not export.done()  # else it took its snapshot beside the open transaction
+        await publish.commit()
+        summary = await asyncio.wait_for(export, 60)
+    finally:
+        await late.close()
+        await watch.close()
+
+    assert summary["watermark"] == later["id"]
+    assert f"<{uri}> " in out.read_text()  # the event below the watermark is in the snapshot
+    assert summary["records"] == 1
+    assert waited
+
+
+async def test_the_export_gives_up_when_an_outbox_insert_stays_open(
+    bootstrap_settings: Settings, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The wait is bounded: publishes queue behind the export's lock request, so it must not
+    wait for ever on a session that never commits. The export fails and writes no metadata."""
+    monkeypatch.setattr(lae.bootstrap.export, "SETTLE_TIMEOUT_MS", 200)
+    late = await asyncpg.connect(asyncpg_dsn(bootstrap_settings.database_url))
+    out = tmp_path / "export.nt"
+    try:
+        publish = late.transaction()
+        await publish.start()
+        await _late_publish(late, f"{BASE_URI}person/never")
+        with pytest.raises(BootstrapError, match="outbox_events"):
+            await asyncio.wait_for(export_nt(out, settings=bootstrap_settings, workers=1), 60)
+        # The lock request is gone with the export: another publish is not held up.
+        await fetch(
+            bootstrap_settings,
+            "INSERT INTO outbox_events (kind, record_id) VALUES ('publish', $1)",
+            new_uuid7(),
+        )
+        await publish.rollback()
+    finally:
+        await late.close()
+    assert not meta_path(out).exists()
 
 
 def test_asyncpg_dsn_drops_the_sqlalchemy_driver() -> None:

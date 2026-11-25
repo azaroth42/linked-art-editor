@@ -1061,7 +1061,9 @@ async def connect(database_url: str) -> asyncpg.Connection:
     (``ArgumentError``, or ``ValueError`` for a port that is not a number), or by asyncpg before
     it opens a socket (``ClientConfigurationError``, a ``ValueError``; or a ``ValueError`` of its
     own). A server that cannot be reached or refuses the login raises what ``asyncpg.connect``
-    raises (``OSError``, ``asyncpg.PostgresError``); a host name that does not resolve is one.
+    raises (``CONNECT_ERRORS``); a host name that does not resolve is one. An ``OSError`` is
+    never a parse error, even when it is a ``ValueError`` too: ``ssl.SSLCertVerificationError``
+    is both, and comes from the TLS handshake with a server that was reached (contract §10).
     """
     try:
         dsn = asyncpg_dsn(database_url)
@@ -1069,23 +1071,42 @@ async def connect(database_url: str) -> asyncpg.Connection:
         raise _url_error(error, database_url) from None
     try:
         return await asyncpg.connect(dsn)
+    except OSError:  # the socket or the TLS handshake: the URL parsed
+        raise
     except ValueError as error:  # asyncpg parses the DSN before any I/O
         raise _url_error(error, database_url) from None
+
+
+CONNECT_ERRORS: Final = (
+    OSError,
+    asyncpg.PostgresError,
+    asyncpg.InterfaceError,
+    asyncpg.InternalClientError,
+)
+"""What ``asyncpg.connect`` raises for a URL that parsed: ``sync_database_unreachable``, exit 1.
+
+``OSError``: no route, refused, timed out, a failed TLS handshake. ``PostgresError``: the server
+refused the login or is starting. ``InterfaceError``, raised after the socket opened: the server
+asks for an authentication method asyncpg does not have, or its SCRAM signature does not verify.
+``InternalClientError``: no host has the ``target_session_attrs`` asked for, or the server broke
+the protocol. Each depends on the server, so each may pass without a change to this host's
+settings (contract §10 item 48)."""
 
 
 async def _open_connection(settings: Settings, command: Command) -> asyncpg.Connection | int:
     """The command's connection, or its exit code after saying why there is none (§9 item 46).
 
-    A URL that cannot be parsed refuses to start: one stderr line, ``EXIT_CONFIG_ERROR``. A
-    server that cannot be reached is ``sync_database_unreachable`` and ``EXIT_FAILURE`` (item
-    39); ``--replay-after`` and ``--failed`` also say so on stderr.
+    A URL that cannot be parsed refuses to start: one stderr line, ``EXIT_CONFIG_ERROR``. Every
+    other failure to connect (``CONNECT_ERRORS``) is ``sync_database_unreachable`` and
+    ``EXIT_FAILURE`` (items 39 and 48); ``--replay-after`` and ``--failed`` also say so on
+    stderr.
     """
     try:
         return await connect(settings.database_url)
     except DatabaseUrlError as error:
         print(f"lae sync-worker: refusing to start: {error}", file=sys.stderr)
         return EXIT_CONFIG_ERROR
-    except (OSError, asyncpg.PostgresError) as error:
+    except CONNECT_ERRORS as error:
         logger.error(
             "sync_database_unreachable",
             error=str(error),

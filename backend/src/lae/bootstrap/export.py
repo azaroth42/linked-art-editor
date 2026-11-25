@@ -21,9 +21,15 @@ default graph, and ``deploy/Qleverfile`` reads the file as ``nq``.
 **Watermark.** The snapshot also gives the highest ``outbox_events.id``. Every event up to it is
 reflected in the export; ``lae bootstrap build-index`` stores it as ``qlever_index_watermark`` so
 that the sync worker replays only later events. It is written, with the counts, to
-``<out>.meta.json``. An event whose transaction is still open when the snapshot is taken, with an
-id below the maximum, would be in neither; a bootstrap runs before editing starts, and blue/green
-rebuilds (Phase 2) handle that case.
+``<out>.meta.json``. An event's id is assigned when it is inserted, before its transaction
+commits, so a snapshot taken beside an open insert could have a higher id as its maximum and
+lack that event's record; the worker would then mark the event ``done`` on the old index and
+nothing would ever give it to the rebuilt one. ``_settled_watermark`` therefore takes the
+snapshot while a second connection holds ``outbox_events`` in ``SHARE`` mode: the lock is
+granted only when no transaction has an uncommitted change to the table, and it is released as
+soon as the snapshot exists. Publishes and the sync worker wait for that moment (milliseconds);
+the wait for the lock is bounded by ``SETTLE_TIMEOUT_MS``, after which the export fails
+(contract ``docs/contracts/1.11-sync-worker.md`` §10 item 49).
 
 **Snapshot time.** ``snapshot_at`` in the metadata is the start of the snapshot's transaction
 (``now()``, ISO 8601). ``build-index`` stores it as ``qlever_index_watermark_time``: an
@@ -56,6 +62,7 @@ from lae.bootstrap.common import (
     INVALID_ID,
     NO_RECORD_URI,
     SIDECAR_LABEL_INVALID,
+    BootstrapError,
     Failure,
     Report,
     asyncpg_dsn,
@@ -69,6 +76,13 @@ from lae.rdf.sanitize import clean_iri
 from lae.settings import Settings
 
 STAGE: Final = "export"
+
+SETTLE_TIMEOUT_MS = 30_000
+"""How long the export waits for the open inserts into ``outbox_events`` to commit.
+
+Writers of the table queue behind the waiting lock request, so this is also the longest the
+export can hold up a publish. A publish transaction takes milliseconds; one that is still open
+after this long is stuck, and the export fails rather than wait for it."""
 
 RDF_TYPE: Final = "http://www.w3.org/1999/02/22-rdf-syntax-ns#type"
 RDFS_LABEL: Final = "http://www.w3.org/2000/01/rdf-schema#label"
@@ -313,6 +327,35 @@ async def _export_sidecar_labels(
     return rows, quads, written
 
 
+async def _settled_watermark(conn: asyncpg.Connection, dsn: str) -> int:
+    """Take ``conn``'s snapshot with no outbox insert open; return its highest event id.
+
+    ``conn`` is in a ``REPEATABLE READ`` transaction that has run no query yet: the query here
+    is its first and fixes its snapshot. A second connection holds ``outbox_events`` in ``SHARE``
+    mode meanwhile, which conflicts with the ``ROW EXCLUSIVE`` lock every insert and update
+    keeps until it commits. So each event with an id up to the one returned is committed and in
+    the snapshot, or rolled back, and each event inserted later gets a higher id (the sequence
+    only grows) and commits after the snapshot. Raises ``BootstrapError`` when the lock is not
+    granted within ``SETTLE_TIMEOUT_MS``.
+    """
+    gate = await asyncpg.connect(dsn)
+    try:
+        async with gate.transaction():
+            await gate.execute(f"SET LOCAL lock_timeout = {int(SETTLE_TIMEOUT_MS)}")
+            try:
+                await gate.execute("LOCK TABLE outbox_events IN SHARE MODE")
+            except asyncpg.LockNotAvailableError as error:
+                raise BootstrapError(
+                    f"a transaction has held a change to outbox_events open for more than "
+                    f"{SETTLE_TIMEOUT_MS} ms; the export cannot take a snapshot that is sure to "
+                    f"hold every event up to its watermark. Find it in pg_stat_activity, then "
+                    f"run the export again"
+                ) from error
+            return int(await conn.fetchval("SELECT coalesce(max(id), 0) FROM outbox_events"))
+    finally:
+        await gate.close()
+
+
 async def export_nt(
     out: Path,
     *,
@@ -330,7 +373,8 @@ async def export_nt(
     compress = out.name.endswith(".gz")
     out.parent.mkdir(parents=True, exist_ok=True)
     started = time.perf_counter()
-    conn = await asyncpg.connect(asyncpg_dsn(settings.database_url))
+    dsn = asyncpg_dsn(settings.database_url)
+    conn = await asyncpg.connect(dsn)
     try:
         with (
             Report(report_path) as report,
@@ -339,9 +383,7 @@ async def export_nt(
         ):
             writer = _Writer(handle, report)
             async with conn.transaction(isolation="repeatable_read", readonly=True):
-                watermark = int(
-                    await conn.fetchval("SELECT coalesce(max(id), 0) FROM outbox_events")
-                )
+                watermark = await _settled_watermark(conn, dsn)  # the snapshot's first query
                 snapshot_at = await conn.fetchval("SELECT now()")
                 context_versions = sorted(
                     row[0]

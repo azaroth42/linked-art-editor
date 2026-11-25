@@ -9,7 +9,8 @@
 #   1  may pass by itself (Postgres unreachable, the connection lost, an error of unknown kind):
 #      restarted every 5 s, without limit (StartLimitIntervalSec=0), so an outage of any length
 #      recovers by itself.
-#   2  refuses to start (a setting missing, the watermark not an integer): not restarted.
+#   2  refuses to start (a setting missing, LAE_DATABASE_URL not a PostgreSQL URL, the metrics
+#      port cannot be bound, the watermark not an integer): not restarted.
 #   4  a database error that cannot pass by itself (SQLSTATE class 42, 23, 22, 0A): not
 #      restarted. Fix the cause (journalctl -u lae-sync-worker, line sync_worker_failed), then
 #      `sudo systemctl start lae-sync-worker`. See "When the sync worker stops" in
