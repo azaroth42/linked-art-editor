@@ -11,11 +11,12 @@ records a test created, never whole tables.
 
 from __future__ import annotations
 
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from typing import Any
 from uuid import UUID
 
+import httpx
 import orjson
 from pycrdt import Doc
 from sqlalchemy import func, select
@@ -135,6 +136,21 @@ async def edit(
     """Apply one edit to the record's draft as ``user_id``, the way a socket's update is."""
     room = await net.rooms.open(record_id)
     await net.rooms.apply_update(record_id, change(replica_of(room.ydoc), operation), user_id)
+
+
+class BeforeClose(Network):
+    """A network on which ``before_close()`` runs once, just before the first ``close`` reaches
+    ``crdt-ws``: after the endpoint has read the ``records`` row and decided to discard."""
+
+    def __init__(self, inner: Network, before_close: Callable[[], Awaitable[None]]) -> None:
+        super().__init__(inner.crdt_app)
+        self.before_close: Callable[[], Awaitable[None]] | None = before_close
+
+    async def handle_async_request(self, request: httpx.Request) -> httpx.Response:
+        if request.url.path.endswith("/close") and self.before_close is not None:
+            injected, self.before_close = self.before_close, None  # its own closes pass through
+            await injected()
+        return await super().handle_async_request(request)
 
 
 async def publish(

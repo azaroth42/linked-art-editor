@@ -21,12 +21,14 @@ from uuid import UUID
 import httpx
 import pytest
 from sqlalchemy import select, text
+from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession
 
 from lae.api.records import new_record_data
 from lae.crdt import store
 from lae.crdt.rooms import DraftSupersededError
 from lae.db.models import QaFindingStatus, Record
+from lae.labels import upsert
 from lae.projection import ops
 from lae.publish import errors, service
 from tests.crdt.helpers import crash, eventually
@@ -452,3 +454,96 @@ async def test_a_crash_before_the_commit_leaves_everything_as_it_was(
     for record_id in bundle:
         (finding,) = (await stored(db_engine, record_id)).findings
         assert (finding.status, finding.resolved_by) == (QaFindingStatus.RESOLVED, editor.id)
+
+
+# -- entity_labels rows shared by two publishes --------------------------------------------------
+
+
+async def test_publishes_that_harvest_onto_each_others_label_rows_both_succeed(
+    served: Served, network: Network, db_engine: AsyncEngine, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Contract §4: "Deadlock: must not occur". Two concepts cite each other with a metatype.
+
+    Each publish writes the ``entity_labels`` row of its own record and then, in the metatype
+    harvest (ADR-0032), the row of the concept it cites, which is the other publish's record.
+    The ``records`` locks of item 6 do not order these: the publishes are of different records.
+    Both are parked at the harvest, each holding its own row; PostgreSQL then breaks the cycle
+    by aborting one of them (SQLSTATE 40P01, nothing of it written). Before issue #178 that was
+    a 500 for one editor; now that publish runs its write transaction again and succeeds.
+    """
+    editor = await caller(db_engine)
+    concepts = [
+        await new_draft(served, editor, "Type", person(name)) for name in ("Oil", "Tempera")
+    ]
+    for record_id, _ in concepts:
+        assert (await publish(served, editor, record_id)).status_code == 200
+    for (record_id, _), (_, other_uri) in zip(concepts, reversed(concepts), strict=True):
+        published = (await stored(db_engine, record_id)).record
+        assert published is not None
+        metatype = {"id": f"https://vocab.example.org/metatype/{record_id}", "type": "Type"}
+        cited = {"id": other_uri, "type": "Type", "classified_as": [metatype]}
+        await network.rooms.open(record_id, content={**published.data, "classified_as": [cited]})
+
+    arrived = 0
+    both_arrived = asyncio.Event()
+    harvest = upsert.harvest_record_metatypes
+
+    async def harvest_together(*args: Any, **kwargs: Any) -> int:
+        nonlocal arrived
+        arrived += 1
+        if arrived == 2:
+            both_arrived.set()
+        await both_arrived.wait()  # each transaction now holds the label row of its own record
+        return await harvest(*args, **kwargs)
+
+    monkeypatch.setattr(upsert, "harvest_record_metatypes", harvest_together)
+    responses = await asyncio.wait_for(
+        asyncio.gather(
+            *(publish(served, editor, record_id) for record_id, _ in concepts),
+            return_exceptions=True,
+        ),
+        timeout=20,
+    )
+
+    assert [getattr(response, "status_code", repr(response)) for response in responses] == [
+        200,
+        200,
+    ]
+    for record_id, _ in concepts:
+        after = await stored(db_engine, record_id)
+        assert after.record is not None and after.label is not None
+        assert (after.record.version, after.counts) == (2, (2, 2, 1, 0, 0))
+        assert after.label.metatype_uris != []
+    assert arrived == 3  # two first attempts and the one that was run again
+
+
+async def test_a_publish_that_keeps_deadlocking_fails_and_writes_nothing(
+    served: Served, network: Network, db_engine: AsyncEngine, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """``WRITE_ATTEMPTS`` transactions, then the error is passed on; other errors at once."""
+    editor = await caller(db_engine)
+    record_id, _ = await new_draft(served, editor, "Person", person())
+    before = fingerprint(await stored(db_engine, record_id))
+    attempts = 0
+
+    def failing(sqlstate: str) -> Any:
+        async def write_bundle(*args: Any, **kwargs: Any) -> Any:
+            nonlocal attempts
+            attempts += 1
+            cause = Exception("aborted")
+            cause.sqlstate = sqlstate  # type: ignore[attr-defined]
+            raise DBAPIError("UPDATE entity_labels", None, cause)
+
+        return write_bundle
+
+    monkeypatch.setattr(service, "_write_bundle", failing(service.DEADLOCK_DETECTED))
+    with pytest.raises(DBAPIError):
+        await publish(served, editor, record_id)
+    assert attempts == service.WRITE_ATTEMPTS
+    monkeypatch.setattr(service, "_write_bundle", failing("23505"))
+    with pytest.raises(DBAPIError):
+        await publish(served, editor, record_id)
+    assert attempts == service.WRITE_ATTEMPTS + 1
+    assert fingerprint(await stored(db_engine, record_id)) == before
+    monkeypatch.undo()
+    assert (await publish(served, editor, record_id)).status_code == 200

@@ -58,8 +58,9 @@ export function HistoryPage() {
   const navigate = useNavigate();
   const record = useCurrentRecord(id);
   const revisions = useRevisions(id);
-  const recordClass = typeof record.data?.type === "string" ? record.data.type : null;
-  const recordUri = typeof record.data?.id === "string" ? record.data.id : "";
+  const published = record.data?.jsonld;
+  const recordClass = typeof published?.type === "string" ? published.type : null;
+  const recordUri = typeof published?.id === "string" ? published.id : "";
   const profile = useProfile(recordClass);
   const [chosen, setChosen] = useState<Comparison | null>(null);
   const [reverting, setReverting] = useState<number | null>(null);
@@ -115,6 +116,7 @@ export function HistoryPage() {
         <RevertDialog
           recordId={id}
           version={reverting}
+          draftEpoch={record.data?.draftEpoch ?? null}
           onCancel={closeRevert}
           onReverted={(result) => {
             void navigate(editorPath(id), {
@@ -319,12 +321,14 @@ function RevisionDiff({ recordId, recordUri, profile, comparison, onSwap }: Revi
 interface RevertDialogProps {
   recordId: string;
   version: number;
+  /** The record's draft epoch as this page read it: the only draft the revert may replace. */
+  draftEpoch: number | null;
   onCancel: () => void;
   onReverted: (result: { draft_epoch: number }) => void;
 }
 
 /** "Revert to version N?": the draft is replaced, nothing is published. */
-function RevertDialog({ recordId, version, onCancel, onReverted }: RevertDialogProps) {
+function RevertDialog({ recordId, version, draftEpoch, onCancel, onReverted }: RevertDialogProps) {
   const { t } = useTranslation("editor");
   const errorMessage = useErrorMessage();
   const revert = useRevert(recordId);
@@ -336,7 +340,7 @@ function RevertDialog({ recordId, version, onCancel, onReverted }: RevertDialogP
       cancelLabel={t("revert.cancel")}
       pending={revert.isPending}
       error={revert.error === null ? null : (errorMessage(revert.error) ?? t("revert.failed"))}
-      onConfirm={() => revert.mutate(version, { onSuccess: onReverted })}
+      onConfirm={() => revert.mutate({ version, draftEpoch }, { onSuccess: onReverted })}
       onCancel={onCancel}
     />
   );

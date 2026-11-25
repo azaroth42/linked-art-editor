@@ -27,6 +27,13 @@ What ``publish`` does, in order:
    of the draft.
 4. **Close** the rooms in ``crdt-ws`` (best effort, after the commit).
 
+``discard`` never discards a draft it was not asked about (issue #178). It reads
+``records.draft_epoch`` first, which is the epoch of the record's draft if it has one, and asks
+``crdt-ws`` to discard the draft of exactly that epoch. A caller that names the epoch it was
+looking at (``draft_epoch``) is refused with 409 ``LAE-CRDT-007`` when the record has moved on
+to another one, and so is any caller whose draft was published while the request was under way:
+the draft somebody has opened since, with whatever was typed into it, is left alone.
+
 Invariants, and where each one is enforced:
 
 - **All or nothing.** Everything in step 3 is one transaction. Any exception rolls it back; the
@@ -46,7 +53,15 @@ Invariants, and where each one is enforced:
 - **One lock order: ``records`` rows in UUID order, then ``crdt_drafts`` rows in UUID order.**
   ``crdt-ws`` takes the ``records`` row before the draft row too (``lae.crdt.store``), and
   every transaction that locks several records must use UUID order (spec §3.4), so publish can
-  wait but cannot deadlock.
+  wait but cannot deadlock on those rows.
+- **A deadlock on other rows costs nobody a publish** (issue #178). The transaction also writes
+  ``entity_labels``: the row of each record it publishes and, in the metatype harvest, rows of
+  concepts those records cite, which other publishes (of those concepts) and other writers of
+  the table lock in no agreed order. PostgreSQL resolves such a cycle by aborting one
+  transaction (SQLSTATE 40P01). That transaction has written nothing, so the write step is run
+  again, ``WRITE_ATTEMPTS`` times in all: a fresh transaction that takes every lock and
+  repeats every check, and therefore still publishes exactly the validated snapshot or
+  refuses with the usual code.
 - **A draft is published onto the version it was hydrated from.** ``records.version`` must
   equal the snapshot's ``base_version`` (409 ``LAE-PUB-006`` otherwise). Today nothing changes
   a record under a live draft; the check is there for the day something does (a merge that
@@ -96,6 +111,7 @@ from uuid import UUID
 from pydantic import BaseModel, ConfigDict
 from sqlalchemy import Text, any_, bindparam, exists, func, select, update
 from sqlalchemy.dialects.postgresql import ARRAY
+from sqlalchemy.exc import DBAPIError
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from lae.aliases import resolve_aliases
@@ -104,6 +120,7 @@ from lae.api.records import RECORD_NOT_FOUND, record_etag
 from lae.auth import CurrentUser
 from lae.auth.errors import permission_denied
 from lae.bootstrap.common import BOOTSTRAP_CONTEXT_VERSION, BOOTSTRAP_EXPANDER_VERSION
+from lae.crdt import errors as crdt_errors
 from lae.crdt import store
 from lae.crdt.client import CrdtWsClient
 from lae.crdt.rooms import Snapshot
@@ -143,6 +160,12 @@ from lae.validation.expansion import expansion_diagnostic
 from lae.validation.schema import SCHEMA_CODE_PREFIX
 
 PUBLISH_PERMISSION: Final = "publish"
+
+WRITE_ATTEMPTS: Final = 3
+"""How often ``publish`` runs its write transaction when PostgreSQL aborts it as a deadlock."""
+
+DEADLOCK_DETECTED: Final = "40P01"
+"""SQLSTATE of a transaction PostgreSQL aborted to break a lock cycle; nothing of it is kept."""
 
 _UNPUBLISHED_TARGETS: Final = select(Record.id, Record.uri).where(
     Record.uri == any_(bindparam("uris", type_=ARRAY(Text))), Record.version == 0
@@ -221,6 +244,29 @@ class _Rendered:
 
 def _record_not_found() -> ApiError:
     return ApiError(404, RECORD_NOT_FOUND)
+
+
+def draft_superseded(record_id: UUID) -> ApiError:
+    """409 ``LAE-CRDT-007``: the draft the caller meant was published or discarded meanwhile.
+
+    The answer of ``discard`` (and of revert, ``lae.api.revisions``) when acting would touch a
+    draft other than the one the caller was looking at. Nothing was discarded by this request
+    beyond, at most, the draft it named; the record's current draft is as it was.
+    """
+    return ApiError(409, crdt_errors.DRAFT_SUPERSEDED, {"record_id": str(record_id)})
+
+
+async def _version_and_epoch(
+    sessions: async_sessionmaker[AsyncSession], record_id: UUID
+) -> tuple[int, int] | None:
+    """Return ``(records.version, records.draft_epoch)`` as committed now; ``None``: no record."""
+    async with sessions() as session:
+        row = (
+            await session.execute(
+                select(Record.version, Record.draft_epoch).where(Record.id == record_id)
+            )
+        ).one_or_none()
+    return None if row is None else (row[0], row[1])
 
 
 def _require_publish(user: CurrentUser) -> None:
@@ -591,6 +637,10 @@ async def _write_bundle(
     return records
 
 
+def _is_deadlock(error: DBAPIError) -> bool:
+    return getattr(error.orig, "sqlstate", None) == DEADLOCK_DETECTED
+
+
 # -- the entry points --------------------------------------------------------------------------
 
 
@@ -621,17 +671,26 @@ async def publish(
         await _validate(bundle, session, settings.context_version)
     _check_diagnostics(record_id, bundle, accepted_warnings)
 
-    async with sessions() as session, session.begin():
-        records = await _write_bundle(
-            session,
-            bundle,
-            user=user,
-            summary=summary,
-            context_version=settings.context_version,
-            label_language=settings.label_language,
-        )
-        version = records[record_id].version
-        draft_epoch = records[record_id].draft_epoch
+    for attempt in range(1, WRITE_ATTEMPTS + 1):
+        try:
+            async with sessions() as session, session.begin():
+                records = await _write_bundle(
+                    session,
+                    bundle,
+                    user=user,
+                    summary=summary,
+                    context_version=settings.context_version,
+                    label_language=settings.label_language,
+                )
+                version = records[record_id].version
+                draft_epoch = records[record_id].draft_epoch
+            break
+        except DBAPIError as error:
+            # Rolled back whole by PostgreSQL. The next attempt locks and checks everything
+            # again, so it publishes the validated snapshot or fails like a first attempt.
+            if not _is_deadlock(error) or attempt == WRITE_ATTEMPTS:
+                raise
+            logger.warning("publish_deadlock_retried", attempt=attempt)
     # Committed. The rooms are closed on a best-effort basis: a room that outlives its draft
     # can no longer write (its draft row is gone) and is retired at its next write or open.
     for document in bundle.values():
@@ -656,33 +715,52 @@ async def discard(
     *,
     sessions: async_sessionmaker[AsyncSession],
     crdt: CrdtWsClient,
+    draft_epoch: int | None = None,
 ) -> DiscardResult:
     """Throw the record's draft away; delete the record itself if it was never published.
 
-    The draft is deleted by ``crdt-ws`` (``close(discard=True)``: sockets get 4409, the rows go,
-    ``records.draft_epoch`` moves on; ADR-0027). A record at ``version = 0`` exists only as its
-    draft, so its row is deleted afterwards, unless somebody has opened a new draft of it in
-    the meantime. Discarding a record that has no draft is not an error.
+    ``draft_epoch`` is the epoch of the draft the caller means (what the editor is connected
+    with). Give it whenever the request comes from a person looking at a draft: if the record
+    has moved on to another epoch (that draft was published or discarded), the answer is 409
+    ``LAE-CRDT-007`` and nothing is touched. Without it, the draft meant is the one the record
+    has when the call starts.
 
-    Raises 403 ``LAE-AUTH-001`` without ``publish``, 404 ``LAE-REC-001`` and
-    ``lae.crdt.client.CrdtWsError`` (nothing is deleted while ``crdt-ws`` cannot be reached).
+    Either way ``crdt-ws`` is asked to discard the draft of exactly that epoch
+    (``close(discard=True, draft_epoch=...)``: sockets get 4409, the rows go,
+    ``records.draft_epoch`` moves on; ADR-0027), so a draft opened after a publish that
+    overtook this call survives it. Such a publish is reported as 409 ``LAE-CRDT-007`` too:
+    the draft was not discarded, it was published. A record at ``version = 0`` exists only as
+    its draft, so its row is deleted afterwards, unless somebody has opened a new draft of it
+    in the meantime. Discarding a record that has no draft is not an error.
+
+    Raises 403 ``LAE-AUTH-001`` without ``publish``, 404 ``LAE-REC-001``, 409 ``LAE-CRDT-007``
+    and ``lae.crdt.client.CrdtWsError`` (nothing is deleted while ``crdt-ws`` cannot be
+    reached).
     """
     _require_publish(user)
     bind_log_context(user_id=user.id, record_id=record_id)
-    async with sessions() as session:
-        found = await session.scalar(select(Record.id).where(Record.id == record_id))
+    found = await _version_and_epoch(sessions, record_id)
     if found is None:
         raise _record_not_found()
-    await crdt.close(record_id, discard=True)
+    version, current_epoch = found
+    # A live draft has the epoch of its record (``lae.crdt.store``), so this is also "the
+    # draft the caller named is the one there is, if there is one".
+    if draft_epoch is not None and draft_epoch != current_epoch:
+        raise draft_superseded(record_id)
+    await crdt.close(record_id, discard=True, draft_epoch=current_epoch)
     # The same delete as the draft reaper's: the record row is locked FOR UPDATE, which keeps
     # crdt-ws from creating a draft (it locks the row FOR SHARE first) between the check for a
     # draft and the delete, which would cascade to that draft.
     if await delete_unpublished_record(sessions, record_id):
         logger.info("unpublished_record_deleted")
         return DiscardResult(id=record_id, deleted=True, draft_epoch=None)
-    async with sessions() as session:
-        draft_epoch = await session.scalar(select(Record.draft_epoch).where(Record.id == record_id))
-    if draft_epoch is None:  # deleted meanwhile (by the reaper or another discard)
+    after = await _version_and_epoch(sessions, record_id)
+    if after is None:  # deleted meanwhile (by the reaper or another discard)
         return DiscardResult(id=record_id, deleted=True, draft_epoch=None)
-    logger.info("draft_discarded", draft_epoch=draft_epoch)
-    return DiscardResult(id=record_id, deleted=False, draft_epoch=draft_epoch)
+    if after[0] != version:
+        # A publish overtook the close: the draft became a version instead of being discarded,
+        # and the close, limited to its epoch, left whatever draft has been opened since.
+        logger.info("discard_overtaken_by_publish", version=after[0])
+        raise draft_superseded(record_id)
+    logger.info("draft_discarded", draft_epoch=after[1])
+    return DiscardResult(id=record_id, deleted=False, draft_epoch=after[1])

@@ -84,7 +84,11 @@ function titleChange(from: number, to: number): Change[] {
 function api(extra: Routes = {}): Routes {
   return {
     "GET /auth/me": () => Response.json(EDITOR),
-    [RECORD]: () => Response.json({ id: RECORD_URI, type: "HumanMadeObject" }),
+    [RECORD]: () =>
+      Response.json(
+        { id: RECORD_URI, type: "HumanMadeObject" },
+        { headers: { "X-Draft-Epoch": "8" } },
+      ),
     [REVISIONS]: () => Response.json(REVISION_LIST),
     "GET /api/profiles/HumanMadeObject": () => Response.json(PROFILE),
     ...extra,
@@ -256,6 +260,53 @@ describe("HistoryPage", () => {
     expect(
       requests.filter((request) => request.method === "POST").map((r) => new URL(r.url).pathname),
     ).toEqual([`/api/records/${ID}/revisions/1/revert`]);
+    // The revert may only replace the draft this page knew about (issue #178).
+    const sent = requests.find((request) => request.method === "POST");
+    expect(await sent?.json()).toEqual({ draft_epoch: 8 });
+  });
+
+  it("reads the record again after a refused revert, so a retry names the current epoch", async () => {
+    const user = userEvent.setup();
+    let epoch = 8;
+    const bodies: unknown[] = [];
+    const { router, requests } = renderHistory(
+      api({
+        [RECORD]: () =>
+          Response.json(
+            { id: RECORD_URI, type: "HumanMadeObject" },
+            { headers: { "X-Draft-Epoch": String(epoch) } },
+          ),
+        [REVERT(2)]: async (request: Request) => {
+          const body = (await request.json()) as { draft_epoch: number };
+          bodies.push(body);
+          if (bodies.length === 1) {
+            epoch = 9; // the draft the page knew about was published on the way
+          }
+          // As the server: only a request that names the record's epoch is carried out.
+          return body.draft_epoch === epoch
+            ? Response.json({ id: ID, version: 2, draft_epoch: 10, base_version: 4 })
+            : errorResponse(409, "LAE-CRDT-007", `/api/records/${ID}/revisions/2/revert`);
+        },
+      }),
+    );
+    await user.click(await screen.findByRole("button", { name: "Revert to version 2" }));
+    const dialog = screen.getByRole("dialog", { name: "Revert to version 2?" });
+    await user.click(within(dialog).getByRole("button", { name: "Revert" }));
+    await within(dialog).findByText(
+      "The draft was published or discarded in the meantime. Reload to continue.",
+    );
+    expect(bodies).toEqual([{ draft_epoch: 8 }]);
+    expect(router.state.location.pathname).toBe(`/records/${ID}/history`);
+    // The record is read again without a reload of the page, and the next attempt goes through.
+    const reads = () => requests.filter((r) => new URL(r.url).pathname === `/api/records/${ID}`);
+    await waitFor(() => expect(reads().length).toBe(2));
+    await waitFor(async () => {
+      if (router.state.location.pathname !== `/edit/${ID}`) {
+        await user.click(within(dialog).getByRole("button", { name: "Revert" }));
+      }
+      expect(router.state.location.pathname).toBe(`/edit/${ID}`);
+    });
+    expect(bodies.at(-1)).toEqual({ draft_epoch: 9 });
   });
 
   it("explains a failed revert and stays on the page", async () => {

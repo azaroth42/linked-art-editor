@@ -16,7 +16,7 @@ afterEach(() => {
 
 function renderButton() {
   const props = { onStart: vi.fn(), onDiscarded: vi.fn(), onFailed: vi.fn() };
-  renderWidget(<DiscardButton recordId={ID} disabled={false} {...props} />, draft());
+  renderWidget(<DiscardButton recordId={ID} draftEpoch={4} disabled={false} {...props} />, draft());
   return props;
 }
 
@@ -39,11 +39,13 @@ describe("DiscardButton", () => {
   it("discards the draft when confirmed", async () => {
     const user = userEvent.setup();
     const result = { id: ID, deleted: false, draft_epoch: 5 };
-    stubFetch({ [DISCARD]: () => Response.json(result) });
+    const requests = stubFetch({ [DISCARD]: () => Response.json(result) });
     const { onStart, onDiscarded } = renderButton();
     await user.click(await screen.findByRole("button", { name: "Discard draft" }));
     await user.click(screen.getByRole("button", { name: "Discard" }));
     await waitFor(() => expect(onDiscarded).toHaveBeenCalledWith(result));
+    // Only the draft on screen may be discarded: the request names its epoch (issue #178).
+    expect(await requests[0]?.json()).toEqual({ draft_epoch: 4 });
     expect(onStart).toHaveBeenCalledOnce();
     expect(screen.queryByRole("dialog")).toBeNull();
   });

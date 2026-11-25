@@ -89,13 +89,18 @@ export function usePublish(id: string) {
   });
 }
 
-/** `POST /api/records/{id}/draft/discard`. */
+/**
+ * `POST /api/records/{id}/draft/discard`. The mutation takes the epoch of the draft the user is
+ * looking at (`null` if unknown): the server discards only that draft, and answers 409
+ * `LAE-CRDT-007` if the record has moved on to another one (issue #178).
+ */
 export function useDiscard(id: string) {
   return useMutation({
-    mutationFn: () =>
+    mutationFn: (draftEpoch: number | null) =>
       unwrap(
         api.POST("/api/records/{record_id}/draft/discard", {
           params: { path: { record_id: id } },
+          body: draftEpoch === null ? undefined : { draft_epoch: draftEpoch },
         }),
       ),
   });

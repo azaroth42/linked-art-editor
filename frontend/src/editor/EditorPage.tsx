@@ -215,6 +215,7 @@ export function EditorPage() {
                 </button>
                 <DiscardButton
                   recordId={id}
+                  draftEpoch={epoch}
                   disabled={!usable || ending}
                   onStart={() => setEndingEpoch(epoch)}
                   onDiscarded={onDiscarded}

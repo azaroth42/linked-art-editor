@@ -44,6 +44,17 @@ Between the two calls an editor's socket can reconnect and create a draft from `
 so the endpoint discards it and tries again, ``REVERT_ATTEMPTS`` times in all, and passes the
 409 on if it still loses. The answer carries the new ``draft_epoch``, which every client needs
 before it can connect to the room again (the old one is closed with 4409).
+
+**Revert discards only the draft it was asked about** (issue #178). Every ``close`` names one
+epoch: first ``records.draft_epoch`` as the endpoint read it (the epoch of the record's draft,
+if it has one), and on a retry the epoch read again. The optional body ``{draft_epoch}`` is the
+epoch the caller was looking at; if the record is at another one, the answer is 409
+``LAE-CRDT-007`` before anything is discarded. A draft that makes ``open`` answer 409 is
+discarded for a retry only while ``records.version`` is what it was when the request started:
+then it is a draft of the same published version, made since the endpoint's discard (the
+reconnect above). If the version has changed, a publish overtook the request, the draft is
+somebody's work on the new version, and the answer is 409 ``LAE-CRDT-007`` with that draft
+untouched.
 """
 
 from __future__ import annotations
@@ -78,6 +89,7 @@ from lae.labels.transclude import resolve_labels
 from lae.logging import bind_log_context, get_logger
 from lae.projection import ProjectionError, hydrate
 from lae.publish import errors as publish_errors
+from lae.publish.service import draft_superseded
 
 DRAFT_DIFF_ATTEMPTS: Final = 3
 """How often the draft diff reads the record and the draft before it gives up with 409
@@ -117,6 +129,15 @@ class Reverted(BaseModel):
     """Epoch of the new draft; clients reconnect to the room with it."""
     base_version: int
     """``records.version`` the draft will be published on top of."""
+
+
+class RevertRequest(BaseModel):
+    """Optional body of ``POST /api/records/{id}/revisions/{n}/revert``."""
+
+    draft_epoch: int | None = None
+    """``records.draft_epoch`` as the caller last saw it (``X-Draft-Epoch`` of
+    ``GET /api/records/{id}``; the epoch its editor is connected with). The revert is refused
+    (409 ``LAE-CRDT-007``) if the record is at another epoch by now."""
 
 
 async def labelled_diff(
@@ -233,7 +254,7 @@ async def diff_draft(
     "/{record_id}/revisions/{version}/revert",
     responses={
         status.HTTP_404_NOT_FOUND: {"description": "LAE-REC-001, LAE-REC-004"},
-        status.HTTP_409_CONFLICT: {"description": "LAE-CRDT-004, LAE-CRDT-005"},
+        status.HTTP_409_CONFLICT: {"description": "LAE-CRDT-004, LAE-CRDT-005, LAE-CRDT-007"},
         status.HTTP_422_UNPROCESSABLE_CONTENT: {"description": "LAE-CRDT-008"},
     },
 )
@@ -243,12 +264,15 @@ async def revert_to_revision(
     user: Annotated[CurrentUser, Depends(require("publish"))],
     session: Annotated[AsyncSession, Depends(get_session)],
     crdt: Annotated[CrdtWsClient, Depends(crdt_client)],
+    body: RevertRequest | None = None,
 ) -> Reverted:
     """Replace the record's draft with revision ``version``; return the new ``draft_epoch``.
 
-    Whatever draft the record had is discarded, with every unpublished edit in it. 409
-    ``LAE-CRDT-005`` for a deleted or merged record; 409 ``LAE-CRDT-004`` if other clients kept
-    opening a draft between the discard and the open (try again).
+    The draft the record has when the request starts is discarded, with every unpublished edit
+    in it. 409 ``LAE-CRDT-005`` for a deleted or merged record; 409 ``LAE-CRDT-007`` if the
+    record is no longer at the body's ``draft_epoch``, or a publish overtook the request (the
+    draft opened since is kept; reload); 409 ``LAE-CRDT-004`` if other clients kept opening a
+    draft between the discard and the open (try again).
     """
     bind_log_context(user_id=user.id, record_id=record_id)
     record = await get_record_or_404(session, record_id)
@@ -258,6 +282,10 @@ async def revert_to_revision(
             crdt_errors.RECORD_NOT_EDITABLE,
             {"record_id": str(record_id)},
         )
+    # Read before any await below can refresh the row: the state the caller is acting on.
+    base_version, draft_epoch = record.version, record.draft_epoch
+    if body is not None and body.draft_epoch not in (None, draft_epoch):
+        raise draft_superseded(record_id)
     revision = await _version_or_404(session, record, version)
     try:
         # Checked before the current draft is discarded, so that a revision the room cannot
@@ -270,12 +298,27 @@ async def revert_to_revision(
             {"record_id": str(record_id), "projection_code": error.code},
         ) from error
     for attempt in range(1, REVERT_ATTEMPTS + 1):
-        await crdt.close(record_id, discard=True)
+        # Only the draft of this epoch: a draft opened after a publish that overtook this
+        # request has a later one and is left alone.
+        await crdt.close(record_id, discard=True, draft_epoch=draft_epoch)
         try:
             opened = await crdt.open(record_id, content=revision.data, created_by=user.id)
         except CrdtWsError as error:
-            if error.code != crdt_errors.DRAFT_EXISTS or attempt == REVERT_ATTEMPTS:
+            if error.code != crdt_errors.DRAFT_EXISTS:
                 raise
+            # There is a draft this request did not discard. Read the row again (not from the
+            # identity map) to learn whose it is.
+            current = await session.get(Record, record_id, populate_existing=True)
+            if current is None:
+                raise not_found() from error
+            if current.version != base_version:
+                logger.info("revert_overtaken_by_publish", published=current.version)
+                raise draft_superseded(record_id) from error
+            if attempt == REVERT_ATTEMPTS:
+                raise
+            # A draft of the same published version, made since the discard (a reconnecting
+            # socket): it has the record's epoch, and the next attempt discards exactly it.
+            draft_epoch = current.draft_epoch
             logger.info("revert_retried", version=version, attempt=attempt)
             continue
         logger.info("draft_reverted", version=version, draft_epoch=opened.draft_epoch)

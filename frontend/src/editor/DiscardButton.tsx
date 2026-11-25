@@ -8,6 +8,8 @@ import { ConfirmDialog } from "./ConfirmDialog.tsx";
 
 interface DiscardButtonProps {
   recordId: string;
+  /** Epoch of the draft on screen: the only draft the request may discard (`null`: unknown). */
+  draftEpoch: number | null;
   disabled: boolean;
   /** Called before the request: the draft's epoch is about to end on purpose. */
   onStart: () => void;
@@ -23,6 +25,7 @@ interface DiscardButtonProps {
  */
 export function DiscardButton({
   recordId,
+  draftEpoch,
   disabled,
   onStart,
   onDiscarded,
@@ -50,6 +53,7 @@ export function DiscardButton({
       {confirming && (
         <ConfirmDiscard
           recordId={recordId}
+          draftEpoch={draftEpoch}
           onCancel={close}
           onStart={onStart}
           onDiscarded={(result) => {
@@ -65,12 +69,14 @@ export function DiscardButton({
 
 function ConfirmDiscard({
   recordId,
+  draftEpoch,
   onCancel,
   onStart,
   onDiscarded,
   onFailed,
 }: {
   recordId: string;
+  draftEpoch: number | null;
   onCancel: () => void;
   onStart: () => void;
   onDiscarded: (result: DiscardResult) => void;
@@ -81,7 +87,7 @@ function ConfirmDiscard({
   const discard = useDiscard(recordId);
   const confirm = () => {
     onStart();
-    discard.mutate(undefined, {
+    discard.mutate(draftEpoch, {
       onSuccess: (result) => onDiscarded(result),
       onError: () => onFailed(),
     });
