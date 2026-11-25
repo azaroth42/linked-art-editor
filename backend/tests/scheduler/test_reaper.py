@@ -9,6 +9,7 @@ it; ``POST /api/records/{id}/draft/extend`` keeps a draft. Then the edges: aband
 from __future__ import annotations
 
 from datetime import UTC, datetime, timedelta
+from typing import Any
 from uuid import UUID
 
 import httpx
@@ -19,6 +20,7 @@ from sqlalchemy.ext.asyncio import AsyncEngine, AsyncSession, async_sessionmaker
 from uuid_utils.compat import uuid7
 
 from lae.crdt.client import CrdtWsClient
+from lae.projection import ops
 from lae.scheduler import reaper
 from lae.scheduler.jobs import JobContext
 from lae.scheduler.reaper import (
@@ -39,6 +41,7 @@ from tests.api.conftest import (
     titled_record,
 )
 from tests.auth.conftest import Served, bearer, create_token, create_user, make_settings
+from tests.crdt.helpers import change, replica_of
 from tests.scheduler.conftest import TTL_DAYS, draft_row, make_idle, record_row
 
 TYPE_URI = "http://vocab.getty.edu/aat/300033618"
@@ -217,6 +220,101 @@ async def test_a_draft_active_again_since_the_listing_is_skipped(
     network.crdt_down = True  # the database path checks again under its locks
     assert await reap_draft(sessions, crdt, listed, ttl) is None
     assert await draft_row(db_engine, record_id) is not None
+
+
+class OvertakenClient(CrdtWsClient):
+    """A ``crdt-ws`` client whose ``close`` is overtaken by something that touches the draft.
+
+    ``before_close`` runs after the reaper has decided to discard the draft (its last re-check)
+    and before ``crdt-ws`` handles the close: the window of ADR-0029.
+    """
+
+    before_close: Any = None
+
+    async def close(self, record_id: UUID, **options: Any) -> None:
+        await self.before_close()
+        await super().close(record_id, **options)
+
+
+async def test_an_edit_that_overtakes_the_discard_call_is_not_lost(
+    network: Network, db_engine: AsyncEngine, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    # Core review A, finding 1 (#178): the reaper re-checks idleness, then asks crdt-ws to
+    # discard. An edit accepted by crdt-ws in between used to be deleted with the draft.
+    record_id = await published_record_with_draft(network, db_engine)
+    editor = await create_user(db_engine, "Editor")
+    await make_idle(db_engine, record_id)
+    ttl = timedelta(days=TTL_DAYS)
+    (listed,) = [d for d in await list_idle_drafts(sessions, ttl) if d.record_id == record_id]
+    room = await network.rooms.get(record_id)
+    assert room is not None
+
+    async def edit() -> None:
+        payload = change(
+            replica_of(room.ydoc),
+            lambda doc: ops.add_node(doc, "identified_by", {"type": "Name", "content": "Late"}),
+        )
+        await network.rooms.apply_update(record_id, payload, editor)
+
+    async with httpx.AsyncClient(transport=network) as http:
+        overtaken = OvertakenClient(http, CRDT_WS_URL, INTERNAL_TOKEN)
+        overtaken.before_close = edit
+        assert await reap_draft(sessions, overtaken, listed, ttl) is None  # skipped
+
+    row = await draft_row(db_engine, record_id)
+    assert row is not None and row.draft_epoch == listed.draft_epoch
+    assert await network.rooms.get(record_id) is room  # the room was not retired either
+    snapshot = await network.rooms.snapshot(record_id)
+    assert "Late" in [name["content"] for name in snapshot.jsonld["identified_by"]]
+    assert snapshot.contributors == [editor]
+    await network.rooms.close(record_id, discard=True)
+
+
+async def test_an_extend_that_overtakes_the_discard_call_keeps_the_draft(
+    served: Served,
+    network: Network,
+    db_engine: AsyncEngine,
+    sessions: async_sessionmaker[AsyncSession],
+) -> None:
+    record_id, headers = await created_record(served, db_engine)
+    await make_idle(db_engine, record_id)
+    ttl = timedelta(days=TTL_DAYS)
+    (listed,) = [d for d in await list_idle_drafts(sessions, ttl) if d.record_id == record_id]
+
+    async def extend() -> None:
+        response = await served.client.post(
+            f"/api/records/{record_id}/draft/extend", headers=headers
+        )
+        assert response.status_code == 200, response.text
+
+    async with httpx.AsyncClient(transport=network) as http:
+        overtaken = OvertakenClient(http, CRDT_WS_URL, INTERNAL_TOKEN)
+        overtaken.before_close = extend
+        assert await reap_draft(sessions, overtaken, listed, ttl) is None
+
+    assert await draft_row(db_engine, record_id) is not None
+    assert await record_row(db_engine, record_id) is not None  # version 0: not deleted either
+    assert await network.rooms.is_open(record_id)
+
+
+async def test_an_idle_draft_that_crdt_ws_keeps_is_a_failure(
+    network: Network, db_engine: AsyncEngine, sessions: async_sessionmaker[AsyncSession]
+) -> None:
+    # crdt-ws answers 204 whether or not it discarded; the reaper must not take a draft that
+    # is still there and still idle for a discarded one.
+    record_id = await published_record_with_draft(network, db_engine)
+    await make_idle(db_engine, record_id)
+    ttl = timedelta(days=TTL_DAYS)
+    (listed,) = [d for d in await list_idle_drafts(sessions, ttl) if d.record_id == record_id]
+
+    class Deaf(CrdtWsClient):
+        async def close(self, record_id: UUID, **options: Any) -> None:
+            return None
+
+    async with httpx.AsyncClient(transport=network) as http:
+        with pytest.raises(RuntimeError):
+            await reap_draft(sessions, Deaf(http, CRDT_WS_URL, INTERNAL_TOKEN), listed, ttl)
+    await network.rooms.close(record_id, discard=True)
 
 
 async def test_a_draft_replaced_since_the_listing_is_skipped(

@@ -60,6 +60,7 @@ import logging
 import time
 from collections.abc import AsyncIterator, Callable, Sequence
 from dataclasses import dataclass, field
+from datetime import timedelta
 from typing import Any, Final, Protocol
 from uuid import UUID
 
@@ -706,11 +707,17 @@ class RoomManager(Protocol):
         ...
 
     async def close(
-        self, record_id: UUID, *, discard: bool, draft_epoch: int | None = None
+        self,
+        record_id: UUID,
+        *,
+        discard: bool,
+        draft_epoch: int | None = None,
+        idle_for: timedelta | None = None,
     ) -> None:
         """Drop the room from memory; with ``discard`` also delete the draft and end its epoch.
 
-        ``draft_epoch`` limits a discard to the draft of that epoch.
+        ``draft_epoch`` limits a discard to the draft of that epoch, ``idle_for`` to a draft
+        without activity for that long. A draft that does not qualify is left as it is.
         """
         ...
 
@@ -978,7 +985,12 @@ class InMemoryRoomManager:
         return room.snapshot()
 
     async def close(
-        self, record_id: UUID, *, discard: bool, draft_epoch: int | None = None
+        self,
+        record_id: UUID,
+        *,
+        discard: bool,
+        draft_epoch: int | None = None,
+        idle_for: timedelta | None = None,
     ) -> None:
         """Drop the room from memory, closing its sockets first.
 
@@ -990,12 +1002,33 @@ class InMemoryRoomManager:
         ``draft_epoch`` (with ``discard``) names the draft that is meant: a room or a draft row
         of another epoch is left alone. Publish passes the epoch of the draft it published, so
         that its close, arriving late, cannot discard the draft somebody has opened since.
+
+        ``idle_for`` (with ``discard``; the draft reaper passes its TTL) makes the discard
+        conditional on the draft having had no activity for that long
+        (``crdt_drafts.last_activity_at``, database clock). The database decides, in the
+        statement that locks the draft row (``store.delete_draft``), so an edit or an extend
+        that lands while this call is on its way is not lost with the draft: if it committed
+        first, the draft, the room and its sockets are left exactly as they are. The room is
+        retired only once its rows are gone; a write arriving after that finds its draft
+        superseded, as after a publish (invariant 3).
         """
         async with self._record_lock(record_id):
             room = self._rooms.get(record_id)
             if not discard:
                 if room is not None:
                     await self._retire(room, CLOSE_ROOM_CLOSED, REASON_ROOM_CLOSED, compact=True)
+                return
+            if idle_for is not None:
+                async with self._sessions() as session:
+                    async with session.begin():
+                        await store.delete_draft(
+                            session, record_id, only_epoch=draft_epoch, idle_for=idle_for
+                        )
+                        kept = room is not None and await store.draft_is_current(
+                            session, record_id, room.draft_epoch
+                        )
+                if room is not None and not kept:
+                    await self._retire(room, CLOSE_STALE_EPOCH, REASON_STALE_EPOCH)
                 return
             if room is not None and draft_epoch in (None, room.draft_epoch):
                 await self._retire(room, CLOSE_STALE_EPOCH, REASON_STALE_EPOCH)

@@ -26,8 +26,8 @@ Stable contract (Steps 1.6, 1.9, 1.10, 1.14, 1.15 and Phase 3 call these; signat
   editor). ``content`` hydrates a *new* draft from other JSON-LD than ``records.data``
   (revert-to-revision: ``close(discard=True)`` first, then ``open(content=...)``; 409
   ``LAE-CRDT-004`` if somebody opened a draft in between).
-- ``close(record_id, *, discard, draft_epoch=None)``: ``discard=True`` deletes the draft, closes
-  its sockets with 4409 and makes sure ``records.draft_epoch`` is beyond the deleted draft's
+- ``close(record_id, *, discard, draft_epoch=None, idle_for=None)``: ``discard=True`` deletes
+  the draft, closes its sockets with 4409 and makes sure ``records.draft_epoch`` is beyond the deleted draft's
   epoch. Use it *instead of* deleting draft rows anywhere else (ADR-0027).
 
 **Publish (Step 1.10), in this order:** ``snapshot`` → validate → one transaction that locks
@@ -50,6 +50,7 @@ with the structured body; 404 from ``crdt-ws`` becomes 404, anything unexpected 
 from __future__ import annotations
 
 import base64
+from datetime import timedelta
 from typing import Any, Final
 from uuid import UUID
 
@@ -158,16 +159,26 @@ class CrdtWsClient:
         return OpenedRoom.model_validate_json(response.content)
 
     async def close(
-        self, record_id: UUID, *, discard: bool, draft_epoch: int | None = None
+        self,
+        record_id: UUID,
+        *,
+        discard: bool,
+        draft_epoch: int | None = None,
+        idle_for: timedelta | None = None,
     ) -> None:
         """Drop the room from memory; with ``discard`` delete the draft and end its epoch.
 
         ``draft_epoch`` limits a discard to the draft of that epoch (pass the published
-        snapshot's ``draft_epoch`` after a publish).
+        snapshot's ``draft_epoch`` after a publish). ``idle_for`` limits it to a draft without
+        activity for that long (the draft reaper): a draft edited or extended meanwhile is
+        kept, with its room and sockets. The answer is 204 either way; the caller reads
+        ``crdt_drafts`` to learn which.
         """
         body: dict[str, Any] = {"discard": discard}
         if draft_epoch is not None:
             body["draft_epoch"] = draft_epoch
+        if idle_for is not None:
+            body["idle_seconds"] = idle_for.total_seconds()
         await self._call("POST", f"/internal/rooms/{record_id}/close", json=body)
 
     async def apply_update(self, record_id: UUID, update: bytes, user_id: UUID | None) -> None:

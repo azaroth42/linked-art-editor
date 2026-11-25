@@ -5,9 +5,11 @@ A draft is idle when ``crdt_drafts.last_activity_at`` (set by every persisted up
 
 1. The draft is read again: if it has another epoch or has had activity since the listing, it
    is left alone.
-2. It is discarded through ``crdt-ws``: ``close(discard=True, draft_epoch=<its epoch>)`` closes
-   its sockets with ``4409``, deletes the draft rows and ends the epoch (ADR-0027: nothing else
-   may delete draft rows; the epoch limits the discard to the draft that was found idle). When
+2. It is discarded through ``crdt-ws``: ``close(discard=True, draft_epoch=<its epoch>,
+   idle_for=<the TTL>)`` closes its sockets with ``4409``, deletes the draft rows and ends the
+   epoch (ADR-0027: nothing else may delete draft rows; the epoch limits the discard to the
+   draft that was found idle, and ``idle_for`` to a draft that is still idle when ``crdt-ws``
+   locks its row). When
    ``crdt-ws`` cannot be reached, the draft is deleted with ``lae.crdt.store.delete_draft`` in
    one transaction that locks the ``records`` row, then the draft row (the lock order of
    ``crdt-ws``), and checks the epoch and the idleness again under those locks. A room that is
@@ -26,9 +28,12 @@ Every action is logged (``draft_reaped``) with the record id, the action (``disc
 ``record_deleted``), the draft's contributors, epoch and ``last_activity_at``. A draft that
 fails (``crdt-ws`` answered with an error) is logged and counted, and the others go on.
 
-**Residual race.** Between the re-read in step 1 and the discard in ``crdt-ws`` (one internal
-HTTP call), an edit or an extend of a draft that has been idle for the whole TTL is lost with
-it. The fallback path has no such window.
+**No window for a late edit.** An edit or an extend that lands between the re-read in step 1
+and the discard in ``crdt-ws`` (one internal HTTP call) keeps the draft: ``crdt-ws`` deletes
+only if ``last_activity_at`` is still older than the TTL in the statement that locks the draft
+row (``lae.crdt.store.delete_draft(idle_for=...)``), and the reaper then counts the draft as
+skipped. The fallback path checks under the same locks. An edit that arrives after the delete
+finds its draft gone, as after a publish (its socket is closed with ``4409``).
 """
 
 from __future__ import annotations
@@ -225,13 +230,18 @@ async def reap_draft(
             return None
     via = "crdt-ws"
     try:
-        await crdt.close(draft.record_id, discard=True, draft_epoch=draft.draft_epoch)
+        # Conditional on idleness inside crdt-ws: an edit or an extend that overtakes this
+        # call keeps the draft (ADR-0029).
+        await crdt.close(draft.record_id, discard=True, draft_epoch=draft.draft_epoch, idle_for=ttl)
     except CrdtWsUnavailableError:
         via = "database"
         if not await discard_in_database(sessions, draft, ttl):
             return None
     else:
         if await _draft_with_epoch_exists(sessions, draft.record_id, draft.draft_epoch):
+            async with sessions() as session:
+                if not await _is_still_idle(session, draft, ttl):
+                    return None  # active again while the call was on its way: kept
             raise RuntimeError("crdt-ws acknowledged the discard but the draft is still there")
     action = ReapAction.DISCARDED
     if draft.version == 0 and await delete_unpublished_record(sessions, draft.record_id):

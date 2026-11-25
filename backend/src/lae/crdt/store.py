@@ -32,11 +32,13 @@ Rules (decisions B5, B6; ADR-0027):
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import timedelta
 from typing import Any
 from uuid import UUID
 
 from sqlalchemy import (
     BigInteger,
+    Interval,
     LargeBinary,
     any_,
     case,
@@ -274,7 +276,11 @@ async def compact(
 
 
 async def delete_draft(
-    session: AsyncSession, record_id: UUID, *, only_epoch: int | None = None
+    session: AsyncSession,
+    record_id: UUID,
+    *,
+    only_epoch: int | None = None,
+    idle_for: timedelta | None = None,
 ) -> int | None:
     """Delete the record's draft and updates and end the draft's epoch.
 
@@ -285,6 +291,13 @@ async def delete_draft(
     With ``only_epoch`` the draft is deleted only if it has that epoch; a draft of another
     epoch (a newer one, opened since the caller looked) is left alone.
 
+    With ``idle_for`` the draft is deleted only if its ``last_activity_at`` is longer ago than
+    that on the database's clock (the draft reaper, decision B7). The statement that locks the
+    draft row evaluates the condition, so it queues behind an ``append_update`` or an extend in
+    flight and then sees the activity that one recorded. An edit therefore either commits first
+    and keeps the draft, or comes after the delete and finds its draft gone
+    (``append_update`` returns ``None``); none is deleted with the draft.
+
     The publish transaction (Step 1.10) increments ``records.draft_epoch`` itself and then calls
     this; in that order the epoch goes up by exactly one. ``records.updated_at`` is not touched.
     The ``records`` row is locked first (lock order, see the module docstring).
@@ -294,9 +307,18 @@ async def delete_draft(
     )
     if current is None:
         return None  # no record, so no draft rows either (they cascade)
-    if only_epoch is not None:
-        draft = await load_draft(session, record_id, for_update=True)
-        if draft is None or draft.draft_epoch != only_epoch:
+    if only_epoch is not None or idle_for is not None:
+        conditions = [CrdtDraft.record_id == record_id]
+        if only_epoch is not None:
+            conditions.append(CrdtDraft.draft_epoch == only_epoch)
+        if idle_for is not None:
+            conditions.append(CrdtDraft.last_activity_at < func.now() - literal(idle_for, Interval))
+        # FOR UPDATE: having waited for a concurrent writer of the row, PostgreSQL evaluates the
+        # conditions again on the row as that writer committed it (READ COMMITTED).
+        meant = await session.scalar(
+            select(CrdtDraft.record_id).where(*conditions).with_for_update()
+        )
+        if meant is None:
             return current
     epoch: int | None = await session.scalar(
         delete(CrdtDraft).where(CrdtDraft.record_id == record_id).returning(CrdtDraft.draft_epoch)
