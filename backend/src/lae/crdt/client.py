@@ -27,8 +27,9 @@ Stable contract (Steps 1.6, 1.9, 1.10, 1.14, 1.15 and Phase 3 call these; signat
   (revert-to-revision: ``close(discard=True)`` first, then ``open(content=...)``; 409
   ``LAE-CRDT-004`` if somebody opened a draft in between).
 - ``close(record_id, *, discard, draft_epoch=None, idle_for=None)``: ``discard=True`` deletes
-  the draft, closes its sockets with 4409 and makes sure ``records.draft_epoch`` is beyond the deleted draft's
-  epoch. Use it *instead of* deleting draft rows anywhere else (ADR-0027).
+  the draft, closes its sockets with 4409 and makes sure ``records.draft_epoch`` is beyond the
+  deleted draft's epoch. With ``idle_for`` only a draft idle for that long (the reaper). Use it
+  *instead of* deleting draft rows anywhere else (ADR-0027).
 
 **Publish (Step 1.10), in this order:** ``snapshot`` → validate → one transaction that locks
 the ``records`` row ``FOR UPDATE``, then requires
